@@ -251,7 +251,7 @@ export default function InvoicesPage() {
                     {waUrl && (
                       <Button
                         variant="outline"
-                        onClick={() => window.open(waUrl, "_blank")}
+                        onClick={() => window.open(waUrl, "_blank", "noopener,noreferrer")}
                         className="gap-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
                       >
                         Send via WhatsApp Web
@@ -260,7 +260,7 @@ export default function InvoicesPage() {
                     {previewTab === "email" && gmailUrl && (
                       <Button
                         variant="outline"
-                        onClick={() => window.open(gmailUrl, "_blank")}
+                        onClick={() => window.open(gmailUrl, "_blank", "noopener,noreferrer")}
                         className="gap-2"
                       >
                         <Mail className="h-4 w-4" />
