@@ -4,13 +4,13 @@
 >
 > **Parent plan:** `docs/superpowers/plans/2026-07-03-invoice-chaser-state-of-the-art.md` (read its Phase 7 section and Global Constraints before starting).
 >
-> **Prerequisites (consumed, not redefined here):** Phase 0 provisioned Vercel, Postgres, Clerk prod, Sentry, Inngest, Upstash (recorded in `docs/setup/PROVISIONING.md`; env matrix in `docs/ENVIRONMENT.md`). Vitest + Playwright exist from Phases 1/3. Channel webhooks live at `/api/webhooks/resend` and `/api/webhooks/whatsapp` (Phase 4). Assistant with `ASSISTANT_KILL_SWITCH` + per-org budgets (Phase 6). `analytics.service` (Phase 5). Structured logger at `src/lib/logger/index.ts` (`logger`, `createLogger(context)`).
+> **Prerequisites (consumed, not redefined here):** Phase 0 provisioned Cloudflare Pages, Postgres, Clerk prod, Sentry, Inngest, Upstash (recorded in `docs/setup/PROVISIONING.md`; env matrix in `docs/ENVIRONMENT.md`). Vitest + Playwright exist from Phases 1/3. Channel webhooks live at `/api/webhooks/resend` and `/api/webhooks/whatsapp` (Phase 4). Assistant with `ASSISTANT_KILL_SWITCH` + per-org budgets (Phase 6). `analytics.service` (Phase 5). Structured logger at `src/lib/logger/index.ts` (`logger`, `createLogger(context)`).
 
-**Goal:** Ship Invoice Chaser to production on Vercel with hardened headers, gated migrations, tested backups, full observability (Sentry + structured logs + uptime + Inngest alerts), verified performance at 10k invoices / 1k parties, complete operator docs, and a launch checklist with 1-week hypercare.
+**Goal:** Ship Invoice Chaser to production on Cloudflare Pages with hardened headers, gated migrations, tested backups, full observability (Sentry + structured logs + uptime + Inngest alerts), verified performance at 10k invoices / 1k parties, complete operator docs, and a launch checklist with 1-week hypercare.
 
 **Architecture:** No new product features. This phase adds: security headers/CSP in `next.config.ts`, a `migrate` job in GitHub Actions gating `prisma migrate deploy` on main, `@sentry/nextjs` instrumentation, a `@smoke`-tagged Playwright subset runnable against the deployed URL, volume-seed + `EXPLAIN` verification scripts, and operational docs (`RUNBOOK.md`, final `TALLY.md`, README, onboarding).
 
-**Tech Stack:** Next.js ≥16.2 on Vercel, Prisma ≥7.8 (`migrate deploy`), `@sentry/nextjs` (latest stable), Playwright (existing), GitHub Actions, Postgres (Supabase per Phase 0), Inngest, Upstash.
+**Tech Stack:** Next.js ≥16.2 on Cloudflare Pages via the OpenNext Cloudflare adapter (`@opennextjs/cloudflare`), Prisma ≥7.8 (`migrate deploy`; ⚠️ verify the Postgres driver/engine works under Workers runtime — see ADR-001 Consequences), `@sentry/nextjs` (latest stable), Playwright (existing), GitHub Actions, Postgres (Supabase per Phase 0), Inngest, Upstash.
 
 ## Global Constraints
 
@@ -28,20 +28,22 @@
 ### Task 1: Production Environment Audit — **USER ACTION (verification)**
 
 **Files:**
-- Modify: `docs/ENVIRONMENT.md` (tick/complete the `Vercel Prod` column)
+- Modify: `docs/ENVIRONMENT.md` (tick/complete the `Cloudflare Prod` column)
 - Modify: `docs/setup/PROVISIONING.md` (append "Phase 7 env audit" section)
 
 **Interfaces:**
 - Consumes: the env matrix from Phase 0 Task 2 (`docs/ENVIRONMENT.md`).
-- Produces: a verified, dated statement that every production variable exists in Vercel prod — precondition for Tasks 2–11.
+- Produces: a verified, dated statement that every production variable exists in Cloudflare Pages prod — precondition for Tasks 2–11.
 
-- [ ] **Step 1: List what production actually has:**
+- [ ] **Step 1: List what production actually has** (Wrangler is Cloudflare's CLI; there is no direct `vercel env ls` equivalent that prints values, so cross-check names against the Cloudflare dashboard):
 
 ```bash
-vercel env ls production
+wrangler pages deployment list --project-name <project>
 ```
 
-- [ ] **Step 2: Diff against `docs/ENVIRONMENT.md`.** Every row whose `Vercel Prod` column says required must appear in the output. Expected full set (from Phase 0 + later phases):
+Cross-check the variable *names* configured for the Production environment via Cloudflare dashboard → Workers & Pages → Project → Settings → Environment Variables (Wrangler does not have a dedicated "list env var names" command as of writing — dashboard is the source of truth).
+
+- [ ] **Step 2: Diff against `docs/ENVIRONMENT.md`.** Every row whose `Cloudflare Prod` column says required must appear in the dashboard list. Expected full set (from Phase 0 + later phases):
 
 ```
 DATABASE_URL, DIRECT_URL
@@ -56,7 +58,7 @@ SENTRY_DSN, SENTRY_AUTH_TOKEN, NEXT_PUBLIC_SENTRY_DSN      (NEXT_PUBLIC_ added i
 ASSISTANT_KILL_SWITCH                                       (set to "false" in prod, documented flip procedure in RUNBOOK)
 ```
 
-- [ ] **Step 3: USER ACTION —** user pastes any missing values into Vercel prod (dashboard → Project → Settings → Environment Variables). Agent re-runs Step 1 to confirm; no values are ever echoed into the repo.
+- [ ] **Step 3: USER ACTION —** user pastes any missing values into Cloudflare Pages → Project → Settings → Environment Variables (Production). Agent re-runs Step 1 to confirm; no values are ever echoed into the repo.
 - [ ] **Step 4: Record the audit** in `docs/setup/PROVISIONING.md`: date, who verified, list of variable *names* confirmed present, any deliberately absent vars with reason.
 - [ ] **Step 5: Commit**
 
@@ -174,17 +176,19 @@ git commit -m "feat: add security headers and CSP to next.config"
 - Modify: `next.config.ts` (finalize domain in `CLERK_ORIGINS` from Task 2)
 
 **Interfaces:**
-- Consumes: Clerk prod instance from Phase 0 Task 5; Vercel project from Phase 0 Task 4.
+- Consumes: Clerk prod instance from Phase 0 Task 5; Cloudflare Pages project from Phase 0 Task 4.
 - Produces: the production URL (referred to below as `$PROD_URL`) used by Tasks 7, 10, 12.
 
-- [ ] **Step 1: Prepare exact instructions in `PROVISIONING.md`:** (a) user buys/assigns domain and adds it in Vercel → Project → Settings → Domains; (b) adds the DNS records Vercel displays (A/ALIAS + CNAME); (c) in Clerk dashboard → prod instance → Domains, sets the same domain and adds Clerk's CNAME records (`clerk.<domain>`, `accounts.<domain>`, DKIM records as shown); (d) confirms `pk_live_`/`sk_live_` keys are the ones in Vercel prod env (Task 1 verified presence; this verifies they are *live* keys, not `pk_test_`).
+- [ ] **Step 1: Prepare exact instructions in `PROVISIONING.md`:** (a) user buys/assigns domain and adds it in Cloudflare dashboard → Workers & Pages → Project → Custom domains; (b) adds/confirms the DNS records Cloudflare displays (CNAME to the `pages.dev` target, or A/AAAA if the domain's DNS is already on Cloudflare it's usually automatic); (c) in Clerk dashboard → prod instance → Domains, sets the same domain and adds Clerk's CNAME records (`clerk.<domain>`, `accounts.<domain>`, DKIM records as shown); (d) confirms `pk_live_`/`sk_live_` keys are the ones in Cloudflare Pages prod env (Task 1 verified presence; this verifies they are *live* keys, not `pk_test_`).
 - [ ] **Step 2: USER ACTION —** user executes (a)–(d). DNS propagation may take up to 24h; do other tasks meanwhile.
 - [ ] **Step 3: Agent verifies:**
 
 ```bash
 curl -sI https://<domain> | grep -i "strict-transport-security"   # headers live on prod
-vercel env ls production | grep CLERK                              # keys present
+wrangler pages deployment list --project-name <project>           # deployment is live
 ```
+
+Confirm the Clerk env vars are present via the Cloudflare dashboard → Project → Settings → Environment Variables (no CLI list-by-value equivalent to `vercel env ls`).
 
 Expected: HSTS header present; both Clerk vars listed. Then sign in once on production — Clerk redirects stay on the custom domain.
 
@@ -242,10 +246,10 @@ jobs:
       - run: npm ci
       - run: npm run test   # vitest, added Phase 1
 
-  # Runs prisma migrations against production BEFORE Vercel's deploy finishes
-  # building. Because the two are not strictly ordered, every migration must be
-  # backward-compatible with the previous app version (expand/contract), per
-  # docs/RUNBOOK.md "Migrations".
+  # Runs prisma migrations against production BEFORE Cloudflare Pages' deploy
+  # finishes building. Because the two are not strictly ordered, every migration
+  # must be backward-compatible with the previous app version (expand/contract),
+  # per docs/RUNBOOK.md "Migrations".
   migrate:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: [checks, test]
@@ -412,7 +416,7 @@ git commit -m "feat: staging seed script; document backup schedule and restore d
 
 **Interfaces:**
 - Consumes: `SENTRY_DSN` / `SENTRY_AUTH_TOKEN` from Phase 0 Task 7; the `headers()` config from Task 2.
-- Produces: `Sentry.captureException` available everywhere; traces on API routes; source maps uploaded on Vercel builds. RUNBOOK (Task 9) links the Sentry project.
+- Produces: `Sentry.captureException` available everywhere; traces on API routes; source maps uploaded on Cloudflare Pages builds. RUNBOOK (Task 9) links the Sentry project.
 
 - [ ] **Step 1: Install:**
 
@@ -427,22 +431,30 @@ import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  environment: process.env.VERCEL_ENV ?? "development",
-  tracesSampleRate: process.env.VERCEL_ENV === "production" ? 0.2 : 1.0,
+  // ⚠️ Vercel-specific — needs a Cloudflare-native equivalent: `VERCEL_ENV`
+  // ("production"/"preview"/"development") has no exact Cloudflare Pages
+  // runtime analog. Cloudflare exposes `CF_PAGES_BRANCH` at *build* time only
+  // (not guaranteed at request time under the OpenNext/Workers runtime).
+  // Verify at implementation time whether the OpenNext adapter forwards a
+  // usable environment binding; failing that, set an explicit
+  // `SENTRY_ENVIRONMENT` var per Cloudflare Pages environment (Production/
+  // Preview) and read that instead.
+  environment: process.env.SENTRY_ENVIRONMENT ?? "development",
+  tracesSampleRate: process.env.SENTRY_ENVIRONMENT === "production" ? 0.2 : 1.0,
   // Never send request bodies/headers wholesale — invoices contain party PII.
   sendDefaultPii: false,
   enabled: process.env.NODE_ENV === "production",
 });
 ```
 
-- [ ] **Step 3: Create `sentry.edge.config.ts`** (repo root — middleware runs on edge):
+- [ ] **Step 3: Create `sentry.edge.config.ts`** (repo root — middleware runs on edge; ⚠️ Workers-runtime verification: confirm `@sentry/nextjs`'s edge runtime integration works unmodified under Cloudflare's Workers runtime via the OpenNext adapter, not just Vercel's edge runtime):
 
 ```typescript
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  environment: process.env.VERCEL_ENV ?? "development",
+  environment: process.env.SENTRY_ENVIRONMENT ?? "development", // see Step 2 note on VERCEL_ENV replacement
   tracesSampleRate: 0.2,
   enabled: process.env.NODE_ENV === "production",
 });
@@ -472,7 +484,10 @@ import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? "development",
+  // ⚠️ Vercel-specific — see Step 2 note. `NEXT_PUBLIC_VERCEL_ENV` has no
+  // Cloudflare Pages equivalent; use an explicit `NEXT_PUBLIC_SENTRY_ENVIRONMENT`
+  // var set per Cloudflare Pages environment instead.
+  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? "development",
   tracesSampleRate: 0.1,
   replaysOnErrorSampleRate: 0, // no session replay: invoice pages show party PII
   enabled: process.env.NODE_ENV === "production",
@@ -496,7 +511,7 @@ export default withSentryConfig(nextConfig, {
 });
 ```
 
-- [ ] **Step 7: USER ACTION —** user adds `NEXT_PUBLIC_SENTRY_DSN` (same DSN value) to Vercel prod+preview and confirms `SENTRY_AUTH_TOKEN` is available to Vercel builds (needed for source-map upload). Agent updates `.env.example` and the `docs/ENVIRONMENT.md` row.
+- [ ] **Step 7: USER ACTION —** user adds `NEXT_PUBLIC_SENTRY_DSN` (same DSN value), `SENTRY_ENVIRONMENT`, and `NEXT_PUBLIC_SENTRY_ENVIRONMENT` to Cloudflare Pages Production + Preview environment variables, and confirms `SENTRY_AUTH_TOKEN` is available to the Cloudflare Pages build (needed for source-map upload — set it as a build-time environment variable in the same Settings → Environment Variables screen). Agent updates `.env.example` and the `docs/ENVIRONMENT.md` row.
 - [ ] **Step 8: Verify end-to-end:** deploy preview, then trigger a deliberate error — add `?boom=1` handling nowhere; instead hit a nonexistent API id path that throws in a service, or run locally with `NODE_ENV=production npm run build && npm start` and throw from a test route you immediately revert. Expected: event appears in Sentry with readable (source-mapped) stack and `environment: preview`. Also confirm one transaction/trace appears for an API route.
 - [ ] **Step 9: Confirm CSP still passes** (Sentry ingest origin was already in Task 2's `connect-src`): `npx playwright test tests/e2e/security-headers.spec.ts` → PASS; no CSP errors in console on a page that fires a Sentry event.
 - [ ] **Step 10: Commit**
@@ -601,17 +616,17 @@ export const onFunctionFailed = inngest.createFunction(
 );
 ```
 
-If `src/lib/email/ops-alert.ts` does not exist after Phase 4, create it as a 15-line wrapper: Resend client, `from` = the verified ops sender, `to` = `OPS_ALERT_EMAIL` env var (add to `docs/ENVIRONMENT.md` + `.env.example`, USER ACTION to set in Vercel). Register `onFunctionFailed` in the functions array exported to the Inngest serve handler in `src/lib/jobs/inngest/index.ts`.
+If `src/lib/email/ops-alert.ts` does not exist after Phase 4, create it as a 15-line wrapper: Resend client, `from` = the verified ops sender, `to` = `OPS_ALERT_EMAIL` env var (add to `docs/ENVIRONMENT.md` + `.env.example`, USER ACTION to set in Cloudflare Pages → Project → Settings → Environment Variables). Register `onFunctionFailed` in the functions array exported to the Inngest serve handler in `src/lib/jobs/inngest/index.ts`.
 
 - [ ] **Step 6: Verify the failure path:** on preview, trigger a job with a forced throw (Inngest dev server: send a test event to a scratch function that always throws with `retries: 0`), confirm the alert email arrives and the Sentry message appears. Remove the scratch function.
-- [ ] **Step 7: USER ACTION — uptime monitor.** User creates a monitor (Better Stack, UptimeRobot, or Vercel's own checks — record choice) on `https://<domain>/api/health`, 1-minute interval, alert to the same ops email. Expected keyword: `"status":"ok"`. Record monitor URL in `PROVISIONING.md`.
+- [ ] **Step 7: USER ACTION — uptime monitor.** User creates a monitor (Better Stack, UptimeRobot, or Cloudflare's own Health Checks — record choice) on `https://<domain>/api/health`, 1-minute interval, alert to the same ops email. Expected keyword: `"status":"ok"`. Record monitor URL in `PROVISIONING.md`.
 - [ ] **Step 8: Log hygiene sweep:** grep the codebase for raw console logging that bypasses the structured logger in server code:
 
 ```bash
 grep -rn "console\.\(log\|error\|warn\)" src/server src/lib --include="*.ts" | grep -v "src/lib/logger"
 ```
 
-Replace each hit in services/repositories/jobs with `createLogger("<context>")` calls (client components may keep console). Vercel captures stdout as JSON lines → searchable in Vercel Logs / Log Drains.
+Replace each hit in services/repositories/jobs with `createLogger("<context>")` calls (client components may keep console). Cloudflare Pages captures stdout/stderr from Functions as logs → searchable via `wrangler pages deployment tail` or the Cloudflare dashboard's Logs view (⚠️ Workers-runtime verification: confirm the structured logger's output format is captured the same way under the Workers runtime as it was assumed under Node — set up Logpush or a Tail Worker if longer retention/aggregation is needed, since Cloudflare's default log retention is short).
 
 - [ ] **Step 9: Commit**
 
@@ -839,19 +854,19 @@ git commit -m "feat: volume seed and EXPLAIN index checks for 10k/1k load sanity
 - Produces: the operator + user documentation the launch checklist (Task 11) requires signed off.
 
 - [ ] **Step 1: Write `docs/RUNBOOK.md`** with exactly these sections (each with real values/links from `PROVISIONING.md`, no placeholders left in the committed file):
-  1. **Service map** — prod URL, Vercel project link, Supabase project link, Sentry project link, Inngest app link, Upstash console link, Clerk dashboard link, uptime monitor link, who owns each (name/email).
-  2. **Deploy & rollback** — deploys happen on merge to `main` (Vercel auto + CI `migrate` job); rollback = Vercel dashboard → Deployments → Promote previous; caveat: rollback does *not* revert migrations, hence rule 3.
-  3. **Migrations** — expand/contract policy (every migration must run safely against the previous app version because CI `migrate` and the Vercel build are not strictly ordered); how to check migration status (`npx prisma migrate status` with `PROD_DIRECT_URL`); how to resolve drift (`prisma migrate resolve`).
+  1. **Service map** — prod URL, Cloudflare Pages project link, Supabase project link, Sentry project link, Inngest app link, Upstash console link, Clerk dashboard link, uptime monitor link, who owns each (name/email).
+  2. **Deploy & rollback** — deploys happen on merge to `main` (Cloudflare Pages auto-deploy + CI `migrate` job); rollback = Cloudflare dashboard → Workers & Pages → Project → Deployments → select a previous deployment → Rollback to this deployment; caveat: rollback does *not* revert migrations, hence rule 3.
+  3. **Migrations** — expand/contract policy (every migration must run safely against the previous app version because CI `migrate` and the Cloudflare Pages build are not strictly ordered); how to check migration status (`npx prisma migrate status` with `PROD_DIRECT_URL`); how to resolve drift (`prisma migrate resolve`).
   4. **Backups & restore** — schedule/retention/PITR settings, the exact restore-drill procedure from Task 5 Step 2, last drill date, and the rule: re-drill quarterly.
   5. **Monitoring & alerts** — where each alert comes from (Sentry issues, uptime monitor, Inngest failure emails), what each means, first-response steps for each.
   6. **Common incidents** — one subsection each with diagnosis + fix:
      - Email bounce spike (Resend dashboard → check DNS/DKIM, suppress list, pause affected sequence)
      - WhatsApp webhook failures / template quality drop (Meta Business Manager quality rating, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` mismatch symptoms)
-     - Assistant misbehaving or cost spike → **flip `ASSISTANT_KILL_SWITCH=true` in Vercel env + redeploy**; check per-org budgets in Upstash
-     - DB connection exhaustion (pooler vs direct URL, Vercel function concurrency)
+     - Assistant misbehaving or cost spike → **flip `ASSISTANT_KILL_SWITCH=true` in Cloudflare Pages env + redeploy**; check per-org budgets in Upstash
+     - DB connection exhaustion (pooler vs direct URL, Cloudflare Pages/Workers concurrency limits — ⚠️ Workers-runtime verification: confirm Prisma's connection-pooling behavior under Workers' concurrency model matches what was assumed for a Node runtime)
      - Stuck reminders (Inngest dashboard → replay run; `CommunicationLog` rows stuck in `QUEUED`)
-  7. **Secrets rotation** — per provider: where to mint a new key, which Vercel envs and GitHub secrets to update (`PROD_DIRECT_URL`!), and the redeploy step.
-  8. **Escalation & contacts** — owner, provider support links, status pages (Vercel, Supabase, Meta, Resend, Anthropic).
+  7. **Secrets rotation** — per provider: where to mint a new key, which Cloudflare Pages envs and GitHub secrets to update (`PROD_DIRECT_URL`!), and the redeploy step.
+  8. **Escalation & contacts** — owner, provider support links, status pages (Cloudflare, Supabase, Meta, Resend, Anthropic).
 - [ ] **Step 2: Finalize `docs/TALLY.md`.** Phase 0 Task 9 wrote the export runbook; Phase 2 item 6 extended it. Final pass: verify every menu path against the user's actual Tally Prime version (USER ACTION: user confirms on their machine), add a troubleshooting table (common import warnings from `ImportBatch` UI → meaning → fix), and the "optional LAN HTTP-XML auto-sync" section clearly marked *future enhancement, not built*.
 - [ ] **Step 3: Update `README.md`:** project description (receivables/payables + inventory platform, not just reminders), tech stack with version floors, local setup (`npm ci`, `.env` from `.env.example`, `npm run db:migrate`, `npm run dev`), test commands (`npm run test`, `npx playwright test`, smoke: see Task 10), links to `docs/ARCHITECTURE.md`, `docs/RUNBOOK.md`, `docs/TALLY.md`, `docs/ENVIRONMENT.md`.
 - [ ] **Step 4: Write `docs/ONBOARDING.md`** — the user walkthrough, in order: sign up / sign in → create organization → Settings (email sender, WhatsApp opt-in, reminder defaults, quiet hours) → run first Tally import (link to `docs/TALLY.md`, expect the wizard's preview step) → review imported parties (fill missing emails/phones the wizard flagged) → send a first reminder (both channels) from an invoice detail page → read the dashboard tiles → meet the assistant (what it can do, that every write needs your approval, how to reject). One screenshot placeholder per step is acceptable *only* as an `<!-- screenshot: ... -->` comment; the text must stand alone.
@@ -1037,7 +1052,7 @@ git commit -m "docs: launch checklist and 1-week hypercare plan"
 
 The parent plan's gate, verbatim: *"production smoke suite green post-deploy; user completes a real Tally import + sends a real reminder on both channels."*
 
-- [ ] **Step 1: Deploy and smoke.** Merge everything to `main`, let CI (`checks` → `test` → `migrate`) and the Vercel deploy finish, then:
+- [ ] **Step 1: Deploy and smoke.** Merge everything to `main`, let CI (`checks` → `test` → `migrate`) and the Cloudflare Pages deploy finish, then:
 
 ```bash
 PLAYWRIGHT_BASE_URL=https://<domain> npm run test:smoke

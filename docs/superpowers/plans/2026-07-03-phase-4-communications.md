@@ -2752,7 +2752,7 @@ git commit -m "feat(phase4): payment block in templates and auto thank-you on pa
 
 - [ ] **Step 1: Write `docs/COMMUNICATIONS.md`** covering: the `ChannelProvider` interface + registry, env var list, webhook endpoints and how to configure them (Resend dashboard → Webhooks → `https://<domain>/api/webhooks/resend`, events: sent/delivered/bounced/opened; Meta App Dashboard → WhatsApp → Configuration → Callback URL `https://<domain>/api/webhooks/whatsapp` + verify token, subscribe to `messages`), template registry table (tone → template name), quiet hours + escalation semantics, opt-out semantics (STOP keywords, per-channel `*OptOutAt` on Party, resettable via `communicationService.setOptOut`), and the note that FINAL_NOTICE reuses `payment_reminder_firm` pending a dedicated template approval (open follow-up).
 
-- [ ] **Step 2: USER ACTION — configure sandbox endpoints.** User (or agent with `vercel env ls` access) confirms all env vars from the header exist in the target environment; registers both webhook URLs against a deployed preview; adds a WhatsApp sandbox/test recipient number and a test inbox.
+- [ ] **Step 2: USER ACTION — configure sandbox endpoints.** User (or agent with access to the Cloudflare dashboard → Project → Settings → Environment Variables) confirms all env vars from the header exist in the target environment; registers both webhook URLs against a deployed preview; adds a WhatsApp sandbox/test recipient number and a test inbox.
 
 - [ ] **Step 3: Execute the end-to-end gate script (manual, recorded in `PHASE-4-GATE.md`):**
   1. Create a test invoice due 5 days ago for a party with both a real test email and the sandbox WhatsApp number.

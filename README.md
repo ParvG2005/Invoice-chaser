@@ -10,7 +10,7 @@ AI-powered automated invoice chaser for freelancers, agencies, and SMBs. Upload 
 - **Email:** Resend
 - **AI:** OpenRouter (free-tier models)
 - **Jobs:** Inngest (abstracted for future BullMQ/Temporal)
-- **Deploy:** Vercel
+- **Deploy:** Cloudflare Pages (via the OpenNext Cloudflare adapter — see [ADR-001](docs/architecture/ADR-001-monolith-on-cloudflare-pages.md))
 
 ## Prerequisites
 
@@ -90,13 +90,21 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for scalability notes.
 | `npm run db:push` | Push Prisma schema to database |
 | `npm run db:studio` | Open Prisma Studio |
 
-## Deployment (Vercel)
+## Deployment (Cloudflare Pages)
 
-1. Connect repo to Vercel
-2. Add all env vars from `.env.example`
-3. Set `DATABASE_URL` to Supabase pooled connection for serverless
-4. Deploy Inngest app sync at `/api/inngest`
-5. Run `prisma migrate deploy` or `db push` against production DB
+1. Add the OpenNext Cloudflare adapter (`@opennextjs/cloudflare`) and configure `wrangler.jsonc`/`open-next.config.ts` per its Next.js App Router setup.
+2. Connect this repo in Cloudflare dashboard → Workers & Pages → Create → Pages.
+3. Add all env vars from `.env.example`.
+4. Set `DATABASE_URL` to the Supabase pooled connection string.
+5. Deploy Inngest app sync at `/api/inngest`.
+6. Run `prisma migrate deploy` or `db push` against production DB.
+7. Smoke-test Prisma and Clerk middleware under Cloudflare's Workers runtime before treating a deploy as done — see ADR-001's Consequences for why this isn't a formality.
+
+See `docs/setup/PROVISIONING.md` for full step-by-step instructions.
+
+## Program plan
+
+This repo is mid-way through a larger platform buildout (receivables/payables, inventory, Tally Prime import, WhatsApp/email dunning, AI assistant). See `docs/superpowers/plans/2026-07-03-invoice-chaser-state-of-the-art.md` for the master plan and `docs/architecture/README.md` for accepted architecture decisions (ADRs).
 
 ## License
 

@@ -39,7 +39,7 @@ Later phase plans are written in parallel against these exact names. Use them ve
 
 ```
 .nvmrc                                        (verify/create — Node pin)
-package.json                                  (upgrades, scripts: test, vercel-build)
+package.json                                  (upgrades, scripts: test, pages-build)
 vitest.config.ts                              (new)
 prisma/schema.prisma                          (Prisma 7 generator + all new models)
 prisma/migrations/0_init/migration.sql        (baseline of pre-phase schema)
@@ -214,7 +214,7 @@ if (process.env.NODE_ENV !== "production") {
 src/generated/
 ```
 
-Add `"src/generated/**"` to the ESLint ignores (in `eslint.config.mjs`'s ignore list) and to `.prettierignore` (create the file if absent). `postinstall: prisma generate` and `build: prisma generate && next build` already exist in `package.json`, so CI/Vercel regenerate it.
+Add `"src/generated/**"` to the ESLint ignores (in `eslint.config.mjs`'s ignore list) and to `.prettierignore` (create the file if absent). `postinstall: prisma generate` and `build: prisma generate && next build` already exist in `package.json`, so CI/Cloudflare Pages regenerate it.
 
 - [ ] **Step 5: Verify all repository queries still typecheck and run.**
 
@@ -3893,10 +3893,10 @@ git commit -m "feat: enforce OrganizationMember role (RBAC) in the API handler"
 
 **Files:**
 - Modify: `.github/workflows/ci.yml` (created in Phase 0 Task 3; if it does not exist, create it with the full content below)
-- Modify: `package.json` (add `vercel-build`)
+- Modify: `package.json` (add `pages-build`)
 
 **Interfaces:**
-- Produces: CI gates `lint`, `typecheck`, `test`, `migrate-check`, `build` on every PR; Vercel deploys run `prisma migrate deploy` before `next build`.
+- Produces: CI gates `lint`, `typecheck`, `test`, `migrate-check`, `build` on every PR; Cloudflare Pages deploys run `prisma migrate deploy` before the OpenNext Cloudflare build.
 
 - [ ] **Step 1: Replace `.github/workflows/ci.yml` with:**
 
@@ -3940,13 +3940,13 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CI_CLERK_SECRET_KEY }}
 ```
 
-- [ ] **Step 2: Add the deploy-pipeline migration step.** In `package.json` scripts add:
+- [ ] **Step 2: Add the deploy-pipeline migration step.** Cloudflare Pages has no `vercel-build`-style auto-detected script name — the build command is set explicitly in Cloudflare dashboard → Workers & Pages → Project → Settings → Builds. Add a dedicated script in `package.json` scripts and set it as that project's Build command (chaining the migration ahead of the OpenNext Cloudflare adapter's build step, per `@opennextjs/cloudflare` docs):
 
 ```json
-"vercel-build": "prisma generate && prisma migrate deploy && next build"
+"pages-build": "prisma generate && prisma migrate deploy && npx opennextjs-cloudflare build"
 ```
 
-Vercel prefers `vercel-build` over `build` automatically; local `npm run build` stays migration-free. **Prerequisite recorded for Task 13:** production must be baselined (`prisma migrate resolve --applied 0_init` run once against prod) before the first deploy with this script, otherwise `migrate deploy` will refuse the non-empty schema.
+Set Cloudflare Pages → Settings → Builds → Build command to `npm run pages-build` (verify the exact OpenNext CLI invocation against the adapter's current docs at implementation time — the command name above is illustrative); local `npm run build` stays migration-free (`next build`, unchanged). **Prerequisite recorded for Task 13:** production must be baselined (`prisma migrate resolve --applied 0_init` run once against prod) before the first deploy with this script, otherwise `migrate deploy` will refuse the non-empty schema.
 
 - [ ] **Step 3: Verify locally what CI will run.**
 
@@ -3962,7 +3962,7 @@ Expected: all pass.
 
 ```bash
 git add .github/workflows/ci.yml package.json
-git commit -m "ci: run vitest and prisma migrate checks; migrate deploy on Vercel builds"
+git commit -m "ci: run vitest and prisma migrate checks; migrate deploy on Cloudflare Pages builds"
 ```
 
 ---

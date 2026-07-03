@@ -8,14 +8,14 @@
 
 **Goal:** Lock in the architecture, provision every external service, set up CI and design tooling, and collect Tally fixtures — so Phase 1 can start with zero unknowns.
 
-**Architecture:** Single Next.js monolith on Vercel; Postgres via Prisma; Inngest for background jobs; channel-abstracted messaging (Resend email + WhatsApp Cloud API); AI assistant as an approval-gated tool loop over the service layer; Stitch-first UI design. (Full rationale in parent plan §0.1.)
+**Architecture:** Single Next.js monolith on Cloudflare Pages (via the OpenNext Cloudflare adapter — hosting decision amended 2026-07-04 from the original Vercel choice, see ADR-001); Postgres via Prisma; Inngest for background jobs; channel-abstracted messaging (Resend email + WhatsApp Cloud API); AI assistant as an approval-gated tool loop over the service layer; Stitch-first UI design. (Full rationale in parent plan §0.1.)
 
 **Tech Stack targets:** Node 26 LTS, Next.js ≥16.2, React ≥19.2, TypeScript ≥6.0, Prisma ≥7.8, Tailwind ≥4.3 (upgrade itself happens in Phase 1 Step 0, not here).
 
 ## Global Constraints
 
 - No changes under `src/` or `prisma/schema.prisma` in this phase.
-- Secrets never committed — env values live in Vercel/provider dashboards and local `.env` (gitignored); docs record variable *names* and owners only.
+- Secrets never committed — env values live in Cloudflare Pages/provider dashboards and local `.env` (gitignored); docs record variable *names* and owners only.
 - Every task ends in a commit (docs/config/fixtures are all committable).
 - Real Tally fixture files must be sanitized (user confirms no data they consider sensitive) before committing; otherwise store paths outside the repo and note it in the fixtures README.
 
@@ -24,7 +24,7 @@
 ### Task 1: Architecture Decision Records
 
 **Files:**
-- Create: `docs/architecture/ADR-001-monolith-on-vercel.md`
+- Create: `docs/architecture/ADR-001-monolith-on-cloudflare-pages.md` (originally drafted as "ADR-001-monolith-on-vercel.md"; renamed 2026-07-04 when the hosting decision was amended to Cloudflare Pages — see the ADR's own Amendment section)
 - Create: `docs/architecture/ADR-002-party-centric-ledger.md`
 - Create: `docs/architecture/ADR-003-tally-file-first-import.md`
 - Create: `docs/architecture/ADR-004-channel-abstracted-messaging.md`
@@ -83,7 +83,7 @@ git commit -m "docs: add Phase 0 architecture decision records"
 grep -rhoE "process\.env\.[A-Z0-9_]+" src prisma next.config.ts | sort -u
 ```
 
-- [ ] **Step 2: Write `docs/ENVIRONMENT.md`** — a table with columns: `Variable | Used by | Local dev | Vercel Preview | Vercel Prod | Owner/where to get it`. Include every variable found in Step 1 plus the planned ones:
+- [ ] **Step 2: Write `docs/ENVIRONMENT.md`** — a table with columns: `Variable | Used by | Local dev | Cloudflare Preview | Cloudflare Prod | Owner/where to get it`. Include every variable found in Step 1 plus the planned ones:
 
 ```
 DATABASE_URL, DIRECT_URL                         (Postgres — Task 4)
@@ -178,11 +178,11 @@ git commit -m "ci: add lint/typecheck/build workflow and Node 26 pin"
 - Create: `docs/setup/PROVISIONING.md` (running log of what was created, by whom, with dashboard URLs — no secrets)
 
 **Interfaces:**
-- Produces: live Vercel project + prod/preview Postgres, recorded in `PROVISIONING.md`; `DATABASE_URL`/`DIRECT_URL` set in Vercel envs.
+- Produces: live Cloudflare Pages project + prod/preview Postgres, recorded in `PROVISIONING.md`; `DATABASE_URL`/`DIRECT_URL` set in Cloudflare Pages envs.
 
-- [ ] **Step 1: Prepare exact instructions** in `docs/setup/PROVISIONING.md` for the user: create/link Vercel project to the GitHub repo (framework auto-detected: Next.js), enable preview deployments; create Supabase (or Neon — record the choice as an addendum to ADR-001) project for production and a second branch/database for preview.
-- [ ] **Step 2: USER ACTION —** user performs the above; agent verifies via `vercel whoami`/`vercel env ls` (or the Supabase MCP `list_projects`) that project + envs exist.
-- [ ] **Step 3: Set `DATABASE_URL`, `DIRECT_URL` in Vercel prod + preview** (user pastes values into Vercel dashboard; never into the repo). Record variable placement in `docs/ENVIRONMENT.md` table.
+- [ ] **Step 1: Prepare exact instructions** in `docs/setup/PROVISIONING.md` for the user (mirror `docs/setup/PROVISIONING.md`'s "Hosting — Cloudflare Pages" section, which already reflects this per ADR-001's amendment — don't reinvent it here): add the OpenNext Cloudflare adapter (`@opennextjs/cloudflare`) to the app before first deploy (tracked as the first item of Phase 1's framework-upgrade step, not done in Phase 0 itself, since Phase 0 makes no `src/`/dependency changes); in the Cloudflare dashboard → Workers & Pages → Create → Pages, connect the GitHub repo, set the OpenNext build command (not the default `next build`) per the adapter's docs; enable preview deployments (Cloudflare Pages does this per-branch by default); create Supabase (or Neon — record the choice as an addendum to ADR-001) project for production and a second branch/database for preview.
+- [ ] **Step 2: USER ACTION —** user performs the above; agent verifies via `wrangler pages deployment list` (or the Cloudflare dashboard) and the Supabase MCP `list_projects` that project + envs exist.
+- [ ] **Step 3: Set `DATABASE_URL`, `DIRECT_URL` in Cloudflare Pages prod + preview** (user pastes values into Cloudflare Pages → Project → Settings → Environment Variables; never into the repo). Record variable placement in `docs/ENVIRONMENT.md` table. Also validate Prisma + Clerk middleware actually run under Cloudflare's Workers runtime (not full Node.js) before treating hosting as done — this is a real risk called out in ADR-001's Consequences, not a formality.
 - [ ] **Step 4: Decision recorded:** migration workflow switches from `prisma db push` to `prisma migrate` starting Phase 1 — note this in `PROVISIONING.md` with a link to ADR-002.
 - [ ] **Step 5: Commit** `docs/setup/PROVISIONING.md`.
 
@@ -193,8 +193,8 @@ git commit -m "ci: add lint/typecheck/build workflow and Node 26 pin"
 **Files:**
 - Modify: `docs/setup/PROVISIONING.md` (append Clerk section)
 
-- [ ] **Step 1: Prepare instructions:** create Clerk production instance, configure production domain (once known from Task 4), copy prod publishable/secret keys into Vercel prod env. Keep dev keys for local/preview.
-- [ ] **Step 2: USER ACTION —** user executes; agent verifies the Vercel prod env now lists both Clerk vars (`vercel env ls production`).
+- [ ] **Step 1: Prepare instructions:** create Clerk production instance, configure production domain (once known from Task 4), copy prod publishable/secret keys into Cloudflare Pages prod env. Keep dev keys for local/preview.
+- [ ] **Step 2: USER ACTION —** user executes; agent verifies the Cloudflare Pages prod env now lists both Clerk vars (via the dashboard → Project → Settings → Environment Variables — there is no CLI equivalent of `vercel env ls` that lists names without opening the dashboard).
 - [ ] **Step 3: Record decision** (from parent plan): org modeling stays in-app (`Organization` table), Clerk used for identity only.
 - [ ] **Step 4: Commit** the PROVISIONING.md update.
 
@@ -206,7 +206,7 @@ git commit -m "ci: add lint/typecheck/build workflow and Node 26 pin"
 - Modify: `docs/setup/PROVISIONING.md` (append Email + WhatsApp sections)
 - Create: `docs/setup/WHATSAPP_TEMPLATES.md`
 
-- [ ] **Step 1: Resend instructions:** verify sending domain (add SPF/DKIM DNS records — list the exact records Resend shows), create prod API key → Vercel, note webhook endpoint path reserved for Phase 4: `/api/webhooks/resend`.
+- [ ] **Step 1: Resend instructions:** verify sending domain (add SPF/DKIM DNS records — list the exact records Resend shows), create prod API key → Cloudflare Pages env, note webhook endpoint path reserved for Phase 4: `/api/webhooks/resend`.
 - [ ] **Step 2: Draft WhatsApp message templates** in `docs/setup/WHATSAPP_TEMPLATES.md` — three payment-reminder templates (friendly / professional / firm) with placeholder variables `{{party_name}} {{invoice_number}} {{amount}} {{due_date}} {{payment_link}}`, written to comply with WhatsApp Business template rules (transactional category, no promotional wording). Include a fourth "payment received — thank you" template.
 - [ ] **Step 3: USER ACTION —** user creates Meta Business Manager + WhatsApp Business account, registers phone number, submits the four templates for approval. Record app ID, phone number ID, and submission date in PROVISIONING.md. Note the fallback decision: if approval stalls >2 weeks, provision Twilio WhatsApp instead (record as ADR addendum).
 - [ ] **Step 4: Commit** both docs.
@@ -219,8 +219,8 @@ git commit -m "ci: add lint/typecheck/build workflow and Node 26 pin"
 - Modify: `docs/setup/PROVISIONING.md` (append one section each)
 
 - [ ] **Step 1: Prepare instructions per service:** Anthropic API key (assistant, Phase 6); Inngest production app + event/signing keys (jobs already integrated in dev); Upstash Redis prod database (rate limits + assistant budgets); Sentry project for Next.js (record DSN).
-- [ ] **Step 2: USER ACTION —** user creates each, pastes keys into Vercel envs per the ENVIRONMENT.md matrix.
-- [ ] **Step 3: Agent verifies** each var appears in `vercel env ls` for the right environments and ticks the matrix cells in `docs/ENVIRONMENT.md`.
+- [ ] **Step 2: USER ACTION —** user creates each, pastes keys into Cloudflare Pages envs per the ENVIRONMENT.md matrix.
+- [ ] **Step 3: Agent verifies** each var appears in the Cloudflare Pages dashboard → Project → Settings → Environment Variables for the right environments and ticks the matrix cells in `docs/ENVIRONMENT.md`.
 - [ ] **Step 4: Commit** doc updates.
 
 ---
@@ -279,6 +279,6 @@ git commit -m "ci: add lint/typecheck/build workflow and Node 26 pin"
 
 ## Self-Review Notes
 
-- Spec coverage: parent plan §0.2 checklist maps — Vercel/DB→Task 4, Clerk→5, Resend/WhatsApp→6, Anthropic/Inngest/Upstash/Sentry→7, Stitch→8, Tally fixtures→9, tooling/CI→3, env matrix→2, architecture→1, gate→10. Vitest/Playwright *installation* is deliberately deferred to Phase 1 (it touches `package.json` dependencies and test scaffolding — code-adjacent; only the CI skeleton lands here), and the parent plan's Phase 1 already covers it.
+- Spec coverage: parent plan §0.2 checklist maps — Cloudflare Pages/DB→Task 4, Clerk→5, Resend/WhatsApp→6, Anthropic/Inngest/Upstash/Sentry→7, Stitch→8, Tally fixtures→9, tooling/CI→3, env matrix→2, architecture→1, gate→10. Vitest/Playwright *installation* is deliberately deferred to Phase 1 (it touches `package.json` dependencies and test scaffolding — code-adjacent; only the CI skeleton lands here), and the parent plan's Phase 1 already covers it.
 - The `graphify` checklist item from the parent plan is dropped: `graphify-out/` was removed from the repo on 2026-07-03; strike it from the parent checklist during Task 10 and remove the stale section from CLAUDE.md.
 - Ordering: Tasks 1–3 are agent-only and can run immediately in sequence; Tasks 4–9 need user participation — start Task 6 (WhatsApp) and Task 9 (Tally exports) first, as both have external lead times.
