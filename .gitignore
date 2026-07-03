@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cloudflare / opennext
+.open-next/
+.wrangler/
+
 # secrets
 supabase project password*.txt
 *.env.backup*
