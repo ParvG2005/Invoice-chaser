@@ -46,3 +46,17 @@ No Vercel project is linked yet (no `vercel` CLI available in this environment, 
 Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev workflow). Starting Phase 1, this switches to `prisma migrate dev`/`prisma migrate deploy` once the Phase-1 blueprint models land, so schema changes are versioned and repeatable against the Supabase database above.
 
 ---
+
+## Auth — Clerk production instance (Task 5) — USER ACTION
+
+1. In the Clerk dashboard (clerk.com), create a **production instance** for InvoicePilot (the app currently uses a dev instance/keys).
+2. Once the production domain is known (from the Vercel setup above), configure it under Clerk → Domains for the production instance.
+3. Copy the production `Publishable key` and `Secret key` into Vercel → Settings → Environment Variables → **Production** as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (see `docs/ENVIRONMENT.md`).
+4. Keep the existing dev-instance keys for local dev and Vercel Preview — do not mix prod/dev Clerk keys across environments.
+5. Agent verification (once Vercel CLI is authenticated): `vercel env ls production` should list both Clerk vars.
+
+**Decision recorded (per parent plan §0.2):** organization modeling stays in-app — the existing `Organization`/`OrganizationMember` Prisma tables remain the source of truth for org membership and roles; Clerk is used for identity/authentication only, not Clerk Organizations.
+
+**Status:** ⬜ pending user action.
+
+---
