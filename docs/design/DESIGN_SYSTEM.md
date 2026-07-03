@@ -33,4 +33,13 @@ Palette is neutral/near-monochrome (zero-saturation grays with a near-black prim
 - Validates: sidebar nav with all 10 screens + pinned assistant entry, top KPI row (Money to Come / Money to Pay / Overdue / Collection Rate), receivables aging chart, recent activity feed, "Invoices Due Soon" table with per-row Remind action, Indian business names + INR amounts, neutral palette with sparse status accents.
 - Screenshot reviewed 2026-07-04 — matches design-system intent (neutral, data-dense, 12px rounded cards, restrained accent color use).
 
-**Approval:** ⬜ pending user review (see Task 8 Step 5 — user reviews the pilot screen above and records approval or requested changes here before Phase 3 iterates the remaining 11 screens).
+**Approval:** ✅ approved 2026-07-04 (dashboard layout/KPIs/aging/activity confirmed good), with one requested change since applied — see below.
+
+**Iteration 2026-07-04:** "Invoices Due Soon" table updated — every column header (Party Name, Invoice #, Amount, Due Date, Status) now has a sort icon, and a search input above the table filters rows by matching any column value (name/amount/date/etc). Verified in generated HTML (search input + `unfold_more` icons on all 5 headers landed; first attempt missed the sort icons, re-ran and confirmed via HTML diff, not just the screenshot — Stitch's screenshot renderer intermittently fails to load the icon font and shows a visually broken preview even when the underlying markup is correct).
+
+## Second screen — Analytics
+
+- **Analytics** — `projects/7229335890257417243/screens/3bb2600840db49968f065b0dc33df521`
+- Generated 2026-07-04 per user request for per-attribute breakdowns, dedicated tab per attribute: **Party Name** (ranked table, outstanding amount + invoice count + avg days overdue), **Date** (monthly Invoiced-vs-Collected bar chart + date-range picker), **Status** (donut chart, Paid/Pending/Overdue with %), **Amount** (histogram of invoice counts by amount bucket), **Agent** (leaderboard: managed parties, collection rate, total collected), **Stock** (added as 6th tab per user follow-up: summary row — total stock value/SKUs/low-stock count — plus a 6-month value-vs-units trend chart).
+- Same app shell, neutral palette, 12px cards, INR formatting as Dashboard pilot.
+- **Approval:** ⬜ pending user review.
