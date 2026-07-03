@@ -14,7 +14,7 @@ AI-powered automated invoice chaser for freelancers, agencies, and SMBs. Upload 
 
 ## Prerequisites
 
-- Node.js 20+ and npm (recommended: use your `gpu_env` conda environment)
+- Node.js 26+ (see `.nvmrc`) and npm (recommended: use your `gpu_env` conda environment)
 - Supabase Postgres database
 - Clerk, OpenRouter, Resend, and Inngest accounts
 

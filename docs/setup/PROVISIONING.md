@@ -52,10 +52,10 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 ## Auth — Clerk production instance (Task 5) — USER ACTION
 
 1. In the Clerk dashboard (clerk.com), create a **production instance** for InvoicePilot (the app currently uses a dev instance/keys).
-2. Once the production domain is known (from the Vercel setup above), configure it under Clerk → Domains for the production instance.
-3. Copy the production `Publishable key` and `Secret key` into Vercel → Settings → Environment Variables → **Production** as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (see `docs/ENVIRONMENT.md`).
-4. Keep the existing dev-instance keys for local dev and Vercel Preview — do not mix prod/dev Clerk keys across environments.
-5. Agent verification (once Vercel CLI is authenticated): `vercel env ls production` should list both Clerk vars.
+2. Once the production domain is known (from the Cloudflare Pages setup above), configure it under Clerk → Domains for the production instance.
+3. Copy the production `Publishable key` and `Secret key` into Cloudflare Pages → Settings → Environment Variables → **Production** as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (see `docs/ENVIRONMENT.md`).
+4. Keep the existing dev-instance keys for local dev and Cloudflare Pages Preview — do not mix prod/dev Clerk keys across environments.
+5. Agent verification: confirm both Clerk vars via the Cloudflare dashboard → Settings → Environment Variables (no CLI list-by-value equivalent to `vercel env ls`).
 
 **Decision recorded (per parent plan §0.2):** organization modeling stays in-app — the existing `Organization`/`OrganizationMember` Prisma tables remain the source of truth for org membership and roles; Clerk is used for identity/authentication only, not Clerk Organizations.
 
@@ -66,8 +66,8 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 ## Messaging — Email (Resend) (Task 6) — USER ACTION, start early
 
 1. In the Resend dashboard (resend.com), add and verify the sending domain: Resend generates SPF and DKIM DNS records — add exactly the records shown in Resend's domain-verification screen to the domain's DNS provider. (Exact record values are per-account/per-domain and shown only in the Resend dashboard at verification time — copy them from there, not from this doc.)
-2. Once verified, create a production API key and paste it into Vercel → Settings → Environment Variables → Production as `RESEND_API_KEY`.
-3. Configure a Resend webhook (for delivery/bounce/open events) pointing at `/api/webhooks/resend` (reserved path for Phase 4 — not implemented yet, this is just registering the endpoint). Copy the webhook signing secret into Vercel as `RESEND_WEBHOOK_SECRET`.
+2. Once verified, create a production API key and paste it into Cloudflare Pages → Settings → Environment Variables → Production as `RESEND_API_KEY`.
+3. Configure a Resend webhook (for delivery/bounce/open events) pointing at `/api/webhooks/resend` (reserved path for Phase 4 — not implemented yet, this is just registering the endpoint). Copy the webhook signing secret into Cloudflare Pages as `RESEND_WEBHOOK_SECRET`.
 
 **Status:** ⬜ pending user action.
 
@@ -82,7 +82,7 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
    - Templates submitted on: `TBD`
    - Approval status: `TBD`
 5. **Fallback decision:** if template approval has not completed within 2 weeks of submission, switch to Twilio WhatsApp as the provider behind the same `ChannelProvider` interface (ADR-004) — record that switch as an ADR-004 addendum here if it happens.
-6. Once approved, copy `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` into Vercel envs; generate and record a `WHATSAPP_WEBHOOK_VERIFY_TOKEN` for the webhook subscription.
+6. Once approved, copy `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` into Cloudflare Pages envs; generate and record a `WHATSAPP_WEBHOOK_VERIFY_TOKEN` for the webhook subscription.
 
 **Status:** ⬜ pending user action (templates not yet submitted).
 
@@ -93,33 +93,33 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 ### Anthropic (AI assistant, Phase 6)
 
 1. Create an API key at console.anthropic.com.
-2. Paste into Vercel envs as `ANTHROPIC_API_KEY` (Production + Preview).
+2. Paste into Cloudflare Pages envs as `ANTHROPIC_API_KEY` (Production + Preview).
 
 **Status:** ⬜ pending.
 
 ### Inngest (background jobs, production)
 
 1. In the Inngest dashboard, create/promote a production app for InvoicePilot (dev mode is already integrated locally).
-2. Copy the production event key and signing key into Vercel as `INNGEST_EVENT_KEY` (already used in dev) and `INNGEST_SIGNING_KEY`.
+2. Copy the production event key and signing key into Cloudflare Pages as `INNGEST_EVENT_KEY` (already used in dev) and `INNGEST_SIGNING_KEY`.
 
 **Status:** ⬜ pending.
 
 ### Upstash (rate limits + assistant budgets)
 
-1. Create a production Redis database at upstash.com (region close to Vercel deployment region for latency).
-2. Copy the REST URL and token into Vercel as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
+1. Create a production Redis database at upstash.com (region close to the Cloudflare Pages deployment region for latency).
+2. Copy the REST URL and token into Cloudflare Pages as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
 
 **Status:** ⬜ pending.
 
 ### Sentry (observability)
 
 1. Create a Sentry project for this Next.js app at sentry.io.
-2. Copy the DSN into Vercel as `SENTRY_DSN`; create an auth token (Settings → Auth Tokens) for CI source-map upload, store as `SENTRY_AUTH_TOKEN` (GitHub Actions secret + Vercel).
+2. Copy the DSN into Cloudflare Pages as `SENTRY_DSN`; create an auth token (Settings → Auth Tokens) for CI source-map upload, store as `SENTRY_AUTH_TOKEN` (GitHub Actions secret + Cloudflare Pages).
 
 **Status:** ⬜ pending.
 
 ### Agent verification (all four)
 
-Once keys are in place, run `vercel env ls production` and `vercel env ls preview` and tick each variable's cell in `docs/ENVIRONMENT.md`'s Legend column.
+Once keys are in place, check the Cloudflare dashboard → Settings → Environment Variables for Production and Preview and tick each variable's cell in `docs/ENVIRONMENT.md`'s Legend column.
 
 ---

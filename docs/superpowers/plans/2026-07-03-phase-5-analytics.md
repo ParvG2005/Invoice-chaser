@@ -1109,6 +1109,8 @@ git commit -m "feat(analytics): stock valuation, movement trend, low/dead stock 
 - Consumes: `analyticsService` (Tasks 3–7), `withApiHandler`/`successResponse` (existing).
 - Produces: `GET /api/analytics/{headline,aging?side=,trend,cashflow,parties,stock}` returning `ApiSuccess<T>` with the Task 1 types; `analyticsCacheTag(organizationId)` used by mutating services to invalidate.
 
+⚠️ **Workers-runtime verification (ADR-001):** hosting is Cloudflare Pages via the OpenNext Cloudflare adapter, not Vercel. `unstable_cache`/`revalidateTag` rely on Next.js's Data Cache, which on OpenNext Cloudflare needs an explicit incremental-cache binding (KV or R2) to actually persist/invalidate across requests — it does not "just work" the way it does on Vercel by default. Confirm the adapter's cache-handler setup is in place and that `revalidateTag` actually invalidates on Cloudflare before relying on this for correctness; if it doesn't hold up, fall back to a plain in-memory/Upstash-backed TTL cache keyed the same way (`analytics:{organizationId}:{key}`) instead of `next/cache` primitives.
+
 - [ ] **Step 1: Write `src/lib/cache/analytics-cache.ts`:**
 
 ```typescript
