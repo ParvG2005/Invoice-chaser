@@ -4,17 +4,21 @@ Status of Tasks 1-9 against `docs/superpowers/plans/2026-07-03-phase-0-architect
 
 ## Task status
 
+_Last updated 2026-07-04 — see `docs/setup/PROVISIONING.md` for full detail behind every row below._
+
 | Task | Status | Evidence |
 |---|---|---|
 | 1. Architecture Decision Records | ✅ Done | `docs/architecture/ADR-001..005.md`, `docs/architecture/README.md` |
-| 2. Environment & Secrets Matrix | ✅ Done | `docs/ENVIRONMENT.md`, `.env.example` |
-| 3. CI Skeleton | ✅ Done | `.github/workflows/ci.yml`, `.nvmrc`, `package.json` engines/typecheck; verified locally and via 4/4 green GitHub Actions runs on `main`. Caveat: no PR-triggered run and no real `CI_CLERK_*` secrets exercised yet (plan Step 4 called for a draft PR + real dev keys) — see Open risk 6 |
-| 4. Database & Hosting Provisioning | 🟡 Partial | DB done — existing Supabase project "Invoice Chaser" adopted (`docs/setup/PROVISIONING.md`). Cloudflare Pages linkage + preview-DB choice: open, USER ACTION |
-| 5. Auth (Clerk) Production Instance | 🟡 Partial | Decision recorded (in-app org model, Clerk for identity). Instance creation itself: open, USER ACTION |
-| 6. Messaging Providers (Resend + WhatsApp) | 🟡 Partial | Instructions + 4 draft templates ready (`docs/setup/WHATSAPP_TEMPLATES.md`). Domain verification, account creation, template submission: open, USER ACTION |
-| 7. Remaining Services (Anthropic, Inngest, Upstash, Sentry) | 🟡 Partial | Instructions ready. Account creation: open, USER ACTION |
-| 8. Stitch Project & Design System | 🟡 Partial | Project + design system + pilot Dashboard screen created (`docs/design/DESIGN_SYSTEM.md`, `docs/design/SCREEN_INVENTORY.md`). User design-approval sign-off: open |
-| 9. Tally Fixtures & Export Runbook | 🟡 Partial | Runbook ready (`docs/TALLY.md`), fixtures README scaffolded. Real export files: not yet delivered, USER ACTION |
+| 2. Environment & Secrets Matrix | ✅ Done | `docs/ENVIRONMENT.md`, `.env.example` — legend refreshed 2026-07-04 to reflect what's actually live |
+| 3. CI Skeleton | ✅ Done | `.github/workflows/ci.yml`, `.nvmrc`, `package.json` engines/typecheck. Caveat unchanged: no PR-triggered run and no real `CI_CLERK_*` secrets exercised yet — see Open risk 6 |
+| 4. Database & Hosting Provisioning | ✅ **Done** (was 🟡) | DB: existing Supabase "Invoice Chaser" project adopted for all environments. Hosting: native Cloudflare Worker `invoicechaser` (OpenNext), live at `https://invoicechaser.invoicepilot.workers.dev`, `DATABASE_URL`/`DIRECT_URL` set as Worker secrets, smoke-tested end-to-end (200s, correct Clerk init, expected 404 on unauthenticated API) |
+| 5. Auth (Clerk) Production Instance | 🟡 Partial, correctly diagnosed (was vaguely 🟡) | Dev instance (`refined-collie-21`) works correctly in the production deployment. Real Clerk **production** instance is genuinely blocked — needs a custom domain you own to add 5 required CNAME records (`workers.dev` DNS isn't yours to edit). Deliberately paused, not forgotten. Also discovered & fixed: the app was originally wired to a different, inaccessible Clerk instance (`exotic-polliwog-92`) from initial project scaffolding — switched to the one actually manageable now |
+| 6. Messaging Providers (Resend + WhatsApp) | 🟡 Partial (email path resolved, WhatsApp unchanged) | **Email: ✅ done** — decided to keep the existing Gmail SMTP path (Resend deferred indefinitely, no domain owned); found and fixed a real bug (`SMTP_PORT=469`, an invalid port that would have broken sending) along the way; all 5 SMTP vars live as Worker secrets. **WhatsApp: ⬜ unchanged** — Meta Business Manager account, template submission still open, USER ACTION |
+| 7. Remaining Services (Anthropic, Inngest, Upstash, Sentry) | 🟡 Partial, 3 of 4 done | **Anthropic: ✅**, **Upstash: ✅**, **Inngest: ✅** (production app created, synced, both keys live) — all set as Worker secrets 2026-07-04. **Sentry: ⬜, explicitly deprioritized to last** per user decision — not blocking anything |
+| 8. Stitch Project & Design System | 🟡 Partial (unchanged) | Project + design system + pilot Dashboard screen created (`docs/design/DESIGN_SYSTEM.md`, `docs/design/SCREEN_INVENTORY.md`). User design-approval sign-off: still open |
+| 9. Tally Fixtures & Export Runbook | 🟡 Partial (unchanged) | Runbook ready (`docs/TALLY.md`), fixtures README scaffolded. Real export files: not yet delivered, USER ACTION |
+
+**Not part of the original Phase 0 task list, done opportunistically:** a small Phase 4 feature (manual "send from your own email" via Gmail/mailto compose-link buttons) was planned and fully implemented on branch `feat/manual-email-compose-link` — 3 commits, all task/final reviews clean, ship-ready. See `docs/superpowers/plans/2026-07-04-manual-email-compose-link.md`. This is ahead-of-schedule Phase 4 work, not a Phase 0 item — noted here only because it happened in the same session.
 
 ## Open risks
 

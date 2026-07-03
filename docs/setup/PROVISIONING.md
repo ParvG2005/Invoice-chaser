@@ -112,10 +112,12 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 
 ### Sentry (observability)
 
-1. Create a Sentry project for this Next.js app at sentry.io.
-2. Copy the DSN into Cloudflare Pages as `SENTRY_DSN`; create an auth token (Settings → Auth Tokens) for CI source-map upload, store as `SENTRY_AUTH_TOKEN` (GitHub Actions secret + Cloudflare Pages).
+**Decision (2026-07-04):** explicitly deprioritized — deferred to last, after everything else in Phase 0. Not a blocker for anything else.
 
-**Status:** ⬜ pending.
+1. Create a Sentry project for this Next.js app at sentry.io.
+2. Copy the DSN into the `invoicechaser` Worker (`wrangler secret put`) as `SENTRY_DSN`; create an auth token (Settings → Auth Tokens) for CI source-map upload, store as `SENTRY_AUTH_TOKEN` (GitHub Actions secret + Worker secret).
+
+**Status:** ⬜ pending, deprioritized (last).
 
 ### Agent verification (all four)
 
