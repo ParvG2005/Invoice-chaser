@@ -60,3 +60,28 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 **Status:** ⬜ pending user action.
 
 ---
+
+## Messaging — Email (Resend) (Task 6) — USER ACTION, start early
+
+1. In the Resend dashboard (resend.com), add and verify the sending domain: Resend generates SPF and DKIM DNS records — add exactly the records shown in Resend's domain-verification screen to the domain's DNS provider. (Exact record values are per-account/per-domain and shown only in the Resend dashboard at verification time — copy them from there, not from this doc.)
+2. Once verified, create a production API key and paste it into Vercel → Settings → Environment Variables → Production as `RESEND_API_KEY`.
+3. Configure a Resend webhook (for delivery/bounce/open events) pointing at `/api/webhooks/resend` (reserved path for Phase 4 — not implemented yet, this is just registering the endpoint). Copy the webhook signing secret into Vercel as `RESEND_WEBHOOK_SECRET`.
+
+**Status:** ⬜ pending user action.
+
+## Messaging — WhatsApp Cloud API (Task 6) — USER ACTION, start early (longest lead time)
+
+1. Create a Meta Business Manager account (business.facebook.com) if one doesn't already exist for this business.
+2. Under Meta for Developers, create a WhatsApp Business app, register a phone number for it.
+3. Submit the four message templates in `docs/setup/WHATSAPP_TEMPLATES.md` for approval (transactional category — required for reliability, since Meta places heavier restrictions/review on marketing-category templates).
+4. Record here once done:
+   - App ID: `TBD`
+   - Phone number ID: `TBD`
+   - Templates submitted on: `TBD`
+   - Approval status: `TBD`
+5. **Fallback decision:** if template approval has not completed within 2 weeks of submission, switch to Twilio WhatsApp as the provider behind the same `ChannelProvider` interface (ADR-004) — record that switch as an ADR-004 addendum here if it happens.
+6. Once approved, copy `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` into Vercel envs; generate and record a `WHATSAPP_WEBHOOK_VERIFY_TOKEN` for the webhook subscription.
+
+**Status:** ⬜ pending user action (templates not yet submitted).
+
+---
