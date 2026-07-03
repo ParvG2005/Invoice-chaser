@@ -32,6 +32,7 @@ Legend: ✅ set · ⬜ not yet set · — not applicable to that environment.
 | `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API (Task 6) | ⬜ | ⬜ | ⬜ | Meta Business Manager (system user token) |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | WhatsApp Cloud API webhook (Task 6) | ⬜ | ⬜ | ⬜ | Self-generated, registered in Meta webhook config |
 | `ANTHROPIC_API_KEY` | AI assistant (Task 7 / Phase 6) | ⬜ | ⬜ | ⬜ | console.anthropic.com |
+| `ANTHROPIC_MODEL` | AI assistant model selection (Task 7 / Phase 6) | ⬜ | ⬜ | ⬜ | Config value, not a secret — default `claude-sonnet-5` for now; revisit at Phase 6 build time against then-current model lineup/pricing |
 | `INNGEST_SIGNING_KEY` | Background jobs, production (Task 7) | — | ⬜ | ⬜ | Inngest dashboard → production app |
 | `SENTRY_DSN` | Error tracking (Task 7) | ⬜ | ⬜ | ⬜ | sentry.io project settings |
 | `SENTRY_AUTH_TOKEN` | Sentry release/source-map upload (Task 7, CI) | — | ⬜ | ⬜ | sentry.io → Auth Tokens |

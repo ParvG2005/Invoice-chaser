@@ -93,9 +93,10 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 ### Anthropic (AI assistant, Phase 6)
 
 1. Create an API key at console.anthropic.com.
-2. Paste into Cloudflare Pages envs as `ANTHROPIC_API_KEY` (Production + Preview).
+2. Paste into Cloudflare Pages envs as `ANTHROPIC_API_KEY` (Production + Preview) once the project is linked; for now, add the real key to a local `.env` (gitignored) for early testing.
+3. **Model decision (2026-07-04):** `ANTHROPIC_MODEL=claude-sonnet-5` for now. Revisit at Phase 6 build time against the then-current model lineup/pricing — this is a placeholder-for-now choice, not a load-bearing architecture decision, so no ADR.
 
-**Status:** ⬜ pending.
+**Status:** 🟡 key being added locally by user; Cloudflare Pages env placement still pending (blocked on Task 4's Cloudflare Pages link).
 
 ### Inngest (background jobs, production)
 
