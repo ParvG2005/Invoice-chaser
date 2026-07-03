@@ -20,28 +20,24 @@ Running log of external services provisioned for InvoicePilot, who did it, and w
 
 **ADR-001 addendum:** project already existed prior to Phase 0 (created 2026-07-03); Phase 0 adopts it as the single source of truth for `DATABASE_URL`/`DIRECT_URL` rather than provisioning a new Neon or second Supabase project.
 
-### Preview database — open decision, USER ACTION
+### Preview database — decided 2026-07-04
 
-Supabase branching (`create_branch`) is a paid/billing-relevant operation (requires cost confirmation) and the initial `list_branches` call returned a permissions error — branching may not be enabled on this project's plan tier. Two options, user to choose and record here:
-1. Enable Supabase branching (requires appropriate plan tier) and create a `preview` branch — agent can then create it via Supabase MCP once cost is confirmed.
-2. Provision a second, separate Supabase project dedicated to preview/staging (simpler, no branching-plan dependency).
+**Decision:** reuse the main Supabase "Invoice Chaser" project for preview too (no branch, no second project). Supabase branching requires a paid-plan cost confirmation and the initial `list_branches` call returned a permissions error, so it's not enabled on this plan tier. Revisit real branch-based previews later once there's a cost/isolation reason to.
 
-**Status:** ⬜ pending user decision.
+**Status:** ✅ done (decision recorded; using main DB for all environments for now).
 
-### Hosting — Cloudflare Pages — USER ACTION
+### Hosting — Cloudflare Workers (via OpenNext adapter) — done
 
-**Decision (amended 2026-07-04, ADR-001):** Cloudflare Pages, not Vercel. No Cloudflare Pages project is linked yet.
+**Decision (amended 2026-07-04, ADR-001):** Cloudflare (not Vercel). Deployed as a native Worker (Workers Builds Git integration), not the classic Pages product — this is the OpenNext-recommended path and functionally equivalent for this project's needs.
 
-1. Add the OpenNext Cloudflare adapter to the app before first deploy: `npm i -D @opennextjs/cloudflare` (this is the one exception to Phase 0's "no `src/`/dependency changes" rule that must happen — track it as the first item of Phase 1's framework-upgrade step, not done in Phase 0 itself). Follow the adapter's `wrangler.jsonc`/`open-next.config.ts` setup for Next.js App Router.
-2. In the Cloudflare dashboard → Workers & Pages → Create → Pages, connect this GitHub repo. Build command: the OpenNext build command from the adapter docs (not the default `next build`); output directory per adapter config.
-3. Enable preview deployments for branches/PRs (Cloudflare Pages does this per-branch by default).
-4. Once linked, set `DATABASE_URL` and `DIRECT_URL` in Cloudflare Pages → Project → Settings → Environment Variables:
-   - **Production:** Supabase "Invoice Chaser" pooled (port 6543) / direct (port 5432) connection strings — get exact strings from Supabase dashboard → Project Settings → Database → Connection string.
-   - **Preview:** connection strings for whichever preview-DB option is chosen above.
-5. Validate Prisma + Clerk middleware actually run under Cloudflare's Workers runtime (not full Node.js) — this is a real risk called out in ADR-001's Consequences, not a formality. Confirm with a smoke test before treating hosting as done.
-6. Confirm via `wrangler pages deployment list` (Wrangler CLI) or the Cloudflare dashboard once linked, or paste confirmation back for manual verification.
+1. ✅ OpenNext Cloudflare adapter added (`@opennextjs/cloudflare`), `wrangler.jsonc` + `open-next.config.ts` configured.
+2. ✅ Worker `invoicechaser` connected to GitHub repo (`ParvG2005/Invoice-chaser`) via Cloudflare's Git integration; build command `npx opennextjs-cloudflare build`, deploy command `npx wrangler deploy`.
+3. ✅ Account `workers.dev` subdomain registered: `invoicepilot.workers.dev`. Live URL: `https://invoicechaser.invoicepilot.workers.dev`.
+4. ✅ `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` set as Worker secrets (`wrangler secret put`, verified via `wrangler secret list --name invoicechaser`) — same values for all environments per the preview-DB decision above. (Clerk keys were missed initially and caused a 500 — caught by the smoke test below.)
+5. ✅ Smoke test (2026-07-04): `GET /` → 200 with Clerk initialized (`x-clerk-auth-status: signed-out`); `GET /sign-in` → 200; `GET /api/dashboard/stats` (unauthenticated) → 404, which is Clerk's expected `auth.protect()` behavior for non-page requests, not an error. Confirms Prisma + Clerk middleware work correctly under Cloudflare's Workers runtime.
+6. Preview deployments: not yet configured for non-main branches/PRs (Workers Builds' per-branch preview behavior needs separate verification if/when needed).
 
-**Status:** ⬜ pending user action.
+**Status:** ✅ done.
 
 ### Migration workflow decision
 
@@ -51,25 +47,27 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 
 ## Auth — Clerk production instance (Task 5) — USER ACTION
 
-1. In the Clerk dashboard (clerk.com), create a **production instance** for InvoicePilot (the app currently uses a dev instance/keys).
-2. Once the production domain is known (from the Cloudflare Pages setup above), configure it under Clerk → Domains for the production instance.
-3. Copy the production `Publishable key` and `Secret key` into Cloudflare Pages → Settings → Environment Variables → **Production** as `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` (see `docs/ENVIRONMENT.md`).
-4. Keep the existing dev-instance keys for local dev and Cloudflare Pages Preview — do not mix prod/dev Clerk keys across environments.
-5. Agent verification: confirm both Clerk vars via the Cloudflare dashboard → Settings → Environment Variables (no CLI list-by-value equivalent to `vercel env ls`).
+**Correction (2026-07-04):** the app was originally wired to a Clerk dev instance `exotic-polliwog-92.clerk.accounts.dev` from the repo's initial commit — that instance is not visible under the Clerk account currently in use (`parvmahangoyal2005@gmail.com`, dashboard app "My Application" / dev instance `refined-collie-21.clerk.accounts.dev`), likely created under a different login during original project scaffolding. Since it can't be managed from the current account, the project has been switched to `refined-collie-21` as the canonical Clerk app going forward — local `.env` and the Cloudflare Worker secrets both updated and redeployed; verified live (`GET /` 200 with correct key, `GET /sign-in` 200, unauthenticated `GET /api/dashboard/stats` correctly 404s).
+
+1. A **production instance** for `refined-collie-21` (app `app_3Dzk5xhtTxUnGABUZi1GNXyjcYu`) was created via `clerk deploy`, targeting domain `invoicechaser.invoicepilot.workers.dev` — but it's **stuck in `domain_pending`** and cannot complete: Clerk needs 5 CNAME records added under that domain (`clerk.`, `accounts.`, `clkmail.`, two `_domainkey` records), and `workers.dev` is Cloudflare-owned, so there's no DNS control to add them. Production Clerk requires a **real custom domain you own**, added to Cloudflare as a DNS zone.
+2. **Decision (2026-07-04):** paused — continue using the `refined-collie-21` **dev** instance/keys for now (fully functional for current purposes). Revisit once a real custom domain is acquired.
+3. Google OAuth was prompted during `clerk deploy` (not currently used anywhere in this app — only email/password is wired up) — skipped/deferred, not configured.
 
 **Decision recorded (per parent plan §0.2):** organization modeling stays in-app — the existing `Organization`/`OrganizationMember` Prisma tables remain the source of truth for org membership and roles; Clerk is used for identity/authentication only, not Clerk Organizations.
 
-**Status:** ⬜ pending user action.
+**Status:** 🟡 paused — dev instance working correctly in production deployment; real production instance blocked on owning a custom domain.
 
 ---
 
-## Messaging — Email (Resend) (Task 6) — USER ACTION, start early
+## Messaging — Email (Task 6)
 
-1. In the Resend dashboard (resend.com), add and verify the sending domain: Resend generates SPF and DKIM DNS records — add exactly the records shown in Resend's domain-verification screen to the domain's DNS provider. (Exact record values are per-account/per-domain and shown only in the Resend dashboard at verification time — copy them from there, not from this doc.)
-2. Once verified, create a production API key and paste it into Cloudflare Pages → Settings → Environment Variables → Production as `RESEND_API_KEY`.
-3. Configure a Resend webhook (for delivery/bounce/open events) pointing at `/api/webhooks/resend` (reserved path for Phase 4 — not implemented yet, this is just registering the endpoint). Copy the webhook signing secret into Cloudflare Pages as `RESEND_WEBHOOK_SECRET`.
+**Decision (2026-07-04):** no custom domain is owned yet, so Resend domain verification is deferred indefinitely. The app's actual, active email path is **Nodemailer over Gmail SMTP** (`src/lib/email/index.ts` → `createNodemailerProvider`), sending from the user's personal Gmail address (`parvmahangoyal2005@gmail.com`) — Resend was never wired into the codebase at all (only referenced in this doc as originally-planned future work). Considered and explicitly deferred: per-signed-in-user sender email (each org connecting its own email account) — real feature scope, not a config change; revisit at Phase 4 (Communications) if wanted.
 
-**Status:** ⬜ pending user action.
+1. ✅ `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL` set as `invoicechaser` Worker secrets (2026-07-04).
+2. **Bug found and fixed:** `.env` had `SMTP_PORT=469` (not a valid SMTP port — Gmail listens on 465/587). `src/lib/email/providers/nodemailer.ts` sets `secure: port === 465`, so port 469 would have connected on the wrong port with the wrong TLS mode and failed outright. Corrected to `465` in both `.env` and the Worker secret.
+3. Resend (`RESEND_API_KEY`) remains set as a Worker secret from earlier but is unused by the codebase — harmless to leave, revisit only if/when a domain is acquired and Resend is actually wired in.
+
+**Status:** ✅ done (Gmail SMTP path, shared sender for all orgs) — real domain + Resend explicitly deferred, not blocking.
 
 ## Messaging — WhatsApp Cloud API (Task 6) — USER ACTION, start early (longest lead time)
 
@@ -96,21 +94,21 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 2. Paste into Cloudflare Pages envs as `ANTHROPIC_API_KEY` (Production + Preview) once the project is linked; for now, add the real key to a local `.env` (gitignored) for early testing.
 3. **Model decision (2026-07-04):** `ANTHROPIC_MODEL=claude-sonnet-5` for now. Revisit at Phase 6 build time against the then-current model lineup/pricing — this is a placeholder-for-now choice, not a load-bearing architecture decision, so no ADR.
 
-**Status:** 🟡 key being added locally by user; Cloudflare Pages env placement still pending (blocked on Task 4's Cloudflare Pages link).
+**Status:** ✅ key set as a Worker secret (`ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`), verified via `wrangler secret list --name invoicechaser` (2026-07-04).
 
 ### Inngest (background jobs, production)
 
-1. In the Inngest dashboard, create/promote a production app for InvoicePilot (dev mode is already integrated locally).
-2. Copy the production event key and signing key into Cloudflare Pages as `INNGEST_EVENT_KEY` (already used in dev) and `INNGEST_SIGNING_KEY`.
+1. ✅ Production Inngest app "invoicepilot" created at app.inngest.com, synced against `https://invoicechaser.invoicepilot.workers.dev/api/inngest` (initial sync failed with 401/signature-verification error until `INNGEST_SIGNING_KEY` was set on the Worker — then succeeded).
+2. ✅ `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` set as Worker secrets and in local `.env` (2026-07-04).
 
-**Status:** ⬜ pending.
+**Status:** ✅ done.
 
 ### Upstash (rate limits + assistant budgets)
 
-1. Create a production Redis database at upstash.com (region close to the Cloudflare Pages deployment region for latency).
-2. Copy the REST URL and token into Cloudflare Pages as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
+1. Create a production Redis database at upstash.com (region close to the Cloudflare Worker's deployment region for latency).
+2. Copy the REST URL and token into the `invoicechaser` Worker (`wrangler secret put`) as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
 
-**Status:** ⬜ pending.
+**Status:** ✅ key set as a Worker secret, verified via `wrangler secret list --name invoicechaser` (2026-07-04). Note: this reuses whatever Upstash database was already in local dev — worth confirming it's actually a production-grade instance, not a throwaway dev one, before relying on it.
 
 ### Sentry (observability)
 
