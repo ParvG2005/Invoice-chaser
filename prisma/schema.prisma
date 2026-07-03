@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum InvoiceStatus {
+  PENDING
+  OVERDUE
+  PAID
+}
+
+enum EmailTone {
+  FRIENDLY
+  PROFESSIONAL
+  FIRM
+}
+
+enum ReminderStatus {
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+enum EmailLogStatus {
+  QUEUED
+  SENT
+  FAILED
+  BOUNCED
+}
+
+model User {
+  id        String    @id @default(uuid())
+  clerkId   String    @unique @map("clerk_id")
+  email     String
+  name      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  memberships OrganizationMember[]
+
+  @@index([clerkId])
+  @@index([email])
+  @@map("users")
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  members          OrganizationMember[]
+  invoices         Invoice[]
+  reminderSettings ReminderSettings?
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  role           String   @default("owner")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  clientName     String        @map("client_name")
+  clientEmail    String        @map("client_email")
+  clientPhone    String?       @map("client_phone")
+  amount         Decimal       @db.Decimal(12, 2)
+  dueDate        DateTime      @map("due_date")
+  invoiceNumber  String        @map("invoice_number")
+  notes          String?
+  status         InvoiceStatus @default(PENDING)
+  paidAt         DateTime?     @map("paid_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reminders    Reminder[]
+  emailLogs    EmailLog[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([status])
+  @@map("invoices")
+}
+
+model ReminderSettings {
+  id             String    @id @default(uuid())
+  organizationId String    @unique @map("organization_id")
+  reminderDays   Int[]     @default([3, 7, 14]) @map("reminder_days")
+  emailTone      EmailTone @default(PROFESSIONAL) @map("email_tone")
+  autoSend       Boolean   @default(true) @map("auto_send")
+  whatsappEnabled Boolean   @default(false) @map("whatsapp_enabled")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_settings")
+}
+
+model Reminder {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  invoiceId      String         @map("invoice_id")
+  scheduledFor   DateTime       @map("scheduled_for")
+  sentAt         DateTime?      @map("sent_at")
+  status         ReminderStatus @default(SCHEDULED)
+  tone           EmailTone      @default(PROFESSIONAL)
+  dayOffset      Int            @map("day_offset")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  invoice      Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  emailLogs    EmailLog[]
+  aiGeneration AiGeneration?
+
+  @@index([organizationId, status])
+  @@index([invoiceId])
+  @@index([invoiceId, dayOffset, status])
+  @@index([scheduledFor, status])
+  @@map("reminders")
+}
+
+model EmailLog {
+  id             String         @id @default(uuid())
+  organizationId String         @map("organization_id")
+  invoiceId      String?        @map("invoice_id")
+  reminderId     String?        @map("reminder_id")
+  toEmail        String         @map("to_email")
+  subject        String
+  bodyHtml       String         @map("body_html")
+  status         EmailLogStatus @default(QUEUED)
+  providerId     String?        @map("provider_id")
+  errorMessage   String?        @map("error_message")
+  sentAt         DateTime?      @map("sent_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  reminder Reminder? @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([invoiceId])
+  @@map("email_logs")
+}
+
+model AiGeneration {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  reminderId     String?   @unique @map("reminder_id")
+  model          String
+  prompt         String    @db.Text
+  response       String    @db.Text
+  tone           EmailTone
+  tokensUsed     Int?      @map("tokens_used")
+  latencyMs      Int?      @map("latency_ms")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  reminder Reminder? @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@map("ai_generations")
+}

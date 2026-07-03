@@ -1,0 +1,21 @@
+clientName,clientEmail,clientPhone,amount,dueDate,invoiceNumber,notes
+Acme Corp,parvgoyal58@gmail.com,+919876543210,1500.00,2026-06-01,INV-1001,Monthly retainer fee
+Globex Inc,parvgoyal58@gmail.com,+919876543211,450.50,2026-06-15,INV-1002,Website maintenance
+Stark Industries,parvgoyal58@gmail.com,+919876543212,9000.00,2026-06-10,INV-1003,Security consulting services
+Wayne Enterprises,parvgoyal58@gmail.com,+919876543213,275.00,2026-04-10,INV-1004,Overdue domain renewal
+Umbrella Corp,parvgoyal58@gmail.com,+919876543214,3200.75,2026-04-15,INV-1005,Lab equipment software update
+Oscorp,parvgoyal58@gmail.com,+919876543215,1250.00,2026-04-20,INV-1006,Biotech supplies
+InGen,parvgoyal58@gmail.com,+919876543216,8500.00,2026-06-05,INV-1007,Fossil extraction consulting
+Cyberdyne,parvgoyal58@gmail.com,+919876543217,12000.00,2026-03-15,INV-1008,AI mainframe upgrade
+Weyland-Yutani,parvgoyal58@gmail.com,+919876543218,4500.00,2026-06-25,INV-1009,Spacecraft maintenance
+Tyrell Corp,parvgoyal58@gmail.com,+919876543219,320.00,2026-06-30,INV-1010,Replicant repair parts
+LexCorp,parvgoyal58@gmail.com,+919876543220,780.00,2026-04-01,INV-1011,PR services
+Massive Dynamic,parvgoyal58@gmail.com,+919876543221,1900.50,2026-05-01,INV-1012,Fringe science equipment
+Aperture Science,parvgoyal58@gmail.com,+919876543222,640.25,2026-07-01,INV-1013,Portal gun calibration
+Black Mesa,parvgoyal58@gmail.com,+919876543223,995.00,2026-06-18,INV-1014,Hazmat suit replacements
+Dunder Mifflin,parvgoyal58@gmail.com,+919876543224,150.00,2026-04-25,INV-1015,Paper supply Q2
+Pied Piper,parvgoyal58@gmail.com,+919876543225,4300.00,2026-05-10,INV-1016,Compression algorithm licensing
+Hooli,parvgoyal58@gmail.com,+919876543226,2100.00,2026-07-15,INV-1017,Cloud hosting fees
+Los Pollos Hermanos,parvgoyal58@gmail.com,+919876543227,85.00,2026-05-05,INV-1018,Catering services
+Vandelay Industries,parvgoyal58@gmail.com,+919876543228,500.00,2026-06-20,INV-1019,Latex imports
+Kramerica Industries,parvgoyal58@gmail.com,+919876543229,120.00,2026-05-12,INV-1020,Oil bladder system

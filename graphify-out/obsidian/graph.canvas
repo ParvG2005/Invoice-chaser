@@ -1,0 +1,5182 @@
+{
+  "nodes": [
+    {
+      "id": "g0",
+      "type": "group",
+      "label": "Community 0",
+      "x": 0,
+      "y": 0,
+      "width": 1980,
+      "height": 2720,
+      "color": "1"
+    },
+    {
+      "id": "n_types_index_apierror",
+      "type": "file",
+      "file": "ApiError.md",
+      "x": 20,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_apiresponse",
+      "type": "file",
+      "file": "ApiResponse.md",
+      "x": 220,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_apisuccess",
+      "type": "file",
+      "file": "ApiSuccess.md",
+      "x": 420,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_layout_app_sidebar_appsidebar",
+      "type": "file",
+      "file": "AppSidebar().md",
+      "x": 20,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_badge_badge",
+      "type": "file",
+      "file": "Badge().md",
+      "x": 220,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_badge_badgeprops",
+      "type": "file",
+      "file": "BadgeProps.md",
+      "x": 420,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_button_button",
+      "type": "file",
+      "file": "Button.md",
+      "x": 20,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_button_buttonprops",
+      "type": "file",
+      "file": "ButtonProps.md",
+      "x": 220,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card_card",
+      "type": "file",
+      "file": "Card.md",
+      "x": 420,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card_cardcontent",
+      "type": "file",
+      "file": "CardContent.md",
+      "x": 20,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card_carddescription",
+      "type": "file",
+      "file": "CardDescription.md",
+      "x": 220,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card_cardheader",
+      "type": "file",
+      "file": "CardHeader.md",
+      "x": 420,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card_cardtitle",
+      "type": "file",
+      "file": "CardTitle.md",
+      "x": 20,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_create_invoice_dialog_createinvoicedialog",
+      "type": "file",
+      "file": "CreateInvoiceDialog().md",
+      "x": 220,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_createinvoiceinput",
+      "type": "file",
+      "file": "CreateInvoiceInput.md",
+      "x": 420,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_csv_parser_csvparseresult",
+      "type": "file",
+      "file": "CsvParseResult.md",
+      "x": 20,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_csv_upload_csvupload",
+      "type": "file",
+      "file": "CsvUpload().md",
+      "x": 220,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_dashboard_layout_dashboardlayout",
+      "type": "file",
+      "file": "DashboardLayout().md",
+      "x": 420,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_dashboard_page_dashboardpage",
+      "type": "file",
+      "file": "DashboardPage().md",
+      "x": 20,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_dashboardstats",
+      "type": "file",
+      "file": "DashboardStats.md",
+      "x": 220,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_csv_parser_field_aliases",
+      "type": "file",
+      "file": "FIELD_ALIASES.md",
+      "x": 420,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_generateemailresult",
+      "type": "file",
+      "file": "GenerateEmailResult.md",
+      "x": 20,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_import_dialog_importdialog",
+      "type": "file",
+      "file": "ImportDialog().md",
+      "x": 220,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_import_dialog_importtab",
+      "type": "file",
+      "file": "ImportTab.md",
+      "x": 420,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_input_input",
+      "type": "file",
+      "file": "Input.md",
+      "x": 20,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_invoicedto",
+      "type": "file",
+      "file": "InvoiceDto.md",
+      "x": 220,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_invoice_table_invoicetable",
+      "type": "file",
+      "file": "InvoiceTable().md",
+      "x": 420,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_invoice_table_invoicetableprops",
+      "type": "file",
+      "file": "InvoiceTableProps.md",
+      "x": 20,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_invoices_page_invoicespage",
+      "type": "file",
+      "file": "InvoicesPage().md",
+      "x": 220,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_label_label",
+      "type": "file",
+      "file": "Label.md",
+      "x": 420,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_page_landingpage",
+      "type": "file",
+      "file": "LandingPage().md",
+      "x": 20,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_import_dialog_parsedpreview",
+      "type": "file",
+      "file": "ParsedPreview.md",
+      "x": 220,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index_remindersettingsdto",
+      "type": "file",
+      "file": "ReminderSettingsDto.md",
+      "x": 420,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_select_selectcontent",
+      "type": "file",
+      "file": "SelectContent.md",
+      "x": 20,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_select_selectitem",
+      "type": "file",
+      "file": "SelectItem.md",
+      "x": 220,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_select_selecttrigger",
+      "type": "file",
+      "file": "SelectTrigger.md",
+      "x": 420,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_settings_page_settingspage",
+      "type": "file",
+      "file": "SettingsPage().md",
+      "x": 20,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_skeleton_skeleton",
+      "type": "file",
+      "file": "Skeleton().md",
+      "x": 220,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_stats_cards_statscards",
+      "type": "file",
+      "file": "StatsCards().md",
+      "x": 420,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_status_chart_statuschart",
+      "type": "file",
+      "file": "StatusChart().md",
+      "x": 20,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_switch_switch",
+      "type": "file",
+      "file": "Switch.md",
+      "x": 220,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_textarea_textarea",
+      "type": "file",
+      "file": "Textarea.md",
+      "x": 420,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_client_apifetch",
+      "type": "file",
+      "file": "apiFetch().md",
+      "x": 20,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_layout_app_sidebar",
+      "type": "file",
+      "file": "app-sidebar.tsx.md",
+      "x": 220,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_badge",
+      "type": "file",
+      "file": "badge.tsx.md",
+      "x": 420,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_badge_badgevariants",
+      "type": "file",
+      "file": "badgeVariants.md",
+      "x": 20,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_button",
+      "type": "file",
+      "file": "button.tsx.md",
+      "x": 220,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_button_buttonvariants",
+      "type": "file",
+      "file": "buttonVariants.md",
+      "x": 420,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_card",
+      "type": "file",
+      "file": "card.tsx.md",
+      "x": 20,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_client",
+      "type": "file",
+      "file": "client.ts.md",
+      "x": 220,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_utils_cn_cn",
+      "type": "file",
+      "file": "cn().md",
+      "x": 420,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_utils_cn",
+      "type": "file",
+      "file": "cn.ts.md",
+      "x": 20,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_create_invoice_dialog",
+      "type": "file",
+      "file": "create-invoice-dialog.tsx.md",
+      "x": 220,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_csv_parser",
+      "type": "file",
+      "file": "csv-parser.ts.md",
+      "x": 420,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_csv_upload",
+      "type": "file",
+      "file": "csv-upload.tsx.md",
+      "x": 20,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_csvinvoicerowschema",
+      "type": "file",
+      "file": "csvInvoiceRowSchema.md",
+      "x": 220,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_utils_currency_formatcurrency",
+      "type": "file",
+      "file": "formatCurrency().md",
+      "x": 420,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_import_dialog",
+      "type": "file",
+      "file": "import-dialog.tsx.md",
+      "x": 20,
+      "y": 1600,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_types_index",
+      "type": "file",
+      "file": "index.ts_4.md",
+      "x": 220,
+      "y": 1600,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_input",
+      "type": "file",
+      "file": "input.tsx.md",
+      "x": 420,
+      "y": 1600,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_invoice_table",
+      "type": "file",
+      "file": "invoice-table.tsx.md",
+      "x": 20,
+      "y": 1680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_label",
+      "type": "file",
+      "file": "label.tsx.md",
+      "x": 220,
+      "y": 1680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_dashboard_layout",
+      "type": "file",
+      "file": "layout.tsx.md",
+      "x": 420,
+      "y": 1680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_layout_app_sidebar_links",
+      "type": "file",
+      "file": "links.md",
+      "x": 20,
+      "y": 1760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_invoices_page",
+      "type": "file",
+      "file": "page.tsx.md",
+      "x": 220,
+      "y": 1760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_dashboard_page",
+      "type": "file",
+      "file": "page.tsx_1.md",
+      "x": 420,
+      "y": 1760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_settings_page",
+      "type": "file",
+      "file": "page.tsx_2.md",
+      "x": 20,
+      "y": 1840,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_page",
+      "type": "file",
+      "file": "page.tsx_3.md",
+      "x": 220,
+      "y": 1840,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_csv_parser_parsecsv",
+      "type": "file",
+      "file": "parseCsv().md",
+      "x": 420,
+      "y": 1840,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_csv_parser_resolvefield",
+      "type": "file",
+      "file": "resolveField().md",
+      "x": 20,
+      "y": 1920,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_select",
+      "type": "file",
+      "file": "select.tsx.md",
+      "x": 220,
+      "y": 1920,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_skeleton",
+      "type": "file",
+      "file": "skeleton.tsx.md",
+      "x": 420,
+      "y": 1920,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_stats_cards",
+      "type": "file",
+      "file": "stats-cards.tsx.md",
+      "x": 20,
+      "y": 2000,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_status_chart",
+      "type": "file",
+      "file": "status-chart.tsx.md",
+      "x": 220,
+      "y": 2000,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_invoice_table_statusvariant",
+      "type": "file",
+      "file": "statusVariant.md",
+      "x": 420,
+      "y": 2000,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_switch",
+      "type": "file",
+      "file": "switch.tsx.md",
+      "x": 20,
+      "y": 2080,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ui_textarea",
+      "type": "file",
+      "file": "textarea.tsx.md",
+      "x": 220,
+      "y": 2080,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g1",
+      "type": "group",
+      "label": "Community 1",
+      "x": 2060,
+      "y": 0,
+      "width": 1760,
+      "height": 2020,
+      "color": "2"
+    },
+    {
+      "id": "n_id_route_delete",
+      "type": "file",
+      "file": "DELETE.md",
+      "x": 2080,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_stats_route_get",
+      "type": "file",
+      "file": "GET.md",
+      "x": 2280,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_id_route_get",
+      "type": "file",
+      "file": "GET_1.md",
+      "x": 2480,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_invoices_route_get",
+      "type": "file",
+      "file": "GET_2.md",
+      "x": 2080,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_settings_route_get",
+      "type": "file",
+      "file": "GET_3.md",
+      "x": 2280,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_id_route_patch",
+      "type": "file",
+      "file": "PATCH.md",
+      "x": 2480,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_generate_email_route_post",
+      "type": "file",
+      "file": "POST.md",
+      "x": 2080,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_send_email_route_post",
+      "type": "file",
+      "file": "POST_1.md",
+      "x": 2280,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_bulk_route_post",
+      "type": "file",
+      "file": "POST_2.md",
+      "x": 2480,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_invoices_route_post",
+      "type": "file",
+      "file": "POST_3.md",
+      "x": 2080,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_trigger_route_post",
+      "type": "file",
+      "file": "POST_4.md",
+      "x": 2280,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_settings_route_put",
+      "type": "file",
+      "file": "PUT.md",
+      "x": 2480,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_reminder_remindersettingsinput",
+      "type": "file",
+      "file": "ReminderSettingsInput.md",
+      "x": 2080,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_updateinvoiceinput",
+      "type": "file",
+      "file": "UpdateInvoiceInput.md",
+      "x": 2280,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_ai_email_service_aiemailservice",
+      "type": "file",
+      "file": "aiEmailService.md",
+      "x": 2480,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_bulkcreateinvoicesschema",
+      "type": "file",
+      "file": "bulkCreateInvoicesSchema.md",
+      "x": 2080,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_mappers_computeinvoicestatus",
+      "type": "file",
+      "file": "computeInvoiceStatus().md",
+      "x": 2280,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_createinvoiceschema",
+      "type": "file",
+      "file": "createInvoiceSchema.md",
+      "x": 2480,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_utils_currency",
+      "type": "file",
+      "file": "currency.ts.md",
+      "x": 2080,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_dashboard_service",
+      "type": "file",
+      "file": "dashboard.service.ts.md",
+      "x": 2280,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_dashboard_service_dashboardservice",
+      "type": "file",
+      "file": "dashboardService.md",
+      "x": 2480,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_utils_currency_decimaltonumber",
+      "type": "file",
+      "file": "decimalToNumber().md",
+      "x": 2080,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_email_log_repository",
+      "type": "file",
+      "file": "email-log.repository.ts.md",
+      "x": 2280,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_email_log_repository_emaillogrepository",
+      "type": "file",
+      "file": "emailLogRepository.md",
+      "x": 2480,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_reminder_emailtoneschema",
+      "type": "file",
+      "file": "emailToneSchema.md",
+      "x": 2080,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_reminder_generateemailschema",
+      "type": "file",
+      "file": "generateEmailSchema.md",
+      "x": 2280,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_invoice_repository",
+      "type": "file",
+      "file": "invoice.repository.ts.md",
+      "x": 2480,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_invoice_service",
+      "type": "file",
+      "file": "invoice.service.ts.md",
+      "x": 2080,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice",
+      "type": "file",
+      "file": "invoice.ts.md",
+      "x": 2280,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_invoice_repository_invoicerepository",
+      "type": "file",
+      "file": "invoiceRepository.md",
+      "x": 2480,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_invoice_service_invoiceservice",
+      "type": "file",
+      "file": "invoiceService.md",
+      "x": 2080,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_invoicestatusschema",
+      "type": "file",
+      "file": "invoiceStatusSchema.md",
+      "x": 2280,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_send_email_route_log",
+      "type": "file",
+      "file": "log.md",
+      "x": 2480,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_trigger_route_log",
+      "type": "file",
+      "file": "log_1.md",
+      "x": 2080,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_reminder_service_log",
+      "type": "file",
+      "file": "log_8.md",
+      "x": 2280,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_mappers",
+      "type": "file",
+      "file": "mappers.ts.md",
+      "x": 2480,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_mappers_parseduedate",
+      "type": "file",
+      "file": "parseDueDate().md",
+      "x": 2080,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_reminder_repository",
+      "type": "file",
+      "file": "reminder.repository.ts.md",
+      "x": 2280,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_reminder_service",
+      "type": "file",
+      "file": "reminder.service.ts.md",
+      "x": 2480,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_reminder",
+      "type": "file",
+      "file": "reminder.ts.md",
+      "x": 2080,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_reminder_repository_reminderrepository",
+      "type": "file",
+      "file": "reminderRepository.md",
+      "x": 2280,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_reminder_service_reminderservice",
+      "type": "file",
+      "file": "reminderService.md",
+      "x": 2480,
+      "y": 1120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_reminder_remindersettingsschema",
+      "type": "file",
+      "file": "reminderSettingsSchema.md",
+      "x": 2080,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_response",
+      "type": "file",
+      "file": "response.ts.md",
+      "x": 2280,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_generate_email_route",
+      "type": "file",
+      "file": "route.ts.md",
+      "x": 2480,
+      "y": 1200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_send_email_route",
+      "type": "file",
+      "file": "route.ts_1.md",
+      "x": 2080,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_stats_route",
+      "type": "file",
+      "file": "route.ts_2.md",
+      "x": 2280,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_id_route",
+      "type": "file",
+      "file": "route.ts_4.md",
+      "x": 2480,
+      "y": 1280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_bulk_route",
+      "type": "file",
+      "file": "route.ts_5.md",
+      "x": 2080,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_invoices_route",
+      "type": "file",
+      "file": "route.ts_6.md",
+      "x": 2280,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_settings_route",
+      "type": "file",
+      "file": "route.ts_7.md",
+      "x": 2480,
+      "y": 1360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_trigger_route",
+      "type": "file",
+      "file": "route.ts_8.md",
+      "x": 2080,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_send_email_route_sendemailschema",
+      "type": "file",
+      "file": "sendEmailSchema.md",
+      "x": 2280,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_response_successresponse",
+      "type": "file",
+      "file": "successResponse().md",
+      "x": 2480,
+      "y": 1440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_mappers_toinvoicedto",
+      "type": "file",
+      "file": "toInvoiceDto().md",
+      "x": 2080,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_validations_invoice_updateinvoiceschema",
+      "type": "file",
+      "file": "updateInvoiceSchema.md",
+      "x": 2280,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_withapihandler",
+      "type": "file",
+      "file": "withApiHandler().md",
+      "x": 2480,
+      "y": 1520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g2",
+      "type": "group",
+      "label": "Community 2",
+      "x": 3900,
+      "y": 0,
+      "width": 1540,
+      "height": 1420,
+      "color": "3"
+    },
+    {
+      "id": "n_ai_index_fallbackaiprovider_complete",
+      "type": "file",
+      "file": ".complete().md",
+      "x": 3920,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini_geminiprovider_complete",
+      "type": "file",
+      "file": ".complete()_1.md",
+      "x": 4120,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq_groqprovider_complete",
+      "type": "file",
+      "file": ".complete()_2.md",
+      "x": 4320,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index_fallbackaiprovider_constructor",
+      "type": "file",
+      "file": ".constructor().md",
+      "x": 3920,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini_geminiprovider_constructor",
+      "type": "file",
+      "file": ".constructor()_1.md",
+      "x": 4120,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq_groqprovider_constructor",
+      "type": "file",
+      "file": ".constructor()_2.md",
+      "x": 4320,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_types_aicompletionrequest",
+      "type": "file",
+      "file": "AiCompletionRequest.md",
+      "x": 3920,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_types_aicompletionresponse",
+      "type": "file",
+      "file": "AiCompletionResponse.md",
+      "x": 4120,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_types_aiprovider",
+      "type": "file",
+      "file": "AiProvider.md",
+      "x": 4320,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index_fallbackaiprovider",
+      "type": "file",
+      "file": "FallbackAiProvider.md",
+      "x": 3920,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini_geminiprovider",
+      "type": "file",
+      "file": "GeminiProvider.md",
+      "x": 4120,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq_groqprovider",
+      "type": "file",
+      "file": "GroqProvider.md",
+      "x": 4320,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_logger_index_loglevel",
+      "type": "file",
+      "file": "LogLevel.md",
+      "x": 3920,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_logger_index_logger",
+      "type": "file",
+      "file": "Logger.md",
+      "x": 4120,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_ai_email_service_parsedemailcontent",
+      "type": "file",
+      "file": "ParsedEmailContent.md",
+      "x": 4320,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_types_reminderemailcontext",
+      "type": "file",
+      "file": "ReminderEmailContext.md",
+      "x": 3920,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_ai_email_service",
+      "type": "file",
+      "file": "ai-email.service.ts.md",
+      "x": 4120,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_ai_generation_repository",
+      "type": "file",
+      "file": "ai-generation.repository.ts.md",
+      "x": 4320,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_ai_generation_repository_aigenerationrepository",
+      "type": "file",
+      "file": "aiGenerationRepository.md",
+      "x": 3920,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_prompts_reminder_email_buildreminderemailprompts",
+      "type": "file",
+      "file": "buildReminderEmailPrompts().md",
+      "x": 4120,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini_creategeminiprovider",
+      "type": "file",
+      "file": "createGeminiProvider().md",
+      "x": 4320,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq_creategroqprovider",
+      "type": "file",
+      "file": "createGroqProvider().md",
+      "x": 3920,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_logger_index_createlogger",
+      "type": "file",
+      "file": "createLogger().md",
+      "x": 4120,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini",
+      "type": "file",
+      "file": "gemini.ts.md",
+      "x": 4320,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index_getaiprovider",
+      "type": "file",
+      "file": "getAiProvider().md",
+      "x": 3920,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq",
+      "type": "file",
+      "file": "groq.ts.md",
+      "x": 4120,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index",
+      "type": "file",
+      "file": "index.ts.md",
+      "x": 4320,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_logger_index",
+      "type": "file",
+      "file": "index.ts_2.md",
+      "x": 3920,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index_log",
+      "type": "file",
+      "file": "log_2.md",
+      "x": 4120,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_gemini_log",
+      "type": "file",
+      "file": "log_3.md",
+      "x": 4320,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_groq_log",
+      "type": "file",
+      "file": "log_4.md",
+      "x": 3920,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_logger_index_log",
+      "type": "file",
+      "file": "log().md",
+      "x": 4120,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_ai_email_service_parseaiemailjson",
+      "type": "file",
+      "file": "parseAiEmailJson().md",
+      "x": 4320,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_prompts_reminder_email",
+      "type": "file",
+      "file": "reminder-email.ts.md",
+      "x": 3920,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_index_setaiprovider",
+      "type": "file",
+      "file": "setAiProvider().md",
+      "x": 4120,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_prompts_reminder_email_toneinstructions",
+      "type": "file",
+      "file": "toneInstructions.md",
+      "x": 4320,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ai_types",
+      "type": "file",
+      "file": "types.ts.md",
+      "x": 3920,
+      "y": 1040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g3",
+      "type": "group",
+      "label": "Community 3",
+      "x": 5520,
+      "y": 0,
+      "width": 1320,
+      "height": 1120,
+      "color": "4"
+    },
+    {
+      "id": "n_package_devdependencies_eslint_eslintrc",
+      "type": "file",
+      "file": "@eslinteslintrc.md",
+      "x": 5540,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_tailwindcss_postcss",
+      "type": "file",
+      "file": "@tailwindcsspostcss.md",
+      "x": 5740,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_types_node",
+      "type": "file",
+      "file": "@typesnode.md",
+      "x": 5940,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_types_nodemailer",
+      "type": "file",
+      "file": "@typesnodemailer.md",
+      "x": 5540,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_types_papaparse",
+      "type": "file",
+      "file": "@typespapaparse.md",
+      "x": 5740,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_types_react",
+      "type": "file",
+      "file": "@typesreact.md",
+      "x": 5940,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_types_react_dom",
+      "type": "file",
+      "file": "@typesreact-dom.md",
+      "x": 5540,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_build",
+      "type": "file",
+      "file": "build.md",
+      "x": 5740,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_db_generate",
+      "type": "file",
+      "file": "dbgenerate.md",
+      "x": 5940,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_db_migrate",
+      "type": "file",
+      "file": "dbmigrate.md",
+      "x": 5540,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_db_push",
+      "type": "file",
+      "file": "dbpush.md",
+      "x": 5740,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_db_studio",
+      "type": "file",
+      "file": "dbstudio.md",
+      "x": 5940,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_dev",
+      "type": "file",
+      "file": "dev.md",
+      "x": 5540,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies",
+      "type": "file",
+      "file": "devDependencies.md",
+      "x": 5740,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_eslint",
+      "type": "file",
+      "file": "eslint.md",
+      "x": 5940,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_eslint_config_next",
+      "type": "file",
+      "file": "eslint-config-next.md",
+      "x": 5540,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_eslint_config_prettier",
+      "type": "file",
+      "file": "eslint-config-prettier.md",
+      "x": 5740,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_format",
+      "type": "file",
+      "file": "format.md",
+      "x": 5940,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_lint",
+      "type": "file",
+      "file": "lint.md",
+      "x": 5540,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_name",
+      "type": "file",
+      "file": "name.md",
+      "x": 5740,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package",
+      "type": "file",
+      "file": "package.json.md",
+      "x": 5940,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_postinstall",
+      "type": "file",
+      "file": "postinstall.md",
+      "x": 5540,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_prettier",
+      "type": "file",
+      "file": "prettier.md",
+      "x": 5740,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_prisma",
+      "type": "file",
+      "file": "prisma.md",
+      "x": 5940,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_private",
+      "type": "file",
+      "file": "private.md",
+      "x": 5540,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts",
+      "type": "file",
+      "file": "scripts.md",
+      "x": 5740,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_scripts_start",
+      "type": "file",
+      "file": "start.md",
+      "x": 5940,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_tailwindcss",
+      "type": "file",
+      "file": "tailwindcss.md",
+      "x": 5540,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_devdependencies_typescript",
+      "type": "file",
+      "file": "typescript.md",
+      "x": 5740,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_version",
+      "type": "file",
+      "file": "version.md",
+      "x": 5940,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g4",
+      "type": "group",
+      "label": "Community 4",
+      "x": 6920,
+      "y": 0,
+      "width": 1320,
+      "height": 1120,
+      "color": "5"
+    },
+    {
+      "id": "n_package_dependencies_clerk_nextjs",
+      "type": "file",
+      "file": "@clerknextjs.md",
+      "x": 6940,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_prisma_client",
+      "type": "file",
+      "file": "@prismaclient.md",
+      "x": 7140,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_dialog",
+      "type": "file",
+      "file": "@radix-uireact-dialog.md",
+      "x": 7340,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_dropdown_menu",
+      "type": "file",
+      "file": "@radix-uireact-dropdown-menu.md",
+      "x": 6940,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_label",
+      "type": "file",
+      "file": "@radix-uireact-label.md",
+      "x": 7140,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_select",
+      "type": "file",
+      "file": "@radix-uireact-select.md",
+      "x": 7340,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_slot",
+      "type": "file",
+      "file": "@radix-uireact-slot.md",
+      "x": 6940,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_switch",
+      "type": "file",
+      "file": "@radix-uireact-switch.md",
+      "x": 7140,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_radix_ui_react_tabs",
+      "type": "file",
+      "file": "@radix-uireact-tabs.md",
+      "x": 7340,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_tanstack_react_query",
+      "type": "file",
+      "file": "@tanstackreact-query.md",
+      "x": 6940,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_class_variance_authority",
+      "type": "file",
+      "file": "class-variance-authority.md",
+      "x": 7140,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_clsx",
+      "type": "file",
+      "file": "clsx.md",
+      "x": 7340,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_date_fns",
+      "type": "file",
+      "file": "date-fns.md",
+      "x": 6940,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies",
+      "type": "file",
+      "file": "dependencies.md",
+      "x": 7140,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_inngest",
+      "type": "file",
+      "file": "inngest.md",
+      "x": 7340,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_lucide_react",
+      "type": "file",
+      "file": "lucide-react.md",
+      "x": 6940,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_next",
+      "type": "file",
+      "file": "next.md",
+      "x": 7140,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_next_themes",
+      "type": "file",
+      "file": "next-themes.md",
+      "x": 7340,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_nodemailer",
+      "type": "file",
+      "file": "nodemailer.md",
+      "x": 6940,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_papaparse",
+      "type": "file",
+      "file": "papaparse.md",
+      "x": 7140,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_react",
+      "type": "file",
+      "file": "react.md",
+      "x": 7340,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_react_dom",
+      "type": "file",
+      "file": "react-dom.md",
+      "x": 6940,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_recharts",
+      "type": "file",
+      "file": "recharts.md",
+      "x": 7140,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_resend",
+      "type": "file",
+      "file": "resend.md",
+      "x": 7340,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_sonner",
+      "type": "file",
+      "file": "sonner.md",
+      "x": 6940,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_tailwind_merge",
+      "type": "file",
+      "file": "tailwind-merge.md",
+      "x": 7140,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_zod",
+      "type": "file",
+      "file": "zod.md",
+      "x": 7340,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_package_dependencies_zustand",
+      "type": "file",
+      "file": "zustand.md",
+      "x": 6940,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g5",
+      "type": "group",
+      "label": "Community 5",
+      "x": 0,
+      "y": 2800,
+      "width": 1320,
+      "height": 1020,
+      "color": "6"
+    },
+    {
+      "id": "n_api_errors_apperror_constructor",
+      "type": "file",
+      "file": ".constructor()_3.md",
+      "x": 20,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_unauthorizederror_constructor",
+      "type": "file",
+      "file": ".constructor()_4.md",
+      "x": 220,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_notfounderror_constructor",
+      "type": "file",
+      "file": ".constructor()_5.md",
+      "x": 420,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_forbiddenerror_constructor",
+      "type": "file",
+      "file": ".constructor()_6.md",
+      "x": 20,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_validationerror_constructor",
+      "type": "file",
+      "file": ".constructor()_7.md",
+      "x": 220,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_ratelimiterror_constructor",
+      "type": "file",
+      "file": ".constructor()_8.md",
+      "x": 420,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_apicontext",
+      "type": "file",
+      "file": "ApiContext.md",
+      "x": 20,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_apperror",
+      "type": "file",
+      "file": "AppError.md",
+      "x": 220,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_forbiddenerror",
+      "type": "file",
+      "file": "ForbiddenError.md",
+      "x": 420,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_handleroptions",
+      "type": "file",
+      "file": "HandlerOptions.md",
+      "x": 20,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_notfounderror",
+      "type": "file",
+      "file": "NotFoundError.md",
+      "x": 220,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index_ratelimitentry",
+      "type": "file",
+      "file": "RateLimitEntry.md",
+      "x": 420,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_ratelimiterror",
+      "type": "file",
+      "file": "RateLimitError.md",
+      "x": 20,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index_ratelimitoptions",
+      "type": "file",
+      "file": "RateLimitOptions.md",
+      "x": 220,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index_ratelimitresult",
+      "type": "file",
+      "file": "RateLimitResult.md",
+      "x": 420,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_routecontext",
+      "type": "file",
+      "file": "RouteContext.md",
+      "x": 20,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_routehandler",
+      "type": "file",
+      "file": "RouteHandler.md",
+      "x": 220,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_unauthorizederror",
+      "type": "file",
+      "file": "UnauthorizedError.md",
+      "x": 420,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors_validationerror",
+      "type": "file",
+      "file": "ValidationError.md",
+      "x": 20,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index_checkratelimit",
+      "type": "file",
+      "file": "checkRateLimit().md",
+      "x": 220,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_response_errorresponse",
+      "type": "file",
+      "file": "errorResponse().md",
+      "x": 420,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_errors",
+      "type": "file",
+      "file": "errors.ts.md",
+      "x": 20,
+      "y": 3440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler",
+      "type": "file",
+      "file": "handler.ts.md",
+      "x": 220,
+      "y": 3440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index",
+      "type": "file",
+      "file": "index.ts_3.md",
+      "x": 420,
+      "y": 3440,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_api_handler_log",
+      "type": "file",
+      "file": "log_5.md",
+      "x": 20,
+      "y": 3520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_rate_limit_index_store",
+      "type": "file",
+      "file": "store.md",
+      "x": 220,
+      "y": 3520,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g6",
+      "type": "group",
+      "label": "Community 6",
+      "x": 2060,
+      "y": 2800,
+      "width": 1100,
+      "height": 820,
+      "color": "1"
+    },
+    {
+      "id": "n_tsconfig_paths",
+      "type": "file",
+      "file": "@.md",
+      "x": 2080,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_allowjs",
+      "type": "file",
+      "file": "allowJs.md",
+      "x": 2280,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions",
+      "type": "file",
+      "file": "compilerOptions.md",
+      "x": 2480,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_esmoduleinterop",
+      "type": "file",
+      "file": "esModuleInterop.md",
+      "x": 2080,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_exclude",
+      "type": "file",
+      "file": "exclude.md",
+      "x": 2280,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_include",
+      "type": "file",
+      "file": "include.md",
+      "x": 2480,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_incremental",
+      "type": "file",
+      "file": "incremental.md",
+      "x": 2080,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_isolatedmodules",
+      "type": "file",
+      "file": "isolatedModules.md",
+      "x": 2280,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_jsx",
+      "type": "file",
+      "file": "jsx.md",
+      "x": 2480,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_lib",
+      "type": "file",
+      "file": "lib_1.md",
+      "x": 2080,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_module",
+      "type": "file",
+      "file": "module.md",
+      "x": 2280,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_moduleresolution",
+      "type": "file",
+      "file": "moduleResolution.md",
+      "x": 2480,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_noemit",
+      "type": "file",
+      "file": "noEmit.md",
+      "x": 2080,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_paths",
+      "type": "file",
+      "file": "paths.md",
+      "x": 2280,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_plugins",
+      "type": "file",
+      "file": "plugins.md",
+      "x": 2480,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_resolvejsonmodule",
+      "type": "file",
+      "file": "resolveJsonModule.md",
+      "x": 2080,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_skiplibcheck",
+      "type": "file",
+      "file": "skipLibCheck.md",
+      "x": 2280,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_strict",
+      "type": "file",
+      "file": "strict.md",
+      "x": 2480,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig_compileroptions_target",
+      "type": "file",
+      "file": "target.md",
+      "x": 2080,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_tsconfig",
+      "type": "file",
+      "file": "tsconfig.json.md",
+      "x": 2280,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g7",
+      "type": "group",
+      "label": "Community 7",
+      "x": 3900,
+      "y": 2800,
+      "width": 1100,
+      "height": 820,
+      "color": "2"
+    },
+    {
+      "id": "n_inngest_scheduler_inngestjobscheduler_enqueueoverduecheck",
+      "type": "file",
+      "file": ".enqueueOverdueCheck().md",
+      "x": 3920,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_scheduler_inngestjobscheduler_enqueuereminder",
+      "type": "file",
+      "file": ".enqueueReminder().md",
+      "x": 4120,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_scheduler_inngestjobscheduler_schedulereminderscan",
+      "type": "file",
+      "file": ".scheduleReminderScan().md",
+      "x": 4320,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_scheduler_inngestjobscheduler",
+      "type": "file",
+      "file": "InngestJobScheduler.md",
+      "x": 3920,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_jobs_types_job_events",
+      "type": "file",
+      "file": "JOB_EVENTS.md",
+      "x": 4120,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_jobs_types_jobscheduler",
+      "type": "file",
+      "file": "JobScheduler.md",
+      "x": 4320,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_client",
+      "type": "file",
+      "file": "client.ts_1.md",
+      "x": 3920,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions",
+      "type": "file",
+      "file": "functions.ts.md",
+      "x": 4120,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_scheduler_getjobscheduler",
+      "type": "file",
+      "file": "getJobScheduler().md",
+      "x": 4320,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_client_inngest",
+      "type": "file",
+      "file": "inngest_1.md",
+      "x": 3920,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions_inngestfunctions",
+      "type": "file",
+      "file": "inngestFunctions.md",
+      "x": 4120,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions_log",
+      "type": "file",
+      "file": "log_9.md",
+      "x": 4320,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions_overduecheckworkflow",
+      "type": "file",
+      "file": "overdueCheckWorkflow.md",
+      "x": 3920,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions_reminderscanworkflow",
+      "type": "file",
+      "file": "reminderScanWorkflow.md",
+      "x": 4120,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_route",
+      "type": "file",
+      "file": "route.ts_3.md",
+      "x": 4320,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_scheduler",
+      "type": "file",
+      "file": "scheduler.ts.md",
+      "x": 3920,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_functions_sendreminderworkflow",
+      "type": "file",
+      "file": "sendReminderWorkflow.md",
+      "x": 4120,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_jobs_types",
+      "type": "file",
+      "file": "types.ts_2.md",
+      "x": 4320,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_inngest_route_get_post_put",
+      "type": "file",
+      "file": "{ GET, POST, PUT }.md",
+      "x": 3920,
+      "y": 3360,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g8",
+      "type": "group",
+      "label": "Community 8",
+      "x": 5520,
+      "y": 2800,
+      "width": 1100,
+      "height": 720,
+      "color": "3"
+    },
+    {
+      "id": "n_components_schema",
+      "type": "file",
+      "file": "$schema.md",
+      "x": 5540,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases",
+      "type": "file",
+      "file": "aliases.md",
+      "x": 5740,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind_basecolor",
+      "type": "file",
+      "file": "baseColor.md",
+      "x": 5940,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases_components",
+      "type": "file",
+      "file": "components.md",
+      "x": 5540,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components",
+      "type": "file",
+      "file": "components.json.md",
+      "x": 5740,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind_config",
+      "type": "file",
+      "file": "config.md",
+      "x": 5940,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind_css",
+      "type": "file",
+      "file": "css.md",
+      "x": 5540,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind_cssvariables",
+      "type": "file",
+      "file": "cssVariables.md",
+      "x": 5740,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases_hooks",
+      "type": "file",
+      "file": "hooks.md",
+      "x": 5940,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_iconlibrary",
+      "type": "file",
+      "file": "iconLibrary.md",
+      "x": 5540,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases_lib",
+      "type": "file",
+      "file": "lib.md",
+      "x": 5740,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind_prefix",
+      "type": "file",
+      "file": "prefix.md",
+      "x": 5940,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_rsc",
+      "type": "file",
+      "file": "rsc.md",
+      "x": 5540,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_style",
+      "type": "file",
+      "file": "style.md",
+      "x": 5740,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tailwind",
+      "type": "file",
+      "file": "tailwind.md",
+      "x": 5940,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_tsx",
+      "type": "file",
+      "file": "tsx.md",
+      "x": 5540,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases_ui",
+      "type": "file",
+      "file": "ui.md",
+      "x": 5740,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_components_aliases_utils",
+      "type": "file",
+      "file": "utils.md",
+      "x": 5940,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g9",
+      "type": "group",
+      "label": "Community 9",
+      "x": 6920,
+      "y": 2800,
+      "width": 1100,
+      "height": 720,
+      "color": "4"
+    },
+    {
+      "id": "n_providers_nodemailer_nodemaileremailprovider_constructor",
+      "type": "file",
+      "file": ".constructor()_9.md",
+      "x": 6940,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_nodemailer_nodemaileremailprovider_send",
+      "type": "file",
+      "file": ".send().md",
+      "x": 7140,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_types_emailprovider",
+      "type": "file",
+      "file": "EmailProvider.md",
+      "x": 7340,
+      "y": 2880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_types_emailtemplatedata",
+      "type": "file",
+      "file": "EmailTemplateData.md",
+      "x": 6940,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_nodemailer_nodemaileremailprovider",
+      "type": "file",
+      "file": "NodemailerEmailProvider.md",
+      "x": 7140,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_types_sendemailparams",
+      "type": "file",
+      "file": "SendEmailParams.md",
+      "x": 7340,
+      "y": 2960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_types_sendemailresult",
+      "type": "file",
+      "file": "SendEmailResult.md",
+      "x": 6940,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_templates_base",
+      "type": "file",
+      "file": "base.ts.md",
+      "x": 7140,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_nodemailer_createnodemailerprovider",
+      "type": "file",
+      "file": "createNodemailerProvider().md",
+      "x": 7340,
+      "y": 3040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_templates_base_escapehtml",
+      "type": "file",
+      "file": "escapeHtml().md",
+      "x": 6940,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_index_getemailprovider",
+      "type": "file",
+      "file": "getEmailProvider().md",
+      "x": 7140,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_index",
+      "type": "file",
+      "file": "index.ts_1.md",
+      "x": 7340,
+      "y": 3120,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_nodemailer_log",
+      "type": "file",
+      "file": "log_6.md",
+      "x": 6940,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_nodemailer",
+      "type": "file",
+      "file": "nodemailer.ts.md",
+      "x": 7140,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_templates_base_renderbaseemailtemplate",
+      "type": "file",
+      "file": "renderBaseEmailTemplate().md",
+      "x": 7340,
+      "y": 3200,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_index_setemailprovider",
+      "type": "file",
+      "file": "setEmailProvider().md",
+      "x": 6940,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_templates_base_texttohtmlparagraphs",
+      "type": "file",
+      "file": "textToHtmlParagraphs().md",
+      "x": 7140,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_email_types",
+      "type": "file",
+      "file": "types.ts_1.md",
+      "x": 7340,
+      "y": 3280,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g10",
+      "type": "group",
+      "label": "Community 10",
+      "x": 0,
+      "y": 3900,
+      "width": 880,
+      "height": 620,
+      "color": "5"
+    },
+    {
+      "id": "n_providers_twilio_twiliowhatsappprovider_constructor",
+      "type": "file",
+      "file": ".constructor()_10.md",
+      "x": 20,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_callmebotwhatsappprovider_constructor",
+      "type": "file",
+      "file": ".constructor()_11.md",
+      "x": 220,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_twiliowhatsappprovider_send",
+      "type": "file",
+      "file": ".send()_1.md",
+      "x": 420,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_callmebotwhatsappprovider_send",
+      "type": "file",
+      "file": ".send()_2.md",
+      "x": 20,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_mockwhatsappprovider_send",
+      "type": "file",
+      "file": ".send()_3.md",
+      "x": 220,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_callmebotwhatsappprovider",
+      "type": "file",
+      "file": "CallMeBotWhatsappProvider.md",
+      "x": 420,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_mockwhatsappprovider",
+      "type": "file",
+      "file": "MockWhatsappProvider.md",
+      "x": 20,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_sendwhatsappparams",
+      "type": "file",
+      "file": "SendWhatsappParams.md",
+      "x": 220,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_sendwhatsappresult",
+      "type": "file",
+      "file": "SendWhatsappResult.md",
+      "x": 420,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_twiliowhatsappprovider",
+      "type": "file",
+      "file": "TwilioWhatsappProvider.md",
+      "x": 20,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_whatsappprovider",
+      "type": "file",
+      "file": "WhatsappProvider.md",
+      "x": 220,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_getwhatsappprovider",
+      "type": "file",
+      "file": "getWhatsappProvider().md",
+      "x": 420,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio_log",
+      "type": "file",
+      "file": "log_7.md",
+      "x": 20,
+      "y": 4300,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_twilio",
+      "type": "file",
+      "file": "twilio.ts.md",
+      "x": 220,
+      "y": 4300,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g11",
+      "type": "group",
+      "label": "Community 11",
+      "x": 2060,
+      "y": 3900,
+      "width": 880,
+      "height": 520,
+      "color": "6"
+    },
+    {
+      "id": "n_readme_csv_upload_format",
+      "type": "file",
+      "file": "CSV upload format.md",
+      "x": 2080,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_deployment_vercel",
+      "type": "file",
+      "file": "Deployment (Vercel).md",
+      "x": 2280,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_environment_variables",
+      "type": "file",
+      "file": "Environment variables.md",
+      "x": 2480,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_invoicepilot",
+      "type": "file",
+      "file": "InvoicePilot.md",
+      "x": 2080,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_license",
+      "type": "file",
+      "file": "License.md",
+      "x": 2280,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_mvp_features",
+      "type": "file",
+      "file": "MVP features.md",
+      "x": 2480,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_prerequisites",
+      "type": "file",
+      "file": "Prerequisites.md",
+      "x": 2080,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_project_structure",
+      "type": "file",
+      "file": "Project structure.md",
+      "x": 2280,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme",
+      "type": "file",
+      "file": "README.md",
+      "x": 2480,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_scripts",
+      "type": "file",
+      "file": "Scripts.md",
+      "x": 2080,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_setup_windows_conda_gpu_env",
+      "type": "file",
+      "file": "Setup (Windows + Conda `gpu_env`).md",
+      "x": 2280,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_readme_stack",
+      "type": "file",
+      "file": "Stack.md",
+      "x": 2480,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g12",
+      "type": "group",
+      "label": "Community 12",
+      "x": 3900,
+      "y": 3900,
+      "width": 880,
+      "height": 520,
+      "color": "1"
+    },
+    {
+      "id": "n_docs_architecture_ai_provider_abstraction",
+      "type": "file",
+      "file": "AI provider abstraction.md",
+      "x": 3920,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture",
+      "type": "file",
+      "file": "ARCHITECTURE.md",
+      "x": 4120,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_database_indexes",
+      "type": "file",
+      "file": "Database indexes.md",
+      "x": 4320,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_design_principles",
+      "type": "file",
+      "file": "Design principles.md",
+      "x": 3920,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_email_abstraction",
+      "type": "file",
+      "file": "Email abstraction.md",
+      "x": 4120,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_invoicepilot_architecture",
+      "type": "file",
+      "file": "InvoicePilot Architecture.md",
+      "x": 4320,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_job_scheduler_abstraction",
+      "type": "file",
+      "file": "Job scheduler abstraction.md",
+      "x": 3920,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_layer_diagram",
+      "type": "file",
+      "file": "Layer diagram.md",
+      "x": 4120,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_multi_tenancy_path",
+      "type": "file",
+      "file": "Multi-tenancy path.md",
+      "x": 4320,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_observability_future",
+      "type": "file",
+      "file": "Observability (future).md",
+      "x": 3920,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_docs_architecture_security",
+      "type": "file",
+      "file": "Security.md",
+      "x": 4120,
+      "y": 4220,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g13",
+      "type": "group",
+      "label": "Community 13",
+      "x": 5520,
+      "y": 3900,
+      "width": 660,
+      "height": 420,
+      "color": "2"
+    },
+    {
+      "id": "n_providers_query_provider_queryprovider",
+      "type": "file",
+      "file": "QueryProvider().md",
+      "x": 5540,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_layout_rootlayout",
+      "type": "file",
+      "file": "RootLayout().md",
+      "x": 5740,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_theme_provider_themeprovider",
+      "type": "file",
+      "file": "ThemeProvider().md",
+      "x": 5940,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_layout_geistmono",
+      "type": "file",
+      "file": "geistMono.md",
+      "x": 5540,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_layout_geistsans",
+      "type": "file",
+      "file": "geistSans.md",
+      "x": 5740,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_layout",
+      "type": "file",
+      "file": "layout.tsx_1.md",
+      "x": 5940,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_app_layout_metadata",
+      "type": "file",
+      "file": "metadata.md",
+      "x": 5540,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_query_provider",
+      "type": "file",
+      "file": "query-provider.tsx.md",
+      "x": 5740,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_providers_theme_provider",
+      "type": "file",
+      "file": "theme-provider.tsx.md",
+      "x": 5940,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g14",
+      "type": "group",
+      "label": "Community 14",
+      "x": 6920,
+      "y": 3900,
+      "width": 660,
+      "height": 420,
+      "color": "3"
+    },
+    {
+      "id": "n_db_prisma_globalforprisma",
+      "type": "file",
+      "file": "globalForPrisma.md",
+      "x": 6940,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_organization_repository",
+      "type": "file",
+      "file": "organization.repository.ts.md",
+      "x": 7140,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_organization_service",
+      "type": "file",
+      "file": "organization.service.ts.md",
+      "x": 7340,
+      "y": 3980,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_organization_repository_organizationrepository",
+      "type": "file",
+      "file": "organizationRepository.md",
+      "x": 6940,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_organization_service_organizationservice",
+      "type": "file",
+      "file": "organizationService.md",
+      "x": 7140,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_db_prisma",
+      "type": "file",
+      "file": "prisma.ts.md",
+      "x": 7340,
+      "y": 4060,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_services_organization_service_slugify",
+      "type": "file",
+      "file": "slugify().md",
+      "x": 6940,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_user_repository",
+      "type": "file",
+      "file": "user.repository.ts.md",
+      "x": 7140,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_repositories_user_repository_userrepository",
+      "type": "file",
+      "file": "userRepository.md",
+      "x": 7340,
+      "y": 4140,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g15",
+      "type": "group",
+      "label": "Community 15",
+      "x": 0,
+      "y": 4600,
+      "width": 660,
+      "height": 420,
+      "color": "4"
+    },
+    {
+      "id": "n_import_tally_parser_tallyinvoice",
+      "type": "file",
+      "file": "TallyInvoice.md",
+      "x": 20,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_tallyparseresult",
+      "type": "file",
+      "file": "TallyParseResult.md",
+      "x": 220,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_extractamount",
+      "type": "file",
+      "file": "extractAmount().md",
+      "x": 420,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_getall",
+      "type": "file",
+      "file": "getAll().md",
+      "x": 20,
+      "y": 4760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_gettext",
+      "type": "file",
+      "file": "getText().md",
+      "x": 220,
+      "y": 4760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_parsetallydate",
+      "type": "file",
+      "file": "parseTallyDate().md",
+      "x": 420,
+      "y": 4760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser_parsetallyxml",
+      "type": "file",
+      "file": "parseTallyXml().md",
+      "x": 20,
+      "y": 4840,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_import_tally_parser",
+      "type": "file",
+      "file": "tally-parser.ts.md",
+      "x": 220,
+      "y": 4840,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g16",
+      "type": "group",
+      "label": "Community 16",
+      "x": 2060,
+      "y": 4600,
+      "width": 660,
+      "height": 400,
+      "color": "5"
+    },
+    {
+      "id": "n_eslint_config_dirname",
+      "type": "file",
+      "file": "__dirname.md",
+      "x": 2080,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_eslint_config_filename",
+      "type": "file",
+      "file": "__filename.md",
+      "x": 2280,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_eslint_config_compat",
+      "type": "file",
+      "file": "compat.md",
+      "x": 2480,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_eslint_config",
+      "type": "file",
+      "file": "eslint.config.mjs.md",
+      "x": 2080,
+      "y": 4760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_eslint_config_eslintconfig",
+      "type": "file",
+      "file": "eslintConfig.md",
+      "x": 2280,
+      "y": 4760,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g17",
+      "type": "group",
+      "label": "Community 17",
+      "x": 3900,
+      "y": 4600,
+      "width": 600,
+      "height": 400,
+      "color": "6"
+    },
+    {
+      "id": "n_src_middleware_config",
+      "type": "file",
+      "file": "config_2.md",
+      "x": 3920,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_src_middleware_ispublicroute",
+      "type": "file",
+      "file": "isPublicRoute.md",
+      "x": 4120,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_src_middleware",
+      "type": "file",
+      "file": "middleware.ts.md",
+      "x": 4320,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g18",
+      "type": "group",
+      "label": "Community 18",
+      "x": 5520,
+      "y": 4600,
+      "width": 600,
+      "height": 400,
+      "color": "1"
+    },
+    {
+      "id": "n_store_ui_store_uistate",
+      "type": "file",
+      "file": "UiState.md",
+      "x": 5540,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_store_ui_store",
+      "type": "file",
+      "file": "ui-store.ts.md",
+      "x": 5740,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_store_ui_store_useuistore",
+      "type": "file",
+      "file": "useUiStore.md",
+      "x": 5940,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g19",
+      "type": "group",
+      "label": "Community 19",
+      "x": 6920,
+      "y": 4600,
+      "width": 600,
+      "height": 400,
+      "color": "2"
+    },
+    {
+      "id": "n_next_config",
+      "type": "file",
+      "file": "next.config.ts.md",
+      "x": 6940,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_next_config_nextconfig",
+      "type": "file",
+      "file": "nextConfig.md",
+      "x": 7140,
+      "y": 4680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g20",
+      "type": "group",
+      "label": "Community 20",
+      "x": 0,
+      "y": 5100,
+      "width": 600,
+      "height": 400,
+      "color": "3"
+    },
+    {
+      "id": "n_postcss_config_config",
+      "type": "file",
+      "file": "config_1.md",
+      "x": 20,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_postcss_config",
+      "type": "file",
+      "file": "postcss.config.mjs.md",
+      "x": 220,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g21",
+      "type": "group",
+      "label": "Community 21",
+      "x": 2060,
+      "y": 5100,
+      "width": 600,
+      "height": 400,
+      "color": "4"
+    },
+    {
+      "id": "n_sign_in_page_signinpage",
+      "type": "file",
+      "file": "SignInPage().md",
+      "x": 2080,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_sign_in_page",
+      "type": "file",
+      "file": "page.tsx_4.md",
+      "x": 2280,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g22",
+      "type": "group",
+      "label": "Community 22",
+      "x": 3900,
+      "y": 5100,
+      "width": 600,
+      "height": 400,
+      "color": "5"
+    },
+    {
+      "id": "n_sign_up_page_signuppage",
+      "type": "file",
+      "file": "SignUpPage().md",
+      "x": 3920,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_sign_up_page",
+      "type": "file",
+      "file": "page.tsx_5.md",
+      "x": 4120,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g23",
+      "type": "group",
+      "label": "Community 23",
+      "x": 5520,
+      "y": 5100,
+      "width": 600,
+      "height": 400,
+      "color": "6"
+    },
+    {
+      "id": "n_get_models",
+      "type": "file",
+      "file": "get-models.js.md",
+      "x": 5540,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g24",
+      "type": "group",
+      "label": "Community 24",
+      "x": 6920,
+      "y": 5100,
+      "width": 600,
+      "height": 400,
+      "color": "1"
+    },
+    {
+      "id": "n_gemini",
+      "type": "file",
+      "file": "GEMINI.md",
+      "x": 6940,
+      "y": 5180,
+      "width": 180,
+      "height": 60
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_components_components_aliases",
+      "fromNode": "n_components",
+      "toNode": "n_components_aliases",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_iconlibrary",
+      "fromNode": "n_components",
+      "toNode": "n_components_iconlibrary",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_rsc",
+      "fromNode": "n_components",
+      "toNode": "n_components_rsc",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_schema",
+      "fromNode": "n_components",
+      "toNode": "n_components_schema",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_style",
+      "fromNode": "n_components",
+      "toNode": "n_components_style",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_tailwind",
+      "fromNode": "n_components",
+      "toNode": "n_components_tailwind",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_components_tsx",
+      "fromNode": "n_components",
+      "toNode": "n_components_tsx",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_tailwind_components_tailwind_basecolor",
+      "fromNode": "n_components_tailwind",
+      "toNode": "n_components_tailwind_basecolor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_tailwind_components_tailwind_config",
+      "fromNode": "n_components_tailwind",
+      "toNode": "n_components_tailwind_config",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_tailwind_components_tailwind_css",
+      "fromNode": "n_components_tailwind",
+      "toNode": "n_components_tailwind_css",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_tailwind_components_tailwind_cssvariables",
+      "fromNode": "n_components_tailwind",
+      "toNode": "n_components_tailwind_cssvariables",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_tailwind_components_tailwind_prefix",
+      "fromNode": "n_components_tailwind",
+      "toNode": "n_components_tailwind_prefix",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_aliases_components_aliases_components",
+      "fromNode": "n_components_aliases",
+      "toNode": "n_components_aliases_components",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_aliases_components_aliases_hooks",
+      "fromNode": "n_components_aliases",
+      "toNode": "n_components_aliases_hooks",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_aliases_components_aliases_lib",
+      "fromNode": "n_components_aliases",
+      "toNode": "n_components_aliases_lib",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_aliases_components_aliases_ui",
+      "fromNode": "n_components_aliases",
+      "toNode": "n_components_aliases_ui",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_components_aliases_components_aliases_utils",
+      "fromNode": "n_components_aliases",
+      "toNode": "n_components_aliases_utils",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_eslint_config_eslint_config_compat",
+      "fromNode": "n_eslint_config",
+      "toNode": "n_eslint_config_compat",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_eslint_config_eslint_config_dirname",
+      "fromNode": "n_eslint_config",
+      "toNode": "n_eslint_config_dirname",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_eslint_config_eslint_config_eslintconfig",
+      "fromNode": "n_eslint_config",
+      "toNode": "n_eslint_config_eslintconfig",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_eslint_config_eslint_config_filename",
+      "fromNode": "n_eslint_config",
+      "toNode": "n_eslint_config_filename",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_next_config_next_config_nextconfig",
+      "fromNode": "n_next_config",
+      "toNode": "n_next_config_nextconfig",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_dependencies",
+      "fromNode": "n_package",
+      "toNode": "n_package_dependencies",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_devdependencies",
+      "fromNode": "n_package",
+      "toNode": "n_package_devdependencies",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_name",
+      "fromNode": "n_package",
+      "toNode": "n_package_name",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_private",
+      "fromNode": "n_package",
+      "toNode": "n_package_private",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_scripts",
+      "fromNode": "n_package",
+      "toNode": "n_package_scripts",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_package_version",
+      "fromNode": "n_package",
+      "toNode": "n_package_version",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_build",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_build",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_db_generate",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_db_generate",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_db_migrate",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_db_migrate",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_db_push",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_db_push",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_db_studio",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_db_studio",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_dev",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_dev",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_format",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_format",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_lint",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_lint",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_postinstall",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_postinstall",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_scripts_package_scripts_start",
+      "fromNode": "n_package_scripts",
+      "toNode": "n_package_scripts_start",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_class_variance_authority",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_class_variance_authority",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_clerk_nextjs",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_clerk_nextjs",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_clsx",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_clsx",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_date_fns",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_date_fns",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_inngest",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_inngest",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_lucide_react",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_lucide_react",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_next",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_next",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_next_themes",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_next_themes",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_nodemailer",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_nodemailer",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_papaparse",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_papaparse",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_prisma_client",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_prisma_client",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_dialog",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_dialog",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_dropdown_menu",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_dropdown_menu",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_label",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_label",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_select",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_select",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_slot",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_slot",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_switch",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_switch",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_radix_ui_react_tabs",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_radix_ui_react_tabs",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_react",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_react",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_react_dom",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_react_dom",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_recharts",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_recharts",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_resend",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_resend",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_sonner",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_sonner",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_tailwind_merge",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_tailwind_merge",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_tanstack_react_query",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_tanstack_react_query",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_zod",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_zod",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_dependencies_package_dependencies_zustand",
+      "fromNode": "n_package_dependencies",
+      "toNode": "n_package_dependencies_zustand",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_eslint",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_eslint",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_eslint_config_next",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_eslint_config_next",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_eslint_config_prettier",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_eslint_config_prettier",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_eslint_eslintrc",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_eslint_eslintrc",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_prettier",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_prettier",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_prisma",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_prisma",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_tailwindcss",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_tailwindcss",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_tailwindcss_postcss",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_tailwindcss_postcss",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_types_node",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_types_node",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_types_nodemailer",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_types_nodemailer",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_types_papaparse",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_types_papaparse",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_types_react",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_types_react",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_types_react_dom",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_types_react_dom",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_package_devdependencies_package_devdependencies_typescript",
+      "fromNode": "n_package_devdependencies",
+      "toNode": "n_package_devdependencies_typescript",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_postcss_config_postcss_config_config",
+      "fromNode": "n_postcss_config",
+      "toNode": "n_postcss_config_config",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_api_handler",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_api_handler_withapihandler",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_api_response",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_api_response_successresponse",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_generate_email_route_post",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_generate_email_route_post",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_services_ai_email_service",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_services_ai_email_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_services_ai_email_service_aiemailservice",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_services_ai_email_service_aiemailservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_validations_reminder",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_validations_reminder",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_generate_email_route_validations_reminder_generateemailschema",
+      "fromNode": "n_generate_email_route",
+      "toNode": "n_validations_reminder_generateemailschema",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_errors",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_errors",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_errors_notfounderror",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_errors_notfounderror",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_handler",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_handler_withapihandler",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_response",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_api_response_successresponse",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_email_index",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_email_index",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_email_index_getemailprovider",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_email_index_getemailprovider",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_logger_index",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_logger_index",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_logger_index_createlogger",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_logger_index_createlogger",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_repositories_email_log_repository",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_repositories_email_log_repository",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_repositories_email_log_repository_emaillogrepository",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_repositories_email_log_repository_emaillogrepository",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_repositories_invoice_repository",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_repositories_invoice_repository",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_repositories_invoice_repository_invoicerepository",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_repositories_invoice_repository_invoicerepository",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_send_email_route_log",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_send_email_route_log",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_send_email_route_post",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_send_email_route_post",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_send_email_route_send_email_route_sendemailschema",
+      "fromNode": "n_send_email_route",
+      "toNode": "n_send_email_route_sendemailschema",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_api_handler",
+      "fromNode": "n_stats_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_api_handler_withapihandler",
+      "fromNode": "n_stats_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_api_response",
+      "fromNode": "n_stats_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_api_response_successresponse",
+      "fromNode": "n_stats_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_services_dashboard_service",
+      "fromNode": "n_stats_route",
+      "toNode": "n_services_dashboard_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_services_dashboard_service_dashboardservice",
+      "fromNode": "n_stats_route",
+      "toNode": "n_services_dashboard_service_dashboardservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_stats_route_stats_route_get",
+      "fromNode": "n_stats_route",
+      "toNode": "n_stats_route_get",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_inngest_route_inngest_client",
+      "fromNode": "n_inngest_route",
+      "toNode": "n_inngest_client",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_inngest_route_inngest_client_inngest",
+      "fromNode": "n_inngest_route",
+      "toNode": "n_inngest_client_inngest",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_inngest_route_inngest_functions",
+      "fromNode": "n_inngest_route",
+      "toNode": "n_inngest_functions",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_inngest_route_inngest_functions_inngestfunctions",
+      "fromNode": "n_inngest_route",
+      "toNode": "n_inngest_functions_inngestfunctions",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_inngest_route_inngest_route_get_post_put",
+      "fromNode": "n_inngest_route",
+      "toNode": "n_inngest_route_get_post_put",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_api_handler",
+      "fromNode": "n_id_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_api_handler_withapihandler",
+      "fromNode": "n_id_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_api_response",
+      "fromNode": "n_id_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_api_response_successresponse",
+      "fromNode": "n_id_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_id_route_delete",
+      "fromNode": "n_id_route",
+      "toNode": "n_id_route_delete",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_id_route_get",
+      "fromNode": "n_id_route",
+      "toNode": "n_id_route_get",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_id_route_patch",
+      "fromNode": "n_id_route",
+      "toNode": "n_id_route_patch",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_services_invoice_service",
+      "fromNode": "n_id_route",
+      "toNode": "n_services_invoice_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_services_invoice_service_invoiceservice",
+      "fromNode": "n_id_route",
+      "toNode": "n_services_invoice_service_invoiceservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_validations_invoice",
+      "fromNode": "n_id_route",
+      "toNode": "n_validations_invoice",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_id_route_validations_invoice_updateinvoiceschema",
+      "fromNode": "n_id_route",
+      "toNode": "n_validations_invoice_updateinvoiceschema",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_api_handler",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_api_handler_withapihandler",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_api_response",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_api_response_successresponse",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_bulk_route_post",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_bulk_route_post",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_services_invoice_service",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_services_invoice_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_services_invoice_service_invoiceservice",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_services_invoice_service_invoiceservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_validations_invoice",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_validations_invoice",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_bulk_route_validations_invoice_bulkcreateinvoicesschema",
+      "fromNode": "n_bulk_route",
+      "toNode": "n_validations_invoice_bulkcreateinvoicesschema",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_api_handler",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_api_handler_withapihandler",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_api_response",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_api_response_successresponse",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_invoices_route_get",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_invoices_route_get",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_invoices_route_post",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_invoices_route_post",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_services_invoice_service",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_services_invoice_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_services_invoice_service_invoiceservice",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_services_invoice_service_invoiceservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_validations_invoice",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_validations_invoice",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_route_validations_invoice_createinvoiceschema",
+      "fromNode": "n_invoices_route",
+      "toNode": "n_validations_invoice_createinvoiceschema",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_api_handler",
+      "fromNode": "n_settings_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_api_handler_withapihandler",
+      "fromNode": "n_settings_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_api_response",
+      "fromNode": "n_settings_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_api_response_successresponse",
+      "fromNode": "n_settings_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_services_reminder_service",
+      "fromNode": "n_settings_route",
+      "toNode": "n_services_reminder_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_services_reminder_service_reminderservice",
+      "fromNode": "n_settings_route",
+      "toNode": "n_services_reminder_service_reminderservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_settings_route_get",
+      "fromNode": "n_settings_route",
+      "toNode": "n_settings_route_get",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_settings_route_put",
+      "fromNode": "n_settings_route",
+      "toNode": "n_settings_route_put",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_validations_reminder",
+      "fromNode": "n_settings_route",
+      "toNode": "n_validations_reminder",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_settings_route_validations_reminder_remindersettingsschema",
+      "fromNode": "n_settings_route",
+      "toNode": "n_validations_reminder_remindersettingsschema",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_api_handler",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_api_handler",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_api_handler_withapihandler",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_api_handler_withapihandler",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_api_response",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_api_response",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_api_response_successresponse",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_api_response_successresponse",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_logger_index",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_logger_index",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_logger_index_createlogger",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_logger_index_createlogger",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_services_reminder_service",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_services_reminder_service",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_services_reminder_service_reminderservice",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_services_reminder_service_reminderservice",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_trigger_route_log",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_trigger_route_log",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_trigger_route_trigger_route_post",
+      "fromNode": "n_trigger_route",
+      "toNode": "n_trigger_route_post",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_api_client",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_api_client",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_api_client_apifetch",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_api_client_apifetch",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_create_invoice_dialog",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_create_invoice_dialog",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_create_invoice_dialog_createinvoicedialog",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_create_invoice_dialog_createinvoicedialog",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_import_dialog",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_import_dialog",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_import_dialog_importdialog",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_import_dialog_importdialog",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_invoice_table",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_invoice_table",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_components_invoice_table_invoicetable",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_components_invoice_table_invoicetable",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_invoices_page_invoicespage",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_invoices_page_invoicespage",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_types_index",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_types_index",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_types_index_generateemailresult",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_types_index_generateemailresult",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_types_index_invoicedto",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_types_index_invoicedto",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_ui_button",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_ui_button",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_ui_button_button",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_ui_button_button",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_ui_skeleton",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_ui_skeleton",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_invoices_page_ui_skeleton_skeleton",
+      "fromNode": "n_invoices_page",
+      "toNode": "n_ui_skeleton_skeleton",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_layout_dashboard_layout_dashboardlayout",
+      "fromNode": "n_dashboard_layout",
+      "toNode": "n_dashboard_layout_dashboardlayout",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_layout_layout_app_sidebar",
+      "fromNode": "n_dashboard_layout",
+      "toNode": "n_layout_app_sidebar",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_layout_layout_app_sidebar_appsidebar",
+      "fromNode": "n_dashboard_layout",
+      "toNode": "n_layout_app_sidebar_appsidebar",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_api_client",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_api_client",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_api_client_apifetch",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_api_client_apifetch",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_components_stats_cards",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_components_stats_cards",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_components_stats_cards_statscards",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_components_stats_cards_statscards",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_components_status_chart",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_components_status_chart",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_components_status_chart_statuschart",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_components_status_chart_statuschart",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_dashboard_page_dashboardpage",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_dashboard_page_dashboardpage",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_types_index",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_types_index",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_types_index_dashboardstats",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_types_index_dashboardstats",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_ui_card",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_ui_card",
+      "label": "imports_from [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_ui_card_card",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_ui_card_card",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_ui_card_cardcontent",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_ui_card_cardcontent",
+      "label": "imports [EXTRACTED]"
+    },
+    {
+      "id": "e_dashboard_page_ui_card_cardheader",
+      "fromNode": "n_dashboard_page",
+      "toNode": "n_ui_card_cardheader",
+      "label": "imports [EXTRACTED]"
+    }
+  ]
+}

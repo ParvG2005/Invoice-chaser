@@ -1,0 +1,216 @@
+import { addDays, differenceInCalendarDays, startOfDay } from "date-fns";
+import { NotFoundError } from "@/lib/api/errors";
+import { getEmailProvider } from "@/lib/email";
+import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
+import { createLogger } from "@/lib/logger";
+import type { ReminderSettingsInput } from "@/lib/validations/reminder";
+import { invoiceRepository } from "@/server/repositories/invoice.repository";
+import { reminderRepository } from "@/server/repositories/reminder.repository";
+import { emailLogRepository } from "@/server/repositories/email-log.repository";
+import { organizationRepository } from "@/server/repositories/organization.repository";
+import { aiEmailService } from "@/server/services/ai-email.service";
+import type { ReminderSettingsDto } from "@/types";
+
+const log = createLogger("reminder-service");
+
+export const reminderService = {
+  async getSettings(organizationId: string): Promise<ReminderSettingsDto> {
+    const settings = await reminderRepository.getSettings(organizationId);
+    return {
+      reminderDays: settings?.reminderDays ?? [3, 7, 14],
+      emailTone: settings?.emailTone ?? "PROFESSIONAL",
+      autoSend: settings?.autoSend ?? true,
+      whatsappEnabled: settings?.whatsappEnabled ?? false,
+    };
+  },
+
+  async updateSettings(organizationId: string, input: ReminderSettingsInput) {
+    const settings = await reminderRepository.upsertSettings(organizationId, input);
+    return {
+      reminderDays: settings.reminderDays,
+      emailTone: settings.emailTone,
+      autoSend: settings.autoSend,
+      whatsappEnabled: settings.whatsappEnabled,
+    };
+  },
+
+  async scheduleRemindersForOrganization(organizationId: string) {
+    const settings = await reminderRepository.getSettings(organizationId);
+    if (!settings?.autoSend) return { scheduled: 0 };
+
+    await invoiceRepository.markOverdueBatch(organizationId);
+
+    const overdue = await invoiceRepository.findOverdue(organizationId);
+    if (overdue.length === 0) return { scheduled: 0 };
+
+    // One query for every (invoice, dayOffset) already in flight, instead of a
+    // per-invoice existence check inside the loop (was O(invoices × offsets) queries).
+    const existing = await reminderRepository.findExistingOffsets(overdue.map((i) => i.id));
+    const seen = new Set(existing.map((e) => `${e.invoiceId}:${e.dayOffset}`));
+
+    const today = startOfDay(new Date());
+    const toCreate: Array<{
+      id: string;
+      organizationId: string;
+      invoiceId: string;
+      scheduledFor: Date;
+      tone: typeof settings.emailTone;
+      dayOffset: number;
+      status: "SCHEDULED";
+    }> = [];
+
+    for (const invoice of overdue) {
+      if (invoice.status === "PAID") continue;
+
+      const daysPastDue = differenceInCalendarDays(today, startOfDay(invoice.dueDate));
+
+      for (const dayOffset of settings.reminderDays) {
+        if (daysPastDue < dayOffset) continue;
+
+        const key = `${invoice.id}:${dayOffset}`;
+        if (seen.has(key)) continue;
+        seen.add(key); // dedupe duplicate offsets within reminderDays too
+
+        toCreate.push({
+          id: crypto.randomUUID(),
+          organizationId,
+          invoiceId: invoice.id,
+          scheduledFor: new Date(),
+          tone: settings.emailTone,
+          dayOffset,
+          status: "SCHEDULED",
+        });
+      }
+    }
+
+    if (toCreate.length === 0) {
+      return { scheduled: 0 };
+    }
+
+    // Batch insert, then a single batched enqueue.
+    await reminderRepository.createManyScheduled(toCreate);
+    await getJobScheduler().enqueueReminders(toCreate.map((r) => r.id));
+
+    log.info("Scheduled reminders", { organizationId, scheduled: toCreate.length });
+    return { scheduled: toCreate.length };
+  },
+
+  async processDueReminders() {
+    const due = await reminderRepository.findDueReminders();
+    let processed = 0;
+
+    for (const reminder of due) {
+      if (!reminder.invoice || reminder.invoice.status === "PAID") {
+        await reminderRepository.updateStatus(reminder.id, "CANCELLED");
+        continue;
+      }
+
+      const settings = await reminderRepository.getSettings(reminder.organizationId);
+      if (!settings?.autoSend) continue;
+
+      await getJobScheduler().enqueueReminder(reminder.id);
+      processed += 1;
+    }
+
+    return { processed };
+  },
+
+  async sendReminder(reminderId: string) {
+    const reminder = await reminderRepository.findById(reminderId);
+    if (!reminder?.invoice) throw new NotFoundError("Reminder not found");
+
+    if (reminder.invoice.status === "PAID") {
+      await reminderRepository.updateStatus(reminder.id, "CANCELLED");
+      return { skipped: true };
+    }
+
+    // At-least-once delivery means this job can run more than once for the same
+    // reminder. Atomically claim it so only one invocation ever sends the email.
+    const claimed = await reminderRepository.claimForSending(reminder.id);
+    if (!claimed) {
+      log.info("Reminder already claimed/sent, skipping duplicate", { reminderId });
+      return { skipped: true };
+    }
+
+    // Once claimed, any failure must release the reminder back to FAILED so it
+    // never gets stranded in SENDING.
+    let emailContent: Awaited<ReturnType<typeof aiEmailService.generateReminderEmail>>;
+    let settings: Awaited<ReturnType<typeof reminderRepository.getSettings>>;
+    try {
+      const org = await organizationRepository.findById(reminder.organizationId);
+      if (!org) throw new NotFoundError("Organization not found");
+
+      emailContent = await aiEmailService.generateReminderEmail(
+        reminder.organizationId,
+        reminder.invoice.id,
+        reminder.tone,
+        { reminderId: reminder.id },
+      );
+
+      settings = await reminderRepository.getSettings(reminder.organizationId);
+    } catch (error) {
+      await reminderRepository.updateStatus(reminder.id, "FAILED");
+      throw error;
+    }
+
+    // Send WhatsApp if enabled and phone number exists
+    if (settings?.whatsappEnabled && reminder.invoice.clientPhone && emailContent.whatsappText) {
+      try {
+        const { getWhatsappProvider } = await import("@/lib/whatsapp/providers/twilio");
+        const waProvider = getWhatsappProvider();
+        await waProvider.send({
+          to: reminder.invoice.clientPhone,
+          body: emailContent.whatsappText,
+        });
+        log.info("Automated WhatsApp reminder sent", {
+          reminderId,
+          phone: reminder.invoice.clientPhone,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Send failed";
+        log.error("Failed to send automated WhatsApp reminder", { reminderId, error: message });
+      }
+    }
+
+    const logEntry = await emailLogRepository.create({
+      organizationId: reminder.organizationId,
+      invoice: { connect: { id: reminder.invoice.id } },
+      reminder: { connect: { id: reminder.id } },
+      toEmail: reminder.invoice.clientEmail,
+      subject: emailContent.subject,
+      bodyHtml: emailContent.bodyHtml,
+      status: "QUEUED",
+    });
+
+    try {
+      const provider = getEmailProvider();
+      const result = await provider.send({
+        to: reminder.invoice.clientEmail,
+        subject: emailContent.subject,
+        html: emailContent.bodyHtml,
+        text: emailContent.bodyText,
+      });
+
+      await emailLogRepository.updateStatus(logEntry.id, "SENT", {
+        providerId: result.id,
+        sentAt: new Date(),
+      });
+
+      await reminderRepository.updateStatus(reminder.id, "SENT", new Date());
+      return { sent: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Send failed";
+      await emailLogRepository.updateStatus(logEntry.id, "FAILED", {
+        errorMessage: message,
+      });
+      await reminderRepository.updateStatus(reminder.id, "FAILED");
+      throw error;
+    }
+  },
+
+  async previewNextReminderDate(invoiceDueDate: Date, reminderDays: number[]) {
+    const sorted = [...reminderDays].sort((a, b) => a - b);
+    const first = sorted[0] ?? 3;
+    return addDays(invoiceDueDate, first);
+  },
+};
