@@ -85,3 +85,39 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 **Status:** ⬜ pending user action (templates not yet submitted).
 
 ---
+
+## Remaining services (Task 7) — USER ACTION
+
+### Anthropic (AI assistant, Phase 6)
+
+1. Create an API key at console.anthropic.com.
+2. Paste into Vercel envs as `ANTHROPIC_API_KEY` (Production + Preview).
+
+**Status:** ⬜ pending.
+
+### Inngest (background jobs, production)
+
+1. In the Inngest dashboard, create/promote a production app for InvoicePilot (dev mode is already integrated locally).
+2. Copy the production event key and signing key into Vercel as `INNGEST_EVENT_KEY` (already used in dev) and `INNGEST_SIGNING_KEY`.
+
+**Status:** ⬜ pending.
+
+### Upstash (rate limits + assistant budgets)
+
+1. Create a production Redis database at upstash.com (region close to Vercel deployment region for latency).
+2. Copy the REST URL and token into Vercel as `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
+
+**Status:** ⬜ pending.
+
+### Sentry (observability)
+
+1. Create a Sentry project for this Next.js app at sentry.io.
+2. Copy the DSN into Vercel as `SENTRY_DSN`; create an auth token (Settings → Auth Tokens) for CI source-map upload, store as `SENTRY_AUTH_TOKEN` (GitHub Actions secret + Vercel).
+
+**Status:** ⬜ pending.
+
+### Agent verification (all four)
+
+Once keys are in place, run `vercel env ls production` and `vercel env ls preview` and tick each variable's cell in `docs/ENVIRONMENT.md`'s Legend column.
+
+---
