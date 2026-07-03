@@ -9,8 +9,9 @@ import { CreateInvoiceDialog } from "@/modules/invoices/components/create-invoic
 import { ImportDialog } from "@/modules/invoices/components/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Send, X } from "lucide-react";
+import { Send, X, Mail } from "lucide-react";
 import type { GenerateEmailResult, InvoiceDto } from "@/types";
+import { buildGmailComposeUrl, buildMailtoUrl } from "@/lib/email/compose-link";
 
 const PAGE_SIZE = 50;
 
@@ -152,6 +153,20 @@ export default function InvoicesPage() {
             clientPhone && preview.whatsappText
               ? `https://api.whatsapp.com/send?phone=${encodeURIComponent(clientPhone)}&text=${encodeURIComponent(preview.whatsappText)}`
               : null;
+          const gmailUrl = selectedInvoice
+            ? buildGmailComposeUrl({
+                to: selectedInvoice.clientEmail,
+                subject: preview.subject,
+                body: preview.bodyText,
+              })
+            : null;
+          const mailtoUrl = selectedInvoice
+            ? buildMailtoUrl({
+                to: selectedInvoice.clientEmail,
+                subject: preview.subject,
+                body: preview.bodyText,
+              })
+            : null;
 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -240,6 +255,24 @@ export default function InvoicesPage() {
                         className="gap-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
                       >
                         Send via WhatsApp Web
+                      </Button>
+                    )}
+                    {previewTab === "email" && gmailUrl && (
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(gmailUrl, "_blank")}
+                        className="gap-2"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Open in Gmail
+                      </Button>
+                    )}
+                    {previewTab === "email" && mailtoUrl && (
+                      <Button variant="outline" asChild className="gap-2">
+                        <a href={mailtoUrl}>
+                          <Mail className="h-4 w-4" />
+                          Open in Mail App
+                        </a>
                       </Button>
                     )}
                     <Button

@@ -399,6 +399,8 @@ git commit -m "feat(phase4): ChannelProvider interface and provider registry"
 
 ### Task 3: Resend email provider (refactor email onto `ChannelProvider`)
 
+**Note (2026-07-04):** a manual, zero-setup alternative to server-side sending was added outside this task list — see `docs/superpowers/plans/2026-07-04-manual-email-compose-link.md`. It opens a prefilled Gmail/mailto compose window so the signed-in user can send from their own address with one click, with no OAuth or credential storage. True per-user *automated* sending (OAuth + Gmail API + token storage) remains deferred until automated reminders need to scale beyond the shared SMTP sender used today.
+
 **Files:**
 - Create: `src/lib/channels/resend-provider.ts`
 - Modify: `src/lib/channels/registry.ts` (real EMAIL factory + nodemailer fallback)
