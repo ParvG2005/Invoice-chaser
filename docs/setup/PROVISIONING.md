@@ -28,16 +28,18 @@ Supabase branching (`create_branch`) is a paid/billing-relevant operation (requi
 
 **Status:** ⬜ pending user decision.
 
-### Vercel — USER ACTION
+### Hosting — Cloudflare Pages — USER ACTION
 
-No Vercel project is linked yet (no `vercel` CLI available in this environment, no `.vercel/project.json` in the repo).
+**Decision (amended 2026-07-04, ADR-001):** Cloudflare Pages, not Vercel. No Cloudflare Pages project is linked yet.
 
-1. Go to https://vercel.com/new, import this GitHub repo. Framework preset auto-detects as Next.js — accept defaults.
-2. Enable preview deployments for all branches/PRs (default behavior).
-3. Once linked, set `DATABASE_URL` and `DIRECT_URL` in Vercel → Project → Settings → Environment Variables:
+1. Add the OpenNext Cloudflare adapter to the app before first deploy: `npm i -D @opennextjs/cloudflare` (this is the one exception to Phase 0's "no `src/`/dependency changes" rule that must happen — track it as the first item of Phase 1's framework-upgrade step, not done in Phase 0 itself). Follow the adapter's `wrangler.jsonc`/`open-next.config.ts` setup for Next.js App Router.
+2. In the Cloudflare dashboard → Workers & Pages → Create → Pages, connect this GitHub repo. Build command: the OpenNext build command from the adapter docs (not the default `next build`); output directory per adapter config.
+3. Enable preview deployments for branches/PRs (Cloudflare Pages does this per-branch by default).
+4. Once linked, set `DATABASE_URL` and `DIRECT_URL` in Cloudflare Pages → Project → Settings → Environment Variables:
    - **Production:** Supabase "Invoice Chaser" pooled (port 6543) / direct (port 5432) connection strings — get exact strings from Supabase dashboard → Project Settings → Database → Connection string.
    - **Preview:** connection strings for whichever preview-DB option is chosen above.
-4. Confirm from the agent side via `vercel env ls production` / `vercel env ls preview` once the Vercel CLI is authenticated, or paste a screenshot/confirmation back for manual verification.
+5. Validate Prisma + Clerk middleware actually run under Cloudflare's Workers runtime (not full Node.js) — this is a real risk called out in ADR-001's Consequences, not a formality. Confirm with a smoke test before treating hosting as done.
+6. Confirm via `wrangler pages deployment list` (Wrangler CLI) or the Cloudflare dashboard once linked, or paste confirmation back for manual verification.
 
 **Status:** ⬜ pending user action.
 

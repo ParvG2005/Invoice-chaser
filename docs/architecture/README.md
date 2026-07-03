@@ -4,7 +4,7 @@ Index of accepted architecture decisions for InvoicePilot (Invoice Chaser). Each
 
 | ADR | Title | Summary |
 |---|---|---|
-| [ADR-001](ADR-001-monolith-on-vercel.md) | Single Next.js monolith on Vercel | One deployable: Next.js API routes + Inngest background jobs, no microservices. |
+| [ADR-001](ADR-001-monolith-on-cloudflare-pages.md) | Single Next.js monolith on Cloudflare Pages | One deployable: Next.js API routes + Inngest background jobs, no microservices. Hosting amended 2026-07-04 from Vercel to Cloudflare Pages (OpenNext adapter). |
 | [ADR-002](ADR-002-party-centric-ledger.md) | Party-centric ledger data model | `Party` (customer/supplier/agent) as the hub; `Payment` allocations, `Item`/`StockMovement`, `Bill` replace free-text client fields. |
 | [ADR-003](ADR-003-tally-file-first-import.md) | Tally integration is file-first, schema-complete | User-exported Masters/Voucher XML, full voucher schema, idempotent on `GUID`+`ALTERID`. LAN HTTP-XML sync deferred. |
 | [ADR-004](ADR-004-channel-abstracted-messaging.md) | Channel-abstracted messaging | One `ChannelProvider` interface for Resend (email) + Meta WhatsApp Cloud API; unified `CommunicationLog`. |

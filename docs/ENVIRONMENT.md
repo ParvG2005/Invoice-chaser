@@ -1,12 +1,12 @@
 # Environment & Secrets Matrix
 
-Canonical list of environment variables for InvoicePilot. Values live only in Vercel project envs and local `.env` (gitignored) — this table records names, purpose, and where to get them, never values. `.env.example` mirrors this list with blank values.
+Canonical list of environment variables for InvoicePilot. Values live only in Cloudflare Pages project envs and local `.env` (gitignored) — this table records names, purpose, and where to get them, never values. `.env.example` mirrors this list with blank values.
 
 Legend: ✅ set · ⬜ not yet set · — not applicable to that environment.
 
 ## Existing (already in use)
 
-| Variable | Used by | Local dev | Vercel Preview | Vercel Prod | Owner / where to get it |
+| Variable | Used by | Local dev | Cloudflare Preview | Cloudflare Prod | Owner / where to get it |
 |---|---|---|---|---|---|
 | `DATABASE_URL` | Prisma (pooled) | ⬜ | ⬜ | ⬜ | Supabase project **"Invoice Chaser"** (`sikdvtqrdqynknlvpsls`, ap-northeast-1) → Project Settings → Database → Connection string (pooled, port 6543) |
 | `DIRECT_URL` | Prisma migrations (direct) | ⬜ | ⬜ | ⬜ | Same Supabase project → Connection string (direct, port 5432) |
@@ -24,7 +24,7 @@ Legend: ✅ set · ⬜ not yet set · — not applicable to that environment.
 
 ## Planned (introduced by later Phase 0 tasks / Phase 1+)
 
-| Variable | Used by | Local dev | Vercel Preview | Vercel Prod | Owner / where to get it |
+| Variable | Used by | Local dev | Cloudflare Preview | Cloudflare Prod | Owner / where to get it |
 |---|---|---|---|---|---|
 | `RESEND_API_KEY` | Email (Task 6) | ⬜ | ⬜ | ⬜ | resend.com dashboard |
 | `RESEND_WEBHOOK_SECRET` | Email delivery webhooks (Task 6) | ⬜ | ⬜ | ⬜ | resend.com webhook config |
