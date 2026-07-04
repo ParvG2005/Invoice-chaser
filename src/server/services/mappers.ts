@@ -1,5 +1,5 @@
-import type { Invoice, Item, Party, StockMovement } from "@/generated/prisma/client";
-import type { InvoiceDto, ItemDto, PartyDto, StockMovementDto } from "@/types";
+import type { Bill, Invoice, Item, Party, StockMovement } from "@/generated/prisma/client";
+import type { BillDto, InvoiceDto, ItemDto, PartyDto, StockMovementDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 
 export function toInvoiceDto(invoice: Invoice): InvoiceDto {
@@ -67,6 +67,27 @@ export function toStockMovementDto(movement: StockMovement): StockMovementDto {
     godown: movement.godown,
     movementDate: movement.movementDate.toISOString(),
     createdAt: movement.createdAt.toISOString(),
+  };
+}
+
+export function toBillDto(bill: Bill): BillDto {
+  const amount = decimalToNumber(bill.amount);
+  const amountPaid = decimalToNumber(bill.amountPaid);
+  return {
+    id: bill.id,
+    partyId: bill.partyId,
+    billNumber: bill.billNumber,
+    billDate: bill.billDate?.toISOString() ?? null,
+    dueDate: bill.dueDate.toISOString(),
+    amount,
+    amountPaid,
+    outstanding: Math.round((amount - amountPaid) * 100) / 100,
+    currency: bill.currency,
+    status: bill.status,
+    notes: bill.notes,
+    paidAt: bill.paidAt?.toISOString() ?? null,
+    createdAt: bill.createdAt.toISOString(),
+    updatedAt: bill.updatedAt.toISOString(),
   };
 }
 

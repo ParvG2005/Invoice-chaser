@@ -92,6 +92,23 @@ export interface StockMovementDto {
   createdAt: string;
 }
 
+export interface BillDto {
+  id: string;
+  partyId: string;
+  billNumber: string;
+  billDate: string | null;
+  dueDate: string;
+  amount: number;
+  amountPaid: number;
+  outstanding: number;
+  currency: string;
+  status: InvoiceStatus;
+  notes: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ReminderSettingsDto {
   reminderDays: number[];
   emailTone: EmailTone;
