@@ -59,6 +59,9 @@ async function main() {
   const organizationId = await resolveOrganizationId();
 
   // --- Parties -------------------------------------------------------
+  // NOTE: upsert matches on [organizationId, name] regardless of deletedAt; if
+  // this seed's rows are ever soft-deleted by other test cleanup, rerunning
+  // this script will resurrect them via upsert rather than creating fresh rows.
   const agent = await prisma.party.upsert({
     where: { organizationId_name: { organizationId, name: E2E_SEED.agentName } },
     update: {},
@@ -97,6 +100,9 @@ async function main() {
   });
 
   // --- Item + opening stock -------------------------------------------
+  // NOTE: upsert matches on [organizationId, name] regardless of deletedAt; if
+  // this seed's row is ever soft-deleted by other test cleanup, rerunning this
+  // script will resurrect it via upsert rather than creating a fresh row.
   const item = await prisma.item.upsert({
     where: { organizationId_name: { organizationId, name: E2E_SEED.itemName } },
     update: {
@@ -172,21 +178,25 @@ async function main() {
     },
   });
 
-  await prisma.invoiceLineItem.deleteMany({ where: { invoiceId: inv1.id } });
-  await prisma.invoiceLineItem.create({
-    data: {
-      organizationId,
-      invoiceId: inv1.id,
-      itemId: item.id,
-      description: item.name,
-      quantity: 20,
-      rate: 500,
-      discount: 0,
-      taxRate: 0,
-      amount: 10000,
-      sortOrder: 0,
-    },
+  const existingLineItem = await prisma.invoiceLineItem.findFirst({
+    where: { organizationId, invoiceId: inv1.id, description: item.name },
   });
+  if (!existingLineItem) {
+    await prisma.invoiceLineItem.create({
+      data: {
+        organizationId,
+        invoiceId: inv1.id,
+        itemId: item.id,
+        description: item.name,
+        quantity: 20,
+        rate: 500,
+        discount: 0,
+        taxRate: 0,
+        amount: 10000,
+        sortOrder: 0,
+      },
+    });
+  }
 
   // E2E-INV-002: OVERDUE, due -30d, ₹18,500.
   await prisma.invoice.upsert({
