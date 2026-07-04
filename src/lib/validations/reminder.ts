@@ -9,13 +9,22 @@ export const reminderSettingsSchema = z.object({
   emailTone: emailToneSchema,
   autoSend: z.boolean(),
   whatsappEnabled: z.boolean(), // legacy, kept for old clients; enabledChannels wins
-  enabledChannels: z.array(channelSchema).min(1),
-  quietHoursStart: hhmm.nullable(),
-  quietHoursEnd: hhmm.nullable(),
-  timezone: z.string().min(1),
-  escalationTones: z.array(emailToneSchema).min(1).max(10),
-  upiId: z.string().max(100).nullable(),
-  paymentLink: z.string().url().nullable(),
+  // Phase 4 fields below are all optional with sane defaults so the existing
+  // reminders settings page — which still only POSTs the legacy payload shape
+  // (reminderDays/emailTone/autoSend/whatsappEnabled/sequence/quietHours) —
+  // continues to validate without being updated in this fix.
+  enabledChannels: z.array(channelSchema).min(1).optional().default(["EMAIL"]),
+  quietHoursStart: hhmm.nullable().optional(),
+  quietHoursEnd: hhmm.nullable().optional(),
+  timezone: z.string().min(1).optional().default("Asia/Kolkata"),
+  escalationTones: z
+    .array(emailToneSchema)
+    .min(1)
+    .max(10)
+    .optional()
+    .default(["FRIENDLY", "PROFESSIONAL", "FIRM", "FINAL_NOTICE"]),
+  upiId: z.string().max(100).nullable().optional(),
+  paymentLink: z.string().url().nullable().optional(),
 });
 
 export const generateEmailSchema = z.object({

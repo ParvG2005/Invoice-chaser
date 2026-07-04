@@ -227,7 +227,7 @@ export interface ReminderSettingsDto {
   emailTone: EmailTone;
   autoSend: boolean;
   whatsappEnabled: boolean; // legacy mirror of enabledChannels.includes("WHATSAPP")
-  enabledChannels: Channel[];
+  enabledChannels: CommunicationChannel[];
   quietHoursStart: string | null;
   quietHoursEnd: string | null;
   timezone: string;
@@ -239,12 +239,12 @@ export interface ReminderSettingsDto {
   quietHours?: QuietHoursDto | null;
 }
 
-export type Channel = "EMAIL" | "WHATSAPP";
+export type CommunicationChannel = "EMAIL" | "WHATSAPP";
 export type CommunicationStatus = "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED" | "BOUNCED";
 
 export interface CommunicationLogDto {
   id: string;
-  channel: Channel;
+  channel: CommunicationChannel;
   direction: "OUTBOUND" | "INBOUND";
   to: string;
   subject: string | null;

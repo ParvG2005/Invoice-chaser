@@ -76,11 +76,6 @@ enum CommunicationChannel {
   WHATSAPP
 }
 
-enum Channel {
-  EMAIL
-  WHATSAPP
-}
-
 enum CommunicationDirection {
   OUTBOUND
   INBOUND
@@ -268,7 +263,7 @@ model ReminderSettings {
   // + UI only in this task, full sequence-driven scheduling is a future phase.
   sequence       Json?
   quietHours     Json?     @map("quiet_hours")
-  enabledChannels Channel[]   @default([EMAIL]) @map("enabled_channels")
+  enabledChannels CommunicationChannel[]   @default([EMAIL]) @map("enabled_channels")
   quietHoursStart String?     @map("quiet_hours_start") // "HH:mm" in org timezone
   quietHoursEnd   String?     @map("quiet_hours_end")
   timezone        String      @default("Asia/Kolkata")
@@ -367,7 +362,7 @@ model Party {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
-  preferredChannels Channel[] @default([]) @map("preferred_channels") // empty = inherit org enabledChannels
+  preferredChannels CommunicationChannel[] @default([]) @map("preferred_channels") // empty = inherit org enabledChannels
   emailOptOutAt     DateTime? @map("email_opt_out_at")
   whatsappOptOutAt  DateTime? @map("whatsapp_opt_out_at")
 
