@@ -36,32 +36,55 @@ const paymentInclude = { allocations: { where: { deletedAt: null } } } as const;
  * never be a valid allocation target in the first place (callers filter those
  * out via findOpenInvoicesForParty / billRepository.findOpenForParty), but the
  * guard is kept defensively.
+ *
+ * Org-scoped: every read/write here is filtered by { id, organizationId,
+ * deletedAt: null }, matching the pattern used by party/item/bill/stock
+ * repositories, so this can never touch a document belonging to another org
+ * even if a future caller passes an unvalidated documentId. Writes use
+ * updateMany (which doesn't return the row) so a pre-update findFirst — also
+ * org-scoped and inside the same transaction — supplies the amountPaid/total
+ * needed to decide the PAID flip, instead of trusting update()'s return value.
  */
 async function applyAllocation(
   tx: Prisma.TransactionClient,
+  organizationId: string,
   target: "invoice" | "bill",
   allocation: AllocationWrite,
 ) {
   if (target === "invoice") {
-    const updated = await tx.invoice.update({
-      where: { id: allocation.documentId },
+    const current = await tx.invoice.findFirst({
+      where: { id: allocation.documentId, organizationId, deletedAt: null },
+    });
+    if (!current) return;
+
+    await tx.invoice.updateMany({
+      where: { id: allocation.documentId, organizationId, deletedAt: null },
       data: { amountPaid: { increment: allocation.amount } },
     });
-    const total = Number(updated.totalAmount ?? updated.amount);
-    if (updated.status !== "PAID" && Number(updated.amountPaid) >= total) {
-      await tx.invoice.update({
-        where: { id: allocation.documentId },
+
+    const newAmountPaid = Number(current.amountPaid) + allocation.amount;
+    const total = Number(current.totalAmount ?? current.amount);
+    if (current.status !== "PAID" && newAmountPaid >= total) {
+      await tx.invoice.updateMany({
+        where: { id: allocation.documentId, organizationId, deletedAt: null },
         data: { status: "PAID", paidAt: new Date() },
       });
     }
   } else {
-    const updated = await tx.bill.update({
-      where: { id: allocation.documentId },
+    const current = await tx.bill.findFirst({
+      where: { id: allocation.documentId, organizationId, deletedAt: null },
+    });
+    if (!current) return;
+
+    await tx.bill.updateMany({
+      where: { id: allocation.documentId, organizationId, deletedAt: null },
       data: { amountPaid: { increment: allocation.amount } },
     });
-    if (updated.status !== "PAID" && Number(updated.amountPaid) >= Number(updated.amount)) {
-      await tx.bill.update({
-        where: { id: allocation.documentId },
+
+    const newAmountPaid = Number(current.amountPaid) + allocation.amount;
+    if (current.status !== "PAID" && newAmountPaid >= Number(current.amount)) {
+      await tx.bill.updateMany({
+        where: { id: allocation.documentId, organizationId, deletedAt: null },
         data: { status: "PAID", paidAt: new Date() },
       });
     }
@@ -139,7 +162,7 @@ export const paymentRepository = {
           },
         });
 
-        await applyAllocation(tx, target, allocation);
+        await applyAllocation(tx, data.organizationId, target, allocation);
       }
 
       return tx.payment.findUniqueOrThrow({
@@ -172,7 +195,7 @@ export const paymentRepository = {
           },
         });
 
-        await applyAllocation(tx, target, allocation);
+        await applyAllocation(tx, organizationId, target, allocation);
       }
 
       await tx.payment.update({

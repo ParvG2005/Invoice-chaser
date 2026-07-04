@@ -146,6 +146,27 @@ describe("paymentService.create", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it("rejects duplicate-documentId explicit allocations that together overpay a document", async () => {
+    vi.mocked(partyRepository.findById).mockResolvedValue({ id: "party-1" } as never);
+    vi.mocked(paymentRepository.findOpenInvoicesForParty).mockResolvedValue([
+      openInvoice("inv-1", "2026-06-01", 500),
+    ] as never);
+
+    // Each entry individually is <= 500 outstanding, but they sum to 600.
+    await expect(
+      paymentService.create(ORG, {
+        partyId: "party-1",
+        direction: "IN",
+        amount: 600,
+        mode: "CASH",
+        allocations: [
+          { documentId: "inv-1", amount: 300 },
+          { documentId: "inv-1", amount: 300 },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
   it("rejects explicit allocations that exceed the payment amount", async () => {
     vi.mocked(partyRepository.findById).mockResolvedValue({ id: "party-1" } as never);
     vi.mocked(paymentRepository.findOpenInvoicesForParty).mockResolvedValue([

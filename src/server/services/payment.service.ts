@@ -76,6 +76,27 @@ function validateExplicitAllocations(
   const openById = new Map(openDocuments.map((d) => [d.id, d]));
   let total = 0;
 
+  // Aggregate by documentId first: two entries targeting the same document can
+  // each be individually <= outstanding while together overpaying it (and
+  // incorrectly flipping it to PAID). The per-entry check below alone can't
+  // catch that, so validate the summed-per-document amount too.
+  const byDocumentId = new Map<string, number>();
+  for (const allocation of explicit) {
+    byDocumentId.set(
+      allocation.documentId,
+      round2((byDocumentId.get(allocation.documentId) ?? 0) + allocation.amount),
+    );
+  }
+  for (const [documentId, aggregatedAmount] of byDocumentId) {
+    const document = openById.get(documentId);
+    if (!document) continue; // reported by the per-entry loop below
+    if (aggregatedAmount > document.outstanding) {
+      throw new ValidationError(
+        `Allocation ${aggregatedAmount} exceeds outstanding ${document.outstanding} on ${documentId}`,
+      );
+    }
+  }
+
   for (const allocation of explicit) {
     const document = openById.get(allocation.documentId);
     if (!document) {
