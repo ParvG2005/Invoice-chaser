@@ -118,6 +118,8 @@ Phase 0 is **done** when: this plan is committed, all checklist accounts exist w
 
 **Gate:** all existing features still work (invoices list/create/remind); new models covered by unit tests; migration runs clean against a copy of prod data.
 
+**Status (2026-07-04): CONDITIONAL GO.** All 13 tasks implemented on `worktree-phase-1-foundation-data-model`, each subagent-reviewed (2 real bugs caught and fixed with regression tests: `Bill.paidAt` overwrite, `parseRole` prototype-chain bypass); full suite green (66/66), lint/typecheck/build clean. Outstanding before this phase is fully closed: prod-copy migration rehearsal, manual live-Clerk browser regression, CI workflow verified green on real GitHub Actions, and user sign-off — see `docs/setup/PHASE-1-GATE.md` for the full status table, open risks, and sign-off block.
+
 ## Phase 2 — Tally Prime Import (full schema match) ⭐ most important
 
 **Outcome:** user exports from Tally Prime and gets parties, stock items, sales/purchase/receipt/payment vouchers imported with bill-wise payment matching — idempotently.
