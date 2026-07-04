@@ -34,6 +34,94 @@ enum EmailLogStatus {
   BOUNCED
 }
 
+enum PartyType {
+  CUSTOMER
+  SUPPLIER
+  AGENT
+  BOTH
+}
+
+enum InvoiceType {
+  RECEIVABLE
+  PAYABLE
+}
+
+enum StockSourceType {
+  INVOICE
+  BILL
+  ADJUSTMENT
+  OPENING
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum PaymentMode {
+  CASH
+  BANK_TRANSFER
+  UPI
+  CHEQUE
+  CARD
+  OTHER
+}
+
+enum CommunicationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum CommunicationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  BOUNCED
+}
+
+enum ImportSource {
+  TALLY_XML
+  CSV
+}
+
+enum ImportBatchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REVERTED
+}
+
+enum ImportRecordStatus {
+  CREATED
+  UPDATED
+  SKIPPED
+  ERRORED
+}
+
+enum ActorType {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum AssistantMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum AssistantActionStatus {
+  PROPOSED
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
+}
+
 model User {
   id        String    @id @default(uuid())
   clerkId   String    @unique @map("clerk_id")
@@ -43,7 +131,8 @@ model User {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  memberships OrganizationMember[]
+  memberships       OrganizationMember[]
+  assistantSessions AssistantSession[]
 
   @@index([clerkId])
   @@index([email])
@@ -61,6 +150,16 @@ model Organization {
   members          OrganizationMember[]
   invoices         Invoice[]
   reminderSettings ReminderSettings?
+
+  parties           Party[]
+  items             Item[]
+  stockMovements    StockMovement[]
+  bills             Bill[]
+  payments          Payment[]
+  communicationLogs CommunicationLog[]
+  importBatches     ImportBatch[]
+  auditLogs         AuditLog[]
+  assistantSessions AssistantSession[]
 
   @@index([slug])
   @@map("organizations")
@@ -98,13 +197,28 @@ model Invoice {
   updatedAt      DateTime      @updatedAt @map("updated_at")
   deletedAt      DateTime?     @map("deleted_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reminders    Reminder[]
-  emailLogs    EmailLog[]
+  type        InvoiceType @default(RECEIVABLE)
+  partyId     String?     @map("party_id")
+  subtotal    Decimal?    @db.Decimal(12, 2)
+  taxAmount   Decimal?    @map("tax_amount") @db.Decimal(12, 2)
+  totalAmount Decimal?    @map("total_amount") @db.Decimal(12, 2)
+  amountPaid  Decimal     @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  currency    String      @default("INR")
+  tallyGuid   String?     @map("tally_guid")
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reminders         Reminder[]
+  emailLogs         EmailLog[]
+  party             Party?              @relation(fields: [partyId], references: [id], onDelete: SetNull)
+  lineItems         InvoiceLineItem[]
+  allocations       PaymentAllocation[]
+  communicationLogs CommunicationLog[]
 
   @@unique([organizationId, invoiceNumber])
+  @@unique([organizationId, tallyGuid])
   @@index([organizationId, status])
   @@index([organizationId, dueDate])
+  @@index([organizationId, partyId])
   @@index([status])
   @@map("invoices")
 }
@@ -136,9 +250,10 @@ model Reminder {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  invoice      Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  emailLogs    EmailLog[]
-  aiGeneration AiGeneration?
+  invoice           Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  emailLogs         EmailLog[]
+  aiGeneration      AiGeneration?
+  communicationLogs CommunicationLog[]
 
   @@index([organizationId, status])
   @@index([invoiceId])
@@ -185,4 +300,332 @@ model AiGeneration {
 
   @@index([organizationId, createdAt])
   @@map("ai_generations")
+}
+
+model Party {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  type           PartyType @default(CUSTOMER)
+  name           String
+  email          String?
+  phone          String?
+  whatsapp       String?
+  gstin          String?
+  billingAddress String?   @map("billing_address")
+  creditLimit    Decimal?  @map("credit_limit") @db.Decimal(12, 2)
+  creditDays     Int?      @map("credit_days")
+  openingBalance Decimal?  @map("opening_balance") @db.Decimal(12, 2)
+  notes          String?
+  tallyGuid      String?   @map("tally_guid")
+  agentId        String?   @map("agent_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agent          Party?       @relation("PartyAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  managedParties Party[]      @relation("PartyAgent")
+  invoices       Invoice[]
+  bills          Bill[]
+  payments       Payment[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, tallyGuid])
+  @@index([organizationId, type])
+  @@index([organizationId, deletedAt])
+  @@map("parties")
+}
+
+model Item {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String
+  sku            String?
+  unit           String    @default("Nos")
+  hsnCode        String?   @map("hsn_code")
+  gstRate        Decimal?  @map("gst_rate") @db.Decimal(5, 2)
+  openingQty     Decimal   @default(0) @map("opening_qty") @db.Decimal(12, 3)
+  reorderLevel   Decimal?  @map("reorder_level") @db.Decimal(12, 3)
+  purchasePrice  Decimal?  @map("purchase_price") @db.Decimal(12, 2)
+  salePrice      Decimal?  @map("sale_price") @db.Decimal(12, 2)
+  tallyGuid      String?   @map("tally_guid")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+  lineItems      InvoiceLineItem[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, tallyGuid])
+  @@index([organizationId, deletedAt])
+  @@map("items")
+}
+
+model StockMovement {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  itemId         String          @map("item_id")
+  qty            Decimal         @db.Decimal(12, 3)
+  rate           Decimal?        @db.Decimal(12, 2)
+  sourceType     StockSourceType @map("source_type")
+  sourceId       String?         @map("source_id")
+  godown         String?
+  movementDate   DateTime        @default(now()) @map("movement_date")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  item         Item         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, itemId])
+  @@index([organizationId, sourceType, sourceId])
+  @@map("stock_movements")
+}
+
+model InvoiceLineItem {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  invoiceId      String    @map("invoice_id")
+  itemId         String?   @map("item_id")
+  description    String
+  quantity       Decimal   @default(1) @db.Decimal(12, 3)
+  rate           Decimal   @db.Decimal(12, 2)
+  discount       Decimal   @default(0) @db.Decimal(12, 2)
+  taxRate        Decimal   @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  amount         Decimal   @db.Decimal(12, 2)
+  sortOrder      Int       @default(0) @map("sort_order")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item    Item?   @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, invoiceId])
+  @@map("invoice_line_items")
+}
+
+model Bill {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  partyId        String        @map("party_id")
+  billNumber     String        @map("bill_number")
+  billDate       DateTime?     @map("bill_date")
+  dueDate        DateTime      @map("due_date")
+  amount         Decimal       @db.Decimal(12, 2)
+  amountPaid     Decimal       @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  currency       String        @default("INR")
+  status         InvoiceStatus @default(PENDING)
+  notes          String?
+  tallyGuid      String?       @map("tally_guid")
+  paidAt         DateTime?     @map("paid_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  party        Party               @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  allocations  PaymentAllocation[]
+
+  @@unique([organizationId, billNumber])
+  @@unique([organizationId, tallyGuid])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@map("bills")
+}
+
+model Payment {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  partyId        String           @map("party_id")
+  direction      PaymentDirection
+  amount         Decimal          @db.Decimal(12, 2)
+  unallocated    Decimal          @default(0) @db.Decimal(12, 2)
+  mode           PaymentMode      @default(BANK_TRANSFER)
+  paymentDate    DateTime         @default(now()) @map("payment_date")
+  reference      String?
+  notes          String?
+  currency       String           @default("INR")
+  tallyGuid      String?          @map("tally_guid")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  deletedAt      DateTime?        @map("deleted_at")
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  party        Party               @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  allocations  PaymentAllocation[]
+
+  @@unique([organizationId, tallyGuid])
+  @@index([organizationId, partyId])
+  @@index([organizationId, paymentDate])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  paymentId      String    @map("payment_id")
+  invoiceId      String?   @map("invoice_id")
+  billId         String?   @map("bill_id")
+  amount         Decimal   @db.Decimal(12, 2)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  payment Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  bill    Bill?    @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, paymentId])
+  @@index([invoiceId])
+  @@index([billId])
+  @@map("payment_allocations")
+}
+
+model CommunicationLog {
+  id             String               @id @default(uuid())
+  organizationId String               @map("organization_id")
+  channel        CommunicationChannel
+  toAddress      String               @map("to_address")
+  templateId     String?              @map("template_id")
+  subject        String?
+  body           String?              @db.Text
+  status         CommunicationStatus  @default(QUEUED)
+  providerId     String?              @map("provider_id")
+  errorMessage   String?              @map("error_message")
+  partyId        String?              @map("party_id")
+  invoiceId      String?              @map("invoice_id")
+  reminderId     String?              @map("reminder_id")
+  sentAt         DateTime?            @map("sent_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  reminder     Reminder?    @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, invoiceId])
+  @@index([providerId])
+  @@map("communication_logs")
+}
+
+model ImportBatch {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  source         ImportSource
+  fileName       String?           @map("file_name")
+  fileHash       String            @map("file_hash")
+  status         ImportBatchStatus @default(PENDING)
+  createdCount   Int               @default(0) @map("created_count")
+  updatedCount   Int               @default(0) @map("updated_count")
+  skippedCount   Int               @default(0) @map("skipped_count")
+  errorCount     Int               @default(0) @map("error_count")
+  errorSummary   String?           @map("error_summary") @db.Text
+  startedAt      DateTime?         @map("started_at")
+  completedAt    DateTime?         @map("completed_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  deletedAt      DateTime?         @map("deleted_at")
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  records      ImportRecord[]
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, fileHash])
+  @@map("import_batches")
+}
+
+model ImportRecord {
+  id             String             @id @default(uuid())
+  organizationId String             @map("organization_id")
+  batchId        String             @map("batch_id")
+  recordType     String             @map("record_type")
+  tallyGuid      String?            @map("tally_guid")
+  alterId        String?            @map("alter_id")
+  entityId       String?            @map("entity_id")
+  status         ImportRecordStatus
+  message        String?
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, batchId])
+  @@index([organizationId, tallyGuid])
+  @@map("import_records")
+}
+
+model AuditLog {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  actorType      ActorType @map("actor_type")
+  actorId        String?   @map("actor_id")
+  action         String
+  entityType     String    @map("entity_type")
+  entityId       String?   @map("entity_id")
+  before         Json?
+  after          Json?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+  @@map("audit_logs")
+}
+
+model AssistantSession {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  userId         String    @map("user_id")
+  title          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     AssistantMessage[]
+  actions      AssistantAction[]
+
+  @@index([organizationId, userId])
+  @@map("assistant_sessions")
+}
+
+model AssistantMessage {
+  id             String               @id @default(uuid())
+  organizationId String               @map("organization_id")
+  sessionId      String               @map("session_id")
+  role           AssistantMessageRole
+  content        Json
+  tokensUsed     Int?                 @map("tokens_used")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  session AssistantSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("assistant_messages")
+}
+
+model AssistantAction {
+  id             String                @id @default(uuid())
+  organizationId String                @map("organization_id")
+  sessionId      String                @map("session_id")
+  messageId      String?               @map("message_id")
+  toolName       String                @map("tool_name")
+  input          Json
+  status         AssistantActionStatus @default(PROPOSED)
+  result         Json?
+  errorMessage   String?               @map("error_message")
+  approvedById   String?               @map("approved_by_id")
+  approvedAt     DateTime?             @map("approved_at")
+  executedAt     DateTime?             @map("executed_at")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  session AssistantSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([sessionId, createdAt])
+  @@map("assistant_actions")
 }
