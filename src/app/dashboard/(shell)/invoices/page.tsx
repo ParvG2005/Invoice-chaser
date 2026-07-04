@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Upload } from "lucide-react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 import { InvoiceTable } from "@/modules/invoices/components/invoice-table";
 import { InvoiceFiltersBar } from "@/modules/invoices/components/invoice-filters";
 import { BulkActionsBar } from "@/modules/invoices/components/bulk-actions-bar";
-import { ImportDialog } from "@/modules/invoices/components/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useInvoiceFilters } from "@/store/invoice-filters";
@@ -63,7 +63,12 @@ export default function InvoicesPage() {
           <p className="text-zinc-500">Manage clients, track status, and generate AI reminders.</p>
         </div>
         <div className="flex gap-2">
-          <ImportDialog />
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/imports">
+              <Upload className="h-4 w-4" />
+              Import
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/dashboard/invoices/new">New invoice</Link>
           </Button>
