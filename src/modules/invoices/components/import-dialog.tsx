@@ -3,17 +3,13 @@
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Upload, FileText, X, AlertTriangle, CheckCircle, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { Upload, FileText, X, AlertTriangle, CheckCircle, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api/client";
 import type { CreateInvoiceInput } from "@/lib/validations/invoice";
 import type { InvoiceDto } from "@/types";
 import { parseCsv } from "@/lib/import/csv-parser";
-import { parseTallyXml, type TallyInvoice } from "@/lib/import/tally-parser";
-
-type ImportTab = "csv" | "tally";
 
 interface ParsedPreview {
   invoices: CreateInvoiceInput[];
@@ -25,12 +21,9 @@ interface ParsedPreview {
 
 export function ImportDialog() {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<ImportTab>("csv");
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<ParsedPreview | null>(null);
-  const [defaultEmail, setDefaultEmail] = useState("");
   const csvRef = useRef<HTMLInputElement>(null);
-  const xmlRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const importMutation = useMutation({
@@ -60,40 +53,12 @@ export function ImportDialog() {
     });
   };
 
-  const handleTallyFile = async (file: File) => {
-    const content = await file.text();
-    try {
-      const result = parseTallyXml(content, defaultEmail || undefined);
-      // Inject defaultEmail into invoices that have no email
-      const invoices = result.invoices.map((inv: TallyInvoice) => ({
-        ...inv,
-        clientEmail: inv.clientEmail || defaultEmail,
-      })) as CreateInvoiceInput[];
-      setPreview({
-        invoices,
-        errors: invoices.filter((inv) => !inv.clientEmail).map(
-          (inv) => `${inv.invoiceNumber}: Missing client email`
-        ),
-        warnings: result.warnings,
-        missingEmailCount: result.missingEmailCount,
-        fileName: file.name,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to parse Tally XML";
-      toast.error(message);
-    }
-  };
-
   const handleFile = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext === "csv") {
-      setTab("csv");
       handleCsvFile(file);
-    } else if (ext === "xml") {
-      setTab("tally");
-      handleTallyFile(file);
     } else {
-      toast.error("Unsupported file type. Upload a .csv or .xml file.");
+      toast.error("Unsupported file type. Upload a .csv file, or use the import wizard for TallyPrime XML.");
     }
   };
 
@@ -123,7 +88,7 @@ export function ImportDialog() {
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
           <div>
             <h2 className="text-lg font-semibold">Import Invoices</h2>
-            <p className="text-sm text-zinc-500">Upload CSV or TallyPrime XML exports</p>
+            <p className="text-sm text-zinc-500">Upload a CSV export</p>
           </div>
           <button
             onClick={() => { setOpen(false); setPreview(null); }}
@@ -134,49 +99,20 @@ export function ImportDialog() {
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Tab switcher */}
-          <div className="flex rounded-lg border border-zinc-200 p-1 dark:border-zinc-700">
-            {(["csv", "tally"] as ImportTab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); setPreview(null); }}
-                className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
-                  tab === t
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                {t === "csv" ? "CSV / Excel" : "TallyPrime XML"}
-              </button>
-            ))}
-          </div>
-
           {/* Format hints */}
           <div className="rounded-lg bg-zinc-50 px-4 py-3 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
-            {tab === "csv" ? (
-              <span>
-                Supports standard CSV and TallyPrime CSV exports. Required columns: <code>clientName</code>, <code>clientEmail</code>, <code>amount</code>, <code>dueDate</code>, <code>invoiceNumber</code>. Many column name variants supported automatically.
-              </span>
-            ) : (
-              <span>
-                Upload TallyPrime Data Export XML files (<em>Gateway of Tally → Display → Export → XML</em>). Supports Sales Vouchers. Since Tally XML rarely includes client email, provide a fallback email below.
-              </span>
-            )}
+            Supports standard CSV and TallyPrime CSV exports. Required columns: <code>clientName</code>, <code>clientEmail</code>, <code>amount</code>, <code>dueDate</code>, <code>invoiceNumber</code>. Many column name variants supported automatically.
           </div>
 
-          {/* Tally: default email */}
-          {tab === "tally" && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="defaultEmail">Fallback client email (used when not in XML)</Label>
-              <Input
-                id="defaultEmail"
-                type="email"
-                placeholder="client@example.com"
-                value={defaultEmail}
-                onChange={(e) => setDefaultEmail(e.target.value)}
-              />
-            </div>
-          )}
+          {/* Tally XML redirect */}
+          <Link
+            href="/dashboard/imports"
+            className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-100"
+            onClick={() => { setOpen(false); setPreview(null); }}
+          >
+            Importing from Tally? Use the new import wizard
+            <ArrowRight className="h-4 w-4" />
+          </Link>
 
           {/* Drop zone */}
           {!preview && (
@@ -189,28 +125,19 @@ export function ImportDialog() {
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
-              onClick={() => tab === "csv" ? csvRef.current?.click() : xmlRef.current?.click()}
+              onClick={() => csvRef.current?.click()}
             >
               <Upload className="mb-3 h-8 w-8 text-zinc-400" />
               <p className="font-medium text-zinc-700 dark:text-zinc-300">
                 Drag & drop or click to browse
               </p>
-              <p className="mt-1 text-sm text-zinc-400">
-                {tab === "csv" ? ".csv files" : ".xml TallyPrime export files"}
-              </p>
+              <p className="mt-1 text-sm text-zinc-400">.csv files</p>
               <input
                 ref={csvRef}
                 type="file"
                 accept=".csv"
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvFile(f); e.target.value = ""; }}
-              />
-              <input
-                ref={xmlRef}
-                type="file"
-                accept=".xml"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleTallyFile(f); e.target.value = ""; }}
               />
             </div>
           )}
