@@ -1,4 +1,4 @@
-import { NotFoundError } from "@/lib/api/errors";
+import { AppError, NotFoundError } from "@/lib/api/errors";
 import type { CreateBillInput, UpdateBillInput } from "@/lib/validations/bill";
 import type { BillPaymentDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
@@ -87,6 +87,18 @@ export const billService = {
     const existing = await billRepository.findById(organizationId, id);
     if (!existing) throw new NotFoundError("Bill not found");
 
+    if (existing.status === "WRITTEN_OFF") {
+      throw new AppError(
+        "INVALID_STATUS_TRANSITION",
+        "Cannot mark a written-off bill as paid",
+        409,
+      );
+    }
+    // Idempotent no-op: already paid, don't re-stamp paidAt.
+    if (existing.status === "PAID") {
+      return toBillDto(existing);
+    }
+
     return withAudit(
       actor,
       "bill.markPaid",
@@ -111,6 +123,10 @@ export const billService = {
   ) {
     const existing = await billRepository.findById(organizationId, id);
     if (!existing) throw new NotFoundError("Bill not found");
+
+    if (existing.status === "PAID") {
+      throw new AppError("INVALID_STATUS_TRANSITION", "Cannot write off a paid bill", 409);
+    }
 
     const notes = reason
       ? existing.notes

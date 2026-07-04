@@ -8,6 +8,7 @@ import { autoAllocate, type OpenDoc } from "@/modules/payments/allocation";
 
 export interface AllocationEditorDoc extends OpenDoc {
   label: string;
+  currency: string;
 }
 
 interface AllocationEditorProps {
@@ -33,6 +34,10 @@ export function AllocationEditor({
   focusTargetId,
 }: AllocationEditorProps) {
   const unallocated = unallocatedAmount(amount, allocations);
+  // All open docs for a single party+direction share one currency in
+  // practice (Invoice/Bill currency isn't per-line-item); fall back to the
+  // schema default when there are no open docs to read it from.
+  const currency = openDocs[0]?.currency ?? "INR";
 
   function handleAutoAllocate() {
     const plan = autoAllocate(amount, openDocs);
@@ -67,7 +72,7 @@ export function AllocationEditor({
                 <p className="font-medium text-foreground">{doc.label}</p>
                 <p className="text-xs text-muted-foreground">
                   Due {format(new Date(doc.dueDate), "MMM d, yyyy")} · Balance{" "}
-                  <Money amount={doc.balanceDue} />
+                  <Money amount={doc.balanceDue} currency={doc.currency} />
                 </p>
               </div>
               <Input
@@ -98,7 +103,7 @@ export function AllocationEditor({
       >
         <span className="text-muted-foreground">Unallocated</span>
         <span className="font-medium tabular-nums">
-          <Money amount={unallocated} />
+          <Money amount={unallocated} currency={currency} />
         </span>
       </div>
     </div>

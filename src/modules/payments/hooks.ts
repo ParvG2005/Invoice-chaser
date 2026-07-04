@@ -16,26 +16,28 @@ export interface RecordPaymentInput {
 }
 
 /** Open (not fully paid, not written off) invoices for a party, shaped for the allocation editor. */
-function toOpenDocs(invoices: InvoiceDto[]): (OpenDoc & { label: string })[] {
+function toOpenDocs(invoices: InvoiceDto[]): (OpenDoc & { label: string; currency: string })[] {
   return invoices
     .filter((invoice) => invoice.status !== "PAID" && invoice.status !== "WRITTEN_OFF")
     .map((invoice) => ({
       id: invoice.id,
       label: invoice.invoiceNumber,
       dueDate: invoice.dueDate,
+      currency: invoice.currency,
       balanceDue: Math.round(((invoice.totalAmount ?? invoice.amount) - invoice.amountPaid) * 100) / 100,
     }))
     .filter((doc) => doc.balanceDue > 0);
 }
 
 /** Open (not fully paid, not written off) bills for a party, shaped for the allocation editor. */
-function toOpenBillDocs(bills: BillDto[]): (OpenDoc & { label: string })[] {
+function toOpenBillDocs(bills: BillDto[]): (OpenDoc & { label: string; currency: string })[] {
   return bills
     .filter((bill) => bill.status !== "PAID" && bill.status !== "WRITTEN_OFF")
     .map((bill) => ({
       id: bill.id,
       label: bill.billNumber,
       dueDate: bill.dueDate,
+      currency: bill.currency,
       balanceDue: bill.outstanding,
     }))
     .filter((doc) => doc.balanceDue > 0);

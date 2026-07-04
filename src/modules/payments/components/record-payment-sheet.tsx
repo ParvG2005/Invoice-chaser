@@ -269,7 +269,7 @@ export function RecordPaymentSheet() {
                 <span className="font-medium">{form.party?.name}</span>
                 <span className="text-muted-foreground"> · {form.direction} · </span>
                 <span className="font-medium">
-                  <Money amount={amount} />
+                  <Money amount={amount} currency={openDocs[0]?.currency ?? "INR"} />
                 </span>
               </div>
               {openDocsLoading ? (

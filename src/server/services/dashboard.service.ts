@@ -105,6 +105,7 @@ export const dashboardService = {
         invoiceNumber: invoice.invoiceNumber,
         clientName: invoice.clientName,
         amount: decimalToNumber(invoice.amount),
+        currency: invoice.currency,
         dueDate: invoice.dueDate.toISOString(),
         status: invoice.status,
       })),

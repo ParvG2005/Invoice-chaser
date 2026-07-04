@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { invoiceService } from "@/server/services/invoice.service";
 import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
-import { NotFoundError } from "@/lib/api/errors";
+import { AppError, NotFoundError } from "@/lib/api/errors";
 
 vi.mock("@/server/repositories/invoice.repository", () => ({
   invoiceRepository: {
@@ -243,6 +243,14 @@ describe("invoiceService (characterization)", () => {
     it("throws NotFoundError for a missing invoice", async () => {
       vi.mocked(invoiceRepository.findById).mockResolvedValue(null);
       await expect(invoiceService.writeOff(ORG, "missing")).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it("rejects writing off an already-paid invoice", async () => {
+      vi.mocked(invoiceRepository.findById).mockResolvedValue(
+        fakeInvoice({ status: "PAID" }) as never,
+      );
+      await expect(invoiceService.writeOff(ORG, "inv-1")).rejects.toBeInstanceOf(AppError);
+      expect(invoiceRepository.update).not.toHaveBeenCalled();
     });
   });
 

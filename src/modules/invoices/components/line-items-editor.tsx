@@ -52,9 +52,11 @@ export function useLineItemsEditor(initial: LineItemRow[] = []) {
 interface LineItemsEditorProps {
   rows: LineItemRow[];
   dispatch: React.Dispatch<Action>;
+  /** Document currency the totals are denominated in (defaults to INR, matching the Invoice model's default). */
+  currency?: string;
 }
 
-export function LineItemsEditor({ rows, dispatch }: LineItemsEditorProps) {
+export function LineItemsEditor({ rows, dispatch, currency = "INR" }: LineItemsEditorProps) {
   const rowTotals = totals(rows);
 
   function handleItemSelect(key: string, item: ItemSearchResultDto) {
@@ -138,7 +140,7 @@ export function LineItemsEditor({ rows, dispatch }: LineItemsEditorProps) {
               }
             />
             <div className="col-span-1 text-right text-sm font-medium tabular-nums" data-testid="line-item-amount">
-              <Money amount={lineAmount(row)} />
+              <Money amount={lineAmount(row)} currency={currency} />
             </div>
             <Button
               type="button"
@@ -161,15 +163,15 @@ export function LineItemsEditor({ rows, dispatch }: LineItemsEditorProps) {
       <div className="flex flex-col items-end gap-1 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
         <div className="flex w-56 justify-between" data-testid="totals-subtotal">
           <span className="text-zinc-500">Subtotal</span>
-          <Money amount={rowTotals.subtotal} />
+          <Money amount={rowTotals.subtotal} currency={currency} />
         </div>
         <div className="flex w-56 justify-between" data-testid="totals-tax">
           <span className="text-zinc-500">Tax</span>
-          <Money amount={rowTotals.taxAmount} />
+          <Money amount={rowTotals.taxAmount} currency={currency} />
         </div>
         <div className="flex w-56 justify-between text-base font-semibold" data-testid="totals-total">
           <span>Total</span>
-          <Money amount={rowTotals.total} />
+          <Money amount={rowTotals.total} currency={currency} />
         </div>
       </div>
     </div>

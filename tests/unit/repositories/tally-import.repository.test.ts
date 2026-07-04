@@ -159,10 +159,8 @@ describe("tallyImportRepository.softDeleteEntity Payment undo", () => {
         amount: 100,
       }),
     });
-    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
-
     const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
-    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+    await tallyImportRepository.softDeleteEntity(tx as never, "org-1", "Payment", "pay-1");
 
     const data = invoiceUpdateMany.mock.calls.at(-1)?.[0]?.data;
     expect(data.amountPaid).toEqual({ decrement: 40 });
@@ -181,10 +179,8 @@ describe("tallyImportRepository.softDeleteEntity Payment undo", () => {
         amount: 100,
       }),
     });
-    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
-
     const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
-    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+    await tallyImportRepository.softDeleteEntity(tx as never, "org-1", "Payment", "pay-1");
 
     const data = invoiceUpdateMany.mock.calls.at(-1)?.[0]?.data;
     expect(data.amountPaid).toEqual({ decrement: 100 });
@@ -202,10 +198,8 @@ describe("tallyImportRepository.softDeleteEntity Payment undo", () => {
         amount: 100,
       }),
     });
-    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
-
     const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
-    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+    await tallyImportRepository.softDeleteEntity(tx as never, "org-1", "Payment", "pay-1");
 
     const data = billUpdateMany.mock.calls.at(-1)?.[0]?.data;
     expect(data.amountPaid).toEqual({ decrement: 30 });

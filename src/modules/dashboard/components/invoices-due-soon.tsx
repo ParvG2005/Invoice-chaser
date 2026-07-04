@@ -110,7 +110,7 @@ export function InvoicesDueSoon({ invoices }: { invoices: Row[] }) {
                   <TableCell className="font-medium">{inv.clientName}</TableCell>
                   <TableCell className="text-muted-foreground">{inv.invoiceNumber}</TableCell>
                   <TableCell className="text-right font-semibold">
-                    <Money amount={inv.amount} />
+                    <Money amount={inv.amount} currency={inv.currency} />
                   </TableCell>
                   <TableCell
                     className={inv.status === "OVERDUE" ? "font-semibold text-destructive" : undefined}

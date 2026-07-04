@@ -20,9 +20,13 @@ const repo = vi.hoisted(() => ({
   findBillByGuid: vi.fn(),
   findBillByNumber: vi.fn(),
   findPaymentByGuid: vi.fn(),
-  softDeleteEntity: vi.fn(async (_o: string, _t: string, _id: string) => undefined),
+  softDeleteEntity: vi.fn(async (_tx: unknown, _o: string, _t: string, _id: string) => undefined),
   restoreEntitySnapshot: vi.fn(async () => undefined),
   countReferences: vi.fn(async () => 0),
+}));
+
+vi.mock("@/lib/db/prisma", () => ({
+  prisma: { $transaction: vi.fn((fn: (tx: unknown) => unknown) => fn("tx")) },
 }));
 vi.mock("@/server/repositories/tally-import.repository", () => ({ tallyImportRepository: repo }));
 
@@ -112,7 +116,7 @@ describe("tallyImportService.undoBatch", () => {
 
     await tallyImportService.undoBatch("org-1", "user-1", "batch-1");
 
-    const softDeleteCalls = repo.softDeleteEntity.mock.calls.map((c) => [c[1], c[2]]);
+    const softDeleteCalls = repo.softDeleteEntity.mock.calls.map((c) => [c[2], c[3]]);
     expect(softDeleteCalls).toEqual([
       ["Payment", "payment-1"],
       ["Invoice", "invoice-1"],
@@ -129,7 +133,13 @@ describe("tallyImportService.undoBatch", () => {
 
     await tallyImportService.undoBatch("org-1", "user-1", "batch-1");
 
-    expect(repo.restoreEntitySnapshot).toHaveBeenCalledWith("org-1", "Party", "party-2", beforeJson);
+    expect(repo.restoreEntitySnapshot).toHaveBeenCalledWith(
+      "tx",
+      "org-1",
+      "Party",
+      "party-2",
+      beforeJson,
+    );
   });
 
   it("sets batch status to REVERTED on success", async () => {
@@ -147,6 +157,7 @@ describe("tallyImportService.undoBatch", () => {
         status: "REVERTED",
         completedAt: expect.any(Date),
       }),
+      "tx",
     );
   });
 
@@ -189,7 +200,46 @@ describe("tallyImportService.undoBatch", () => {
       expect.objectContaining({
         errorSummary: "2 entities referenced by later imports were soft-deleted",
       }),
+      "tx",
     );
+  });
+
+  it("wraps every per-entity revert plus the batch-status update in a single outer transaction", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    repo.findBatchById.mockResolvedValue(batchRow());
+    repo.listRecords.mockResolvedValue([
+      record({ recordType: "Party", status: "CREATED", entityId: "party-1" }),
+      record({ recordType: "Invoice", status: "CREATED", entityId: "invoice-1" }),
+    ]);
+
+    await tallyImportService.undoBatch("org-1", "user-1", "batch-1");
+
+    expect(vi.mocked(prisma.$transaction)).toHaveBeenCalledTimes(1);
+  });
+
+  it("regression: does not mark the batch REVERTED if a later entity's revert throws mid-loop", async () => {
+    // Guards against the non-atomic bug: previously each entity reverted in
+    // its own inner transaction and the batch status was updated separately
+    // afterwards, so a crash/throw partway through the loop left some
+    // entities reverted but the batch still COMPLETED — a stuck state the
+    // double-undo guard can't even retry (it only allows undo from
+    // COMPLETED/FAILED). Wrapping the whole operation in one outer
+    // transaction means the batch-status update is never reached when an
+    // earlier step throws.
+    repo.findBatchById.mockResolvedValue(batchRow());
+    repo.listRecords.mockResolvedValue([
+      record({ recordType: "Party", status: "CREATED", entityId: "party-1" }),
+      record({ recordType: "Invoice", status: "CREATED", entityId: "invoice-1" }),
+    ]);
+    repo.softDeleteEntity
+      .mockResolvedValueOnce(undefined) // Invoice (reverse order) succeeds
+      .mockRejectedValueOnce(new Error("boom")); // Party fails
+
+    await expect(
+      tallyImportService.undoBatch("org-1", "user-1", "batch-1"),
+    ).rejects.toThrow("boom");
+
+    expect(repo.updateBatch).not.toHaveBeenCalled();
   });
 
   it("skips SKIPPED and ERRORED records without touching the repository", async () => {

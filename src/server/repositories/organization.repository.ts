@@ -70,10 +70,20 @@ export const organizationRepository = {
     });
   },
 
-  softDelete(id: string) {
+  /**
+   * Soft-deletes the org AND frees its `slug` (which is `@unique` at the
+   * DB level and is not scoped by `deletedAt`) by suffixing it with a
+   * timestamp. Without this, a user whose only org is soft-deleted can
+   * never be re-provisioned a fresh org: `resolveUserOrganization`
+   * generates a deterministic slug from the same email/userId, which would
+   * collide with the now-orphaned soft-deleted row's slug and throw P2002
+   * on every subsequent `/dashboard` load.
+   */
+  async softDelete(id: string) {
+    const org = await prisma.organization.findUniqueOrThrow({ where: { id } });
     return prisma.organization.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), slug: `${org.slug}-deleted-${Date.now()}` },
     });
   },
 };

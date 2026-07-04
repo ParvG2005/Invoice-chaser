@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { billService } from "@/server/services/bill.service";
 import { billRepository } from "@/server/repositories/bill.repository";
 import { partyRepository } from "@/server/repositories/party.repository";
-import { NotFoundError } from "@/lib/api/errors";
+import { AppError, NotFoundError } from "@/lib/api/errors";
 
 vi.mock("@/server/repositories/bill.repository", () => ({
   billRepository: {
@@ -115,5 +115,63 @@ describe("billService", () => {
     );
     const updateData = vi.mocked(billRepository.update).mock.calls[0][2];
     expect(updateData).not.toHaveProperty("paidAt");
+  });
+
+  describe("markPaid state-machine guards", () => {
+    it("rejects marking a written-off bill as paid", async () => {
+      vi.mocked(billRepository.findById).mockResolvedValue(
+        fakeBill({ status: "WRITTEN_OFF" }) as never,
+      );
+
+      await expect(billService.markPaid(ORG, "bill-1")).rejects.toBeInstanceOf(AppError);
+      expect(billRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("is a no-op (does not re-stamp paidAt) when the bill is already paid", async () => {
+      const originalPaidAt = new Date("2026-06-15T00:00:00.000Z");
+      vi.mocked(billRepository.findById).mockResolvedValue(
+        fakeBill({ status: "PAID", paidAt: originalPaidAt }) as never,
+      );
+
+      const dto = await billService.markPaid(ORG, "bill-1");
+
+      expect(billRepository.update).not.toHaveBeenCalled();
+      expect(dto.status).toBe("PAID");
+    });
+
+    it("marks a PENDING bill paid normally", async () => {
+      vi.mocked(billRepository.findById).mockResolvedValue(fakeBill() as never);
+      vi.mocked(billRepository.update).mockResolvedValue({ count: 1 } as never);
+
+      await billService.markPaid(ORG, "bill-1");
+
+      expect(billRepository.update).toHaveBeenCalledWith(
+        ORG,
+        "bill-1",
+        expect.objectContaining({ status: "PAID", paidAt: expect.any(Date) }),
+      );
+    });
+  });
+
+  describe("writeOff state-machine guards", () => {
+    it("rejects writing off an already-paid bill", async () => {
+      vi.mocked(billRepository.findById).mockResolvedValue(fakeBill({ status: "PAID" }) as never);
+
+      await expect(billService.writeOff(ORG, "bill-1")).rejects.toBeInstanceOf(AppError);
+      expect(billRepository.update).not.toHaveBeenCalled();
+    });
+
+    it("writes off a PENDING bill normally", async () => {
+      vi.mocked(billRepository.findById).mockResolvedValue(fakeBill() as never);
+      vi.mocked(billRepository.update).mockResolvedValue({ count: 1 } as never);
+
+      await billService.writeOff(ORG, "bill-1", "vendor closed shop");
+
+      expect(billRepository.update).toHaveBeenCalledWith(
+        ORG,
+        "bill-1",
+        expect.objectContaining({ status: "WRITTEN_OFF" }),
+      );
+    });
   });
 });

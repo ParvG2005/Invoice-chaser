@@ -174,7 +174,7 @@ export function InvoiceForm({ mode, invoiceId, invoice }: InvoiceFormProps) {
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">Line items</h2>
-        <LineItemsEditor rows={rows} dispatch={dispatch} />
+        <LineItemsEditor rows={rows} dispatch={dispatch} currency={invoice?.currency ?? "INR"} />
       </div>
 
       <div className="flex justify-end gap-2">

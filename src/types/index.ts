@@ -42,6 +42,7 @@ export interface DashboardStats {
     invoiceNumber: string;
     clientName: string;
     amount: number;
+    currency: string;
     dueDate: string;
     status: InvoiceStatus;
   }[];

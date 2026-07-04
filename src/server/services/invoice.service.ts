@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { NotFoundError } from "@/lib/api/errors";
+import { AppError, NotFoundError } from "@/lib/api/errors";
 import type { CreateInvoiceInput } from "@/lib/validations/invoice";
 import { invoiceRepository, type InvoiceLineItemInput } from "@/server/repositories/invoice.repository";
 import { computeInvoiceStatus, parseDueDate, toInvoiceDto } from "@/server/services/mappers";
@@ -329,6 +329,10 @@ export const invoiceService = {
   async writeOff(organizationId: string, id: string, reason?: string) {
     const existing = await invoiceRepository.findById(organizationId, id);
     if (!existing) throw new NotFoundError("Invoice not found");
+
+    if (existing.status === "PAID") {
+      throw new AppError("INVALID_STATUS_TRANSITION", "Cannot write off a paid invoice", 409);
+    }
 
     const notes = reason
       ? existing.notes
