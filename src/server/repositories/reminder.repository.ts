@@ -8,12 +8,6 @@ export const reminderRepository = {
   },
 
   upsertSettings(organizationId: string, data: ReminderSettingsInput) {
-    // `sequence`/`quietHours` are additive Json columns (Task 26): pass through
-    // when present, otherwise leave untouched (upsert.create defaults to
-    // Prisma's column default of NULL; update omits the key entirely).
-    const sequence = data.sequence as Prisma.InputJsonValue | undefined;
-    const quietHours = data.quietHours as Prisma.InputJsonValue | undefined;
-
     return prisma.reminderSettings.upsert({
       where: { organizationId },
       create: {
@@ -21,17 +15,27 @@ export const reminderRepository = {
         reminderDays: data.reminderDays,
         emailTone: data.emailTone as EmailTone,
         autoSend: data.autoSend,
-        whatsappEnabled: data.whatsappEnabled,
-        ...(sequence !== undefined ? { sequence } : {}),
-        ...(quietHours !== undefined ? { quietHours } : {}),
+        whatsappEnabled: data.enabledChannels.includes("WHATSAPP"),
+        enabledChannels: data.enabledChannels,
+        quietHoursStart: data.quietHoursStart,
+        quietHoursEnd: data.quietHoursEnd,
+        timezone: data.timezone,
+        escalationTones: data.escalationTones as EmailTone[],
+        upiId: data.upiId,
+        paymentLink: data.paymentLink,
       },
       update: {
         reminderDays: data.reminderDays,
         emailTone: data.emailTone as EmailTone,
         autoSend: data.autoSend,
-        whatsappEnabled: data.whatsappEnabled,
-        ...(sequence !== undefined ? { sequence } : {}),
-        ...(quietHours !== undefined ? { quietHours } : {}),
+        whatsappEnabled: data.enabledChannels.includes("WHATSAPP"),
+        enabledChannels: data.enabledChannels,
+        quietHoursStart: data.quietHoursStart,
+        quietHoursEnd: data.quietHoursEnd,
+        timezone: data.timezone,
+        escalationTones: data.escalationTones as EmailTone[],
+        upiId: data.upiId,
+        paymentLink: data.paymentLink,
       },
     });
   },

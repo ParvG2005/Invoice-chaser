@@ -7,6 +7,7 @@ const toneInstructions: Record<EmailTone, string> = {
   PROFESSIONAL:
     "Use a polished, professional business tone. Be clear and respectful.",
   FIRM: "Use a firm but polite tone. Emphasize urgency and the importance of prompt payment without being rude.",
+  FINAL_NOTICE: "Use a final, legal tone. Make clear this is the last notice before escalation to legal proceedings. Be firm but professional.",
 };
 
 export function buildReminderEmailPrompts(context: ReminderEmailContext) {

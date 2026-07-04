@@ -81,26 +81,27 @@ async function scheduleForOverdueInvoices(
 export const reminderService = {
   async getSettings(organizationId: string): Promise<ReminderSettingsDto> {
     const settings = await reminderRepository.getSettings(organizationId);
+    const enabledChannels = settings?.enabledChannels?.length ? settings.enabledChannels : ["EMAIL" as const];
     return {
       reminderDays: settings?.reminderDays ?? [3, 7, 14],
       emailTone: settings?.emailTone ?? "PROFESSIONAL",
       autoSend: settings?.autoSend ?? true,
-      whatsappEnabled: settings?.whatsappEnabled ?? false,
-      sequence: (settings?.sequence as unknown as ReminderSettingsDto["sequence"]) ?? undefined,
-      quietHours: (settings?.quietHours as unknown as ReminderSettingsDto["quietHours"]) ?? undefined,
+      whatsappEnabled: enabledChannels.includes("WHATSAPP"),
+      enabledChannels,
+      quietHoursStart: settings?.quietHoursStart ?? null,
+      quietHoursEnd: settings?.quietHoursEnd ?? null,
+      timezone: settings?.timezone ?? "Asia/Kolkata",
+      escalationTones: settings?.escalationTones?.length
+        ? settings.escalationTones
+        : ["FRIENDLY", "PROFESSIONAL", "FIRM", "FINAL_NOTICE"],
+      upiId: settings?.upiId ?? null,
+      paymentLink: settings?.paymentLink ?? null,
     };
   },
 
   async updateSettings(organizationId: string, input: ReminderSettingsInput): Promise<ReminderSettingsDto> {
-    const settings = await reminderRepository.upsertSettings(organizationId, input);
-    return {
-      reminderDays: settings.reminderDays,
-      emailTone: settings.emailTone,
-      autoSend: settings.autoSend,
-      whatsappEnabled: settings.whatsappEnabled,
-      sequence: (settings.sequence as unknown as ReminderSettingsDto["sequence"]) ?? undefined,
-      quietHours: (settings.quietHours as unknown as ReminderSettingsDto["quietHours"]) ?? undefined,
-    };
+    await reminderRepository.upsertSettings(organizationId, input);
+    return this.getSettings(organizationId);
   },
 
   async getUpcoming(organizationId: string) {

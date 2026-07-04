@@ -20,6 +20,7 @@ enum EmailTone {
   FRIENDLY
   PROFESSIONAL
   FIRM
+  FINAL_NOTICE
 }
 
 enum ReminderStatus {
@@ -73,6 +74,16 @@ enum PaymentMode {
 enum CommunicationChannel {
   EMAIL
   WHATSAPP
+}
+
+enum Channel {
+  EMAIL
+  WHATSAPP
+}
+
+enum CommunicationDirection {
+  OUTBOUND
+  INBOUND
 }
 
 enum CommunicationStatus {
@@ -257,6 +268,13 @@ model ReminderSettings {
   // + UI only in this task, full sequence-driven scheduling is a future phase.
   sequence       Json?
   quietHours     Json?     @map("quiet_hours")
+  enabledChannels Channel[]   @default([EMAIL]) @map("enabled_channels")
+  quietHoursStart String?     @map("quiet_hours_start") // "HH:mm" in org timezone
+  quietHoursEnd   String?     @map("quiet_hours_end")
+  timezone        String      @default("Asia/Kolkata")
+  escalationTones EmailTone[] @default([FRIENDLY, PROFESSIONAL, FIRM, FINAL_NOTICE]) @map("escalation_tones")
+  upiId           String?     @map("upi_id")
+  paymentLink     String?     @map("payment_link")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
@@ -349,6 +367,9 @@ model Party {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
+  preferredChannels Channel[] @default([]) @map("preferred_channels") // empty = inherit org enabledChannels
+  emailOptOutAt     DateTime? @map("email_opt_out_at")
+  whatsappOptOutAt  DateTime? @map("whatsapp_opt_out_at")
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   agent          Party?       @relation("PartyAgent", fields: [agentId], references: [id], onDelete: SetNull)
@@ -531,14 +552,18 @@ model CommunicationLog {
   reminderId     String?              @map("reminder_id")
   sentAt         DateTime?            @map("sent_at")
   createdAt      DateTime             @default(now()) @map("created_at")
+  direction    CommunicationDirection @default(OUTBOUND)
+  deliveredAt  DateTime?              @map("delivered_at")
+  readAt       DateTime?              @map("read_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   reminder     Reminder?    @relation(fields: [reminderId], references: [id], onDelete: SetNull)
 
+  @@index([providerId])
+  @@index([invoiceId, createdAt])
   @@index([organizationId, createdAt])
   @@index([organizationId, invoiceId])
-  @@index([providerId])
   @@map("communication_logs")
 }
 

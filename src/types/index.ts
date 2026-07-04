@@ -213,7 +213,7 @@ export interface PaymentDto {
 
 export interface ReminderSequenceStepDto {
   offsetDays: number;
-  tone: "FRIENDLY" | "PROFESSIONAL" | "FIRM" | "FINAL";
+  tone: EmailTone;
   channels: { email: boolean; whatsapp: boolean };
 }
 
@@ -226,10 +226,40 @@ export interface ReminderSettingsDto {
   reminderDays: number[];
   emailTone: EmailTone;
   autoSend: boolean;
-  whatsappEnabled: boolean;
+  whatsappEnabled: boolean; // legacy mirror of enabledChannels.includes("WHATSAPP")
+  enabledChannels: Channel[];
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  timezone: string;
+  escalationTones: EmailTone[];
+  upiId: string | null;
+  paymentLink: string | null;
   /** Additive (Task 26): sequence editor + quiet hours. Not yet consumed by the scheduler. */
   sequence?: ReminderSequenceStepDto[];
   quietHours?: QuietHoursDto | null;
+}
+
+export type Channel = "EMAIL" | "WHATSAPP";
+export type CommunicationStatus = "QUEUED" | "SENT" | "DELIVERED" | "READ" | "FAILED" | "BOUNCED";
+
+export interface CommunicationLogDto {
+  id: string;
+  channel: Channel;
+  direction: "OUTBOUND" | "INBOUND";
+  to: string;
+  subject: string | null;
+  body: string | null;
+  templateId: string | null;
+  status: CommunicationStatus;
+  providerId: string | null;
+  invoiceId: string | null;
+  reminderId: string | null;
+  partyId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  readAt: string | null;
 }
 
 export interface InvoiceReminderDto {

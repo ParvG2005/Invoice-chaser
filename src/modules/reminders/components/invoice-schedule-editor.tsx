@@ -12,6 +12,7 @@ const TONE_LABEL: Record<InvoiceReminderDto["tone"], string> = {
   FRIENDLY: "Friendly",
   PROFESSIONAL: "Professional",
   FIRM: "Firm",
+  FINAL_NOTICE: "Final Notice",
 };
 
 const STATUS_LABEL: Record<InvoiceReminderDto["status"], string> = {

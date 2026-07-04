@@ -24,7 +24,7 @@ const TONE_OPTIONS: { value: ReminderSequenceStepDto["tone"]; label: string }[] 
   { value: "FRIENDLY", label: "Friendly" },
   { value: "PROFESSIONAL", label: "Professional" },
   { value: "FIRM", label: "Firm" },
-  { value: "FINAL", label: "Final notice" },
+  { value: "FINAL_NOTICE", label: "Final notice" },
 ];
 
 export function SequenceEditor({
