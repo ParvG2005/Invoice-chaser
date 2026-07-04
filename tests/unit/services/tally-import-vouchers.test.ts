@@ -140,6 +140,101 @@ function purchaseVoucherXml(): string {
  </TALLYMESSAGE>`;
 }
 
+function receiptVoucherXml(opts: { billType?: string; refName?: string } = {}): string {
+  const billType = opts.billType ?? "Agst Ref";
+  const refName = opts.refName ?? "INV-042";
+  return `
+ <TALLYMESSAGE>
+  <VOUCHER VCHTYPE="Receipt" ACTION="Create">
+   <GUID>guid-vch-0002</GUID>
+   <ALTERID>102</ALTERID>
+   <DATE>20260410</DATE>
+   <VOUCHERTYPENAME>Receipt</VOUCHERTYPENAME>
+   <VOUCHERNUMBER>RCP-007</VOUCHERNUMBER>
+   <PARTYLEDGERNAME>Acme Traders</PARTYLEDGERNAME>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>Acme Traders</LEDGERNAME>
+    <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
+    <AMOUNT>7080.00</AMOUNT>
+    <BILLALLOCATIONS.LIST>
+     <NAME>${refName}</NAME>
+     <BILLTYPE>${billType}</BILLTYPE>
+     <AMOUNT>7080.00</AMOUNT>
+    </BILLALLOCATIONS.LIST>
+   </ALLLEDGERENTRIES.LIST>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>HDFC Bank</LEDGERNAME>
+    <ISPARTYLEDGER>No</ISPARTYLEDGER>
+    <AMOUNT>-7080.00</AMOUNT>
+   </ALLLEDGERENTRIES.LIST>
+  </VOUCHER>
+ </TALLYMESSAGE>`;
+}
+
+function paymentVoucherXml(): string {
+  return `
+ <TALLYMESSAGE>
+  <VOUCHER VCHTYPE="Payment" ACTION="Create">
+   <GUID>guid-vch-0005</GUID>
+   <ALTERID>60</ALTERID>
+   <DATE>20260411</DATE>
+   <VOUCHERTYPENAME>Payment</VOUCHERTYPENAME>
+   <VOUCHERNUMBER>PMT-001</VOUCHERNUMBER>
+   <PARTYLEDGERNAME>Steel Corp</PARTYLEDGERNAME>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>Steel Corp</LEDGERNAME>
+    <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
+    <AMOUNT>-5000.00</AMOUNT>
+    <BILLALLOCATIONS.LIST>
+     <NAME>PB-010</NAME>
+     <BILLTYPE>Agst Ref</BILLTYPE>
+     <AMOUNT>-5000.00</AMOUNT>
+    </BILLALLOCATIONS.LIST>
+   </ALLLEDGERENTRIES.LIST>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>HDFC Bank</LEDGERNAME>
+    <ISPARTYLEDGER>No</ISPARTYLEDGER>
+    <AMOUNT>5000.00</AMOUNT>
+   </ALLLEDGERENTRIES.LIST>
+  </VOUCHER>
+ </TALLYMESSAGE>`;
+}
+
+function creditNoteVoucherXml(): string {
+  return `
+ <TALLYMESSAGE>
+  <VOUCHER VCHTYPE="Credit Note" ACTION="Create">
+   <GUID>guid-vch-0006</GUID>
+   <ALTERID>70</ALTERID>
+   <DATE>20260412</DATE>
+   <VOUCHERTYPENAME>Credit Note</VOUCHERTYPENAME>
+   <VOUCHERNUMBER>CN-001</VOUCHERNUMBER>
+   <PARTYLEDGERNAME>Acme Traders</PARTYLEDGERNAME>
+   <ALLINVENTORYENTRIES.LIST>
+    <STOCKITEMNAME>Widget A</STOCKITEMNAME>
+    <RATE>1,200.00/nos</RATE>
+    <ACTUALQTY> 2 nos</ACTUALQTY>
+    <AMOUNT>2400.00</AMOUNT>
+   </ALLINVENTORYENTRIES.LIST>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>Acme Traders</LEDGERNAME>
+    <ISPARTYLEDGER>Yes</ISPARTYLEDGER>
+    <AMOUNT>2400.00</AMOUNT>
+    <BILLALLOCATIONS.LIST>
+     <NAME>INV-042</NAME>
+     <BILLTYPE>Agst Ref</BILLTYPE>
+     <AMOUNT>2400.00</AMOUNT>
+    </BILLALLOCATIONS.LIST>
+   </ALLLEDGERENTRIES.LIST>
+   <ALLLEDGERENTRIES.LIST>
+    <LEDGERNAME>Sales Return</LEDGERNAME>
+    <ISPARTYLEDGER>No</ISPARTYLEDGER>
+    <AMOUNT>-2400.00</AMOUNT>
+   </ALLLEDGERENTRIES.LIST>
+  </VOUCHER>
+ </TALLYMESSAGE>`;
+}
+
 function journalVoucherXml(): string {
   return `
  <TALLYMESSAGE>
@@ -403,5 +498,138 @@ describe("tallyImportService.runBatch — unsupported voucher kind", () => {
     const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Voucher");
     expect(record?.[0].status).toBe("SKIPPED");
     expect(record?.[0].message).toMatch(/Unsupported voucher type "Journal"/);
+  });
+});
+
+describe("tallyImportService.runBatch — money vouchers (Receipt/Payment/Credit Note)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repo.findPaymentByGuid.mockResolvedValue(null);
+    repo.findPartyByName.mockImplementation(async (_org: string, name: string) =>
+      name === "Acme Traders"
+        ? { id: "party-1", name, creditDays: 0 }
+        : name === "Steel Corp"
+          ? { id: "party-2", name, creditDays: 0 }
+          : null,
+    );
+    repo.findInvoiceByNumber.mockResolvedValue(null);
+    repo.findBillByNumber.mockResolvedValue(null);
+    repo.findItemByName.mockResolvedValue({ id: "item-1", name: "Widget A" });
+  });
+
+  it("Receipt voucher: creates a Payment (direction IN) with an invoice allocation resolved via Agst Ref", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(receiptVoucherXml()) }));
+    repo.findInvoiceByNumber.mockResolvedValue({ id: "inv-42" });
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({
+        partyId: "party-1",
+        direction: "IN",
+        amount: 7080,
+        mode: "BANK_TRANSFER",
+        reference: "HDFC Bank",
+        tallyGuid: "guid-vch-0002",
+        allocations: [{ documentId: "inv-42", amount: 7080 }],
+      }),
+    );
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Payment");
+    expect(record?.[0].status).toBe("CREATED");
+  });
+
+  it("Receipt with an unmatched invoice ref: payment created without that allocation, ImportRecord notes it", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(receiptVoucherXml()) }));
+    repo.findInvoiceByNumber.mockResolvedValue(null);
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ allocations: [] }),
+    );
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Payment");
+    expect(record?.[0].message).toMatch(/Unmatched bill ref "INV-042"/);
+  });
+
+  it("Receipt with a non-Agst-Ref allocation (New Ref): left unallocated, noted, not treated as an error", async () => {
+    repo.findBatchById.mockResolvedValue(
+      batchRow({ rawContent: envelope(receiptVoucherXml({ billType: "New Ref" })) }),
+    );
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ allocations: [] }),
+    );
+    expect(repo.findInvoiceByNumber).not.toHaveBeenCalled();
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Payment");
+    expect(record?.[0].status).toBe("CREATED");
+    expect(record?.[0].message).toMatch(/left unallocated/);
+  });
+
+  it("Payment voucher (direction OUT): allocates to a Bill resolved by number", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(paymentVoucherXml()) }));
+    repo.findBillByNumber.mockResolvedValue({ id: "bill-9" });
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({
+        partyId: "party-2",
+        direction: "OUT",
+        amount: 5000,
+        mode: "BANK_TRANSFER",
+        reference: "HDFC Bank",
+        allocations: [{ documentId: "bill-9", amount: 5000 }],
+      }),
+    );
+  });
+
+  it("Credit Note: creates a Payment (mode OTHER, reference 'Credit Note') and records stock IN via ADJUSTMENT", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(creditNoteVoucherXml()) }));
+    repo.findInvoiceByNumber.mockResolvedValue({ id: "inv-42" });
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({
+        direction: "IN",
+        mode: "OTHER",
+        reference: "Credit Note",
+        allocations: [{ documentId: "inv-42", amount: 2400 }],
+      }),
+    );
+    expect(stockService.recordMovement).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ itemId: "item-1", qty: 2, sourceType: "ADJUSTMENT", sourceId: "payment-1" }),
+    );
+  });
+
+  it("idempotency: existing Payment with same-or-newer ALTERID -> SKIPPED, paymentService.create not called", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(receiptVoucherXml()) }));
+    repo.findPaymentByGuid.mockResolvedValue({ id: "payment-existing", tallyGuid: "guid-vch-0002", tallyAlterId: 102 });
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).not.toHaveBeenCalled();
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Payment");
+    expect(record?.[0].status).toBe("SKIPPED");
+  });
+
+  it("idempotency: existing Payment with an older ALTERID -> SKIPPED with explanatory message (no in-place update)", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(receiptVoucherXml()) }));
+    repo.findPaymentByGuid.mockResolvedValue({ id: "payment-existing", tallyGuid: "guid-vch-0002", tallyAlterId: 50 });
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(paymentService.create).not.toHaveBeenCalled();
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Payment");
+    expect(record?.[0].status).toBe("SKIPPED");
+    expect(record?.[0].message).toMatch(/not supported/i);
   });
 });

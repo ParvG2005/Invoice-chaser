@@ -15,6 +15,8 @@ import { itemService } from "@/server/services/item.service";
 import { invoiceService } from "@/server/services/invoice.service";
 import { billService } from "@/server/services/bill.service";
 import { stockService } from "@/server/services/stock.service";
+import { paymentService } from "@/server/services/payment.service";
+import type { CreatePaymentInput } from "@/lib/validations/payment";
 import { createLogger } from "@/lib/logger";
 import type { ImportBatch, ImportRecord } from "@/generated/prisma/client";
 
@@ -747,14 +749,171 @@ async function importPurchaseVoucher(
   }
 }
 
-// importMoneyVoucher (Receipt/Payment/Credit Note/Debit Note) lands in
-// Task 8; declared here so importVouchers compiles. The outer try/catch in
-// importVouchers turns this into an ERRORED record for now.
+type PaymentMode = CreatePaymentInput["mode"];
+
+/** Maps a non-party ledger name (Receipt/Payment) to the real Payment.mode enum. */
+function inferPaymentMode(raw: string): PaymentMode {
+  const s = raw.toLowerCase();
+  if (s.includes("cash")) return "CASH";
+  if (s.includes("upi")) return "UPI";
+  if (s.includes("cheque") || s.includes("chq")) return "CHEQUE";
+  if (s.includes("card")) return "CARD";
+  if (s.includes("bank")) return "BANK_TRANSFER";
+  return "OTHER";
+}
+
+const MONEY_KIND_CONFIG = {
+  RECEIPT: { direction: "IN", target: "invoice", partyType: "CUSTOMER", stock: null },
+  PAYMENT: { direction: "OUT", target: "bill", partyType: "SUPPLIER", stock: null },
+  CREDIT_NOTE: {
+    direction: "IN",
+    target: "invoice",
+    partyType: "CUSTOMER",
+    stock: 1,
+    mode: "OTHER",
+    reference: "Credit Note",
+  },
+  DEBIT_NOTE: {
+    direction: "OUT",
+    target: "bill",
+    partyType: "SUPPLIER",
+    stock: -1,
+    mode: "OTHER",
+    reference: "Debit Note",
+  },
+} as const satisfies Record<
+  "RECEIPT" | "PAYMENT" | "CREDIT_NOTE" | "DEBIT_NOTE",
+  {
+    direction: "IN" | "OUT";
+    target: "invoice" | "bill";
+    partyType: "CUSTOMER" | "SUPPLIER";
+    stock: 1 | -1 | null;
+    mode?: PaymentMode;
+    reference?: string;
+  }
+>;
+
+/**
+ * Handles Receipt/Payment (bill-wise allocation against Invoices/Bills via
+ * BILLALLOCATIONS "Agst Ref") and Credit/Debit Notes (same allocation
+ * pattern, plus a stock movement for returned goods). Money vouchers are
+ * never updated in place — Phase 1's `paymentService` has no safe API to
+ * deallocate a previously-recorded Payment, so a changed voucher is
+ * recorded as SKIPPED with an explanatory message rather than risking
+ * corrupted balances (mirrors the brief's Step 3 guidance).
+ */
 async function importMoneyVoucher(
-  _organizationId: string,
-  _batchId: string,
-  _voucher: TallyVoucher,
-  _counters: Counters,
+  organizationId: string,
+  batchId: string,
+  voucher: TallyVoucher,
+  counters: Counters,
 ): Promise<void> {
-  throw new AppError("NOT_IMPLEMENTED", "Money voucher import lands in Task 8", 501);
+  const config = MONEY_KIND_CONFIG[voucher.kind as keyof typeof MONEY_KIND_CONFIG];
+  const notes: string[] = [];
+
+  const existing = await tallyImportRepository.findPaymentByGuid(organizationId, voucher.guid);
+  if (existing && (existing.tallyAlterId ?? 0) >= voucher.alterId) {
+    counters.skipped += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Payment",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "SKIPPED",
+      message: "Unchanged (ALTERID not newer)",
+    });
+    return;
+  }
+  if (existing) {
+    // Money vouchers rarely change; replacing allocations safely needs a
+    // deallocation API Phase 1 doesn't expose. Record and skip rather than
+    // corrupt balances.
+    counters.skipped += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Payment",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "SKIPPED",
+      message: `Voucher changed in Tally (ALTERID ${existing.tallyAlterId} → ${voucher.alterId}) but payment updates are not supported — undo the original batch and re-import`,
+    });
+    return;
+  }
+
+  const partyEntry = voucher.ledgerEntries.find((e) => e.isPartyLedger);
+  if (!partyEntry) {
+    throw new Error(`No party ledger entry on ${voucher.voucherNumber}`);
+  }
+  const { partyId, note } = await resolveParty(organizationId, voucher.partyLedgerName, config.partyType);
+  if (note) notes.push(note);
+
+  const rawLedgerName = voucher.ledgerEntries.find((e) => !e.isPartyLedger)?.ledgerName ?? "UNKNOWN";
+  const mode: PaymentMode = "mode" in config ? config.mode : inferPaymentMode(rawLedgerName);
+  const reference: string = "reference" in config ? config.reference : rawLedgerName;
+
+  // BILLALLOCATIONS.LIST → payment allocations (bill-wise matching), resolved
+  // to real document ids *before* calling paymentService.create — it throws
+  // if an allocation targets an unresolved/non-open document.
+  const allocations: Array<{ documentId: string; amount: number }> = [];
+  for (const ref of partyEntry.billAllocations) {
+    if (!/agst/i.test(ref.billType)) {
+      notes.push(`Ref "${ref.name}" (${ref.billType}) left unallocated`);
+      continue;
+    }
+    if (config.target === "invoice") {
+      const invoice = await tallyImportRepository.findInvoiceByNumber(organizationId, ref.name);
+      if (invoice) allocations.push({ documentId: invoice.id, amount: Math.abs(ref.amount) });
+      else notes.push(`Unmatched bill ref "${ref.name}" (${ref.billType})`);
+    } else {
+      const bill = await tallyImportRepository.findBillByNumber(organizationId, ref.name);
+      if (bill) allocations.push({ documentId: bill.id, amount: Math.abs(ref.amount) });
+      else notes.push(`Unmatched bill ref "${ref.name}" (${ref.billType})`);
+    }
+  }
+
+  const payment = await paymentService.create(organizationId, {
+    partyId,
+    direction: config.direction,
+    amount: Math.abs(partyEntry.amount),
+    mode,
+    reference,
+    paymentDate: new Date(voucher.date),
+    allocations,
+    tallyGuid: voucher.guid,
+    tallyAlterId: voucher.alterId,
+  });
+
+  // Credit/debit notes move returned goods
+  if (config.stock !== null) {
+    for (const entry of voucher.inventoryEntries) {
+      const item = await tallyImportRepository.findItemByName(organizationId, entry.stockItemName);
+      if (!item) {
+        notes.push(`Unknown stock item "${entry.stockItemName}"`);
+        continue;
+      }
+      await stockService.recordMovement(organizationId, {
+        itemId: item.id,
+        qty: config.stock * entry.quantity,
+        rate: entry.rate,
+        sourceType: "ADJUSTMENT",
+        sourceId: payment.id,
+      });
+    }
+  }
+
+  counters.created += 1;
+  await tallyImportRepository.createRecord({
+    organizationId,
+    batchId,
+    recordType: "Payment",
+    entityId: payment.id,
+    tallyGuid: voucher.guid,
+    alterId: voucher.alterId,
+    status: "CREATED",
+    message: notes.length ? notes.join("; ") : undefined,
+  });
 }
