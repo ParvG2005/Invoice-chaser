@@ -4,6 +4,8 @@ import type { CreateInvoiceInput } from "@/lib/validations/invoice";
 import { invoiceRepository, type InvoiceLineItemInput } from "@/server/repositories/invoice.repository";
 import { computeInvoiceStatus, parseDueDate, toInvoiceDto } from "@/server/services/mappers";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
+import { decimalToNumber } from "@/lib/utils/currency";
+import type { TimelineEntry } from "@/types";
 
 /**
  * Widened service-level input for Invoice create/update. `clientEmail` is
@@ -53,6 +55,23 @@ async function enqueueOverdueCheckBestEffort(organizationId: string): Promise<vo
   } catch (error) {
     console.error("invoiceService: enqueueOverdueCheck failed (non-fatal)", error);
   }
+}
+
+/**
+ * Picks a collision-free invoice number for a duplicate: `<original>-COPY`,
+ * falling back to `<original>-COPY-2`, `-COPY-3`, ... The
+ * `@@unique([organizationId, invoiceNumber])` constraint is enforced across
+ * all rows (soft-deleted included), so each candidate is checked against the
+ * repo before use.
+ */
+async function nextCopyNumber(organizationId: string, baseNumber: string): Promise<string> {
+  let candidate = `${baseNumber}-COPY`;
+  let suffix = 1;
+  while (await invoiceRepository.findByInvoiceNumber(organizationId, candidate)) {
+    suffix += 1;
+    candidate = `${baseNumber}-COPY-${suffix}`;
+  }
+  return candidate;
 }
 
 function extraInvoiceFields(
@@ -179,5 +198,124 @@ export const invoiceService = {
   async syncOverdue(organizationId: string) {
     await invoiceRepository.markOverdueBatch(organizationId);
     return { success: true };
+  },
+
+  /**
+   * Copies an invoice and its (non-deleted) line items into a new PENDING
+   * invoice. Numbering scheme: `<original>-COPY`, incrementing a numeric
+   * suffix on collision (see `nextCopyNumber`). `amountPaid` is left unset so
+   * it takes the schema default of 0 on the new row. There is no dedicated
+   * "issue date" field on Invoice — `dueDate` is copied as-is from the
+   * source; `createdAt` naturally becomes "today" since it's a fresh row.
+   */
+  async duplicate(organizationId: string, id: string) {
+    const existing = await invoiceRepository.findByIdWithLineItems(organizationId, id);
+    if (!existing) throw new NotFoundError("Invoice not found");
+
+    const invoiceNumber = await nextCopyNumber(organizationId, existing.invoiceNumber);
+
+    const data: Prisma.InvoiceCreateInput = {
+      organization: { connect: { id: organizationId } },
+      clientName: existing.clientName,
+      clientEmail: existing.clientEmail,
+      clientPhone: existing.clientPhone,
+      amount: existing.amount,
+      dueDate: existing.dueDate,
+      invoiceNumber,
+      notes: existing.notes,
+      status: "PENDING",
+      ...extraInvoiceFields({
+        partyId: existing.partyId ?? undefined,
+        type: existing.type,
+        subtotal: existing.subtotal !== null ? decimalToNumber(existing.subtotal) : undefined,
+        taxAmount: existing.taxAmount !== null ? decimalToNumber(existing.taxAmount) : undefined,
+        totalAmount: existing.totalAmount !== null ? decimalToNumber(existing.totalAmount) : undefined,
+      }),
+    };
+
+    const lineItems: InvoiceLineItemInput[] = existing.lineItems.map((li) => ({
+      itemId: li.itemId ?? undefined,
+      description: li.description,
+      quantity: decimalToNumber(li.quantity),
+      rate: decimalToNumber(li.rate),
+      amount: decimalToNumber(li.amount),
+    }));
+
+    const invoice =
+      lineItems.length > 0
+        ? await invoiceRepository.createWithLineItems(data, lineItems)
+        : await invoiceRepository.create(data);
+
+    return toInvoiceDto(invoice);
+  },
+
+  /**
+   * Marks an invoice WRITTEN_OFF. There's no dedicated column for the
+   * write-off reason on Invoice, so it's appended to the existing free-text
+   * `notes` field rather than discarded.
+   */
+  async writeOff(organizationId: string, id: string, reason?: string) {
+    const existing = await invoiceRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Invoice not found");
+
+    const notes = reason
+      ? existing.notes
+        ? `${existing.notes}\n\nWritten off: ${reason}`
+        : `Written off: ${reason}`
+      : existing.notes;
+
+    await invoiceRepository.update(organizationId, id, { status: "WRITTEN_OFF", notes });
+    return this.get(organizationId, id);
+  },
+
+  /** Shifts every unsent Reminder for the invoice forward by `days`. */
+  async snooze(organizationId: string, id: string, days: number) {
+    const existing = await invoiceRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Invoice not found");
+
+    await invoiceRepository.shiftPendingReminders(organizationId, id, days);
+    return this.get(organizationId, id);
+  },
+
+  /**
+   * Merges CommunicationLog rows (falling back to legacy EmailLog rows when
+   * there are no CommunicationLog rows for this invoice) with
+   * PaymentAllocations, sorted newest-first.
+   */
+  async timeline(organizationId: string, id: string): Promise<TimelineEntry[]> {
+    const existing = await invoiceRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Invoice not found");
+
+    const commLogs = await invoiceRepository.findCommunicationLogs(organizationId, id);
+
+    const communicationEntries: TimelineEntry[] =
+      commLogs.length > 0
+        ? commLogs.map((log) => ({
+            id: log.id,
+            at: (log.sentAt ?? log.createdAt).toISOString(),
+            kind: "COMMUNICATION" as const,
+            channel: log.channel,
+            status: log.status,
+            summary: `${log.channel} to ${log.toAddress}: ${log.status}`,
+          }))
+        : (await invoiceRepository.findEmailLogs(organizationId, id)).map((log) => ({
+            id: log.id,
+            at: (log.sentAt ?? log.createdAt).toISOString(),
+            kind: "COMMUNICATION" as const,
+            channel: "EMAIL" as const,
+            status: log.status,
+            summary: `EMAIL to ${log.toEmail}: ${log.status}`,
+          }));
+
+    const allocations = await invoiceRepository.findPaymentAllocations(organizationId, id);
+    const paymentEntries: TimelineEntry[] = allocations.map((allocation) => ({
+      id: allocation.id,
+      at: allocation.createdAt.toISOString(),
+      kind: "PAYMENT" as const,
+      amount: decimalToNumber(allocation.amount).toString(),
+      summary: `Payment of ${decimalToNumber(allocation.amount)} (${allocation.payment.mode})`,
+    }));
+
+    return [...communicationEntries, ...paymentEntries].sort((a, b) => (a.at < b.at ? 1 : -1));
   },
 };

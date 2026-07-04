@@ -68,6 +68,25 @@ export const invoiceRepository = {
     });
   },
 
+  findByIdWithLineItems(organizationId: string, id: string) {
+    return prisma.invoice.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      include: { lineItems: { where: { deletedAt: null }, orderBy: { sortOrder: "asc" } } },
+    });
+  },
+
+  /**
+   * Looks up an invoice by number regardless of soft-delete state, since the
+   * `@@unique([organizationId, invoiceNumber])` constraint is enforced at the
+   * DB level across all rows (soft-deleted included). Used by `duplicate` to
+   * pick a collision-free number for the copy.
+   */
+  findByInvoiceNumber(organizationId: string, invoiceNumber: string) {
+    return prisma.invoice.findFirst({
+      where: { organizationId, invoiceNumber },
+    });
+  },
+
   create(data: Prisma.InvoiceCreateInput) {
     return prisma.invoice.create({ data });
   },
@@ -144,6 +163,53 @@ export const invoiceRepository = {
         dueDate: { lt: asOf },
       },
       data: { status: "OVERDUE" },
+    });
+  },
+
+  /**
+   * Shifts every not-yet-sent Reminder for the invoice forward by `days`.
+   * Prisma's `updateMany` can't do relative date math, so this reads the
+   * pending rows and rewrites `scheduledFor` individually inside a
+   * transaction. Returns the number of reminders shifted.
+   */
+  shiftPendingReminders(organizationId: string, invoiceId: string, days: number) {
+    return prisma.$transaction(async (tx) => {
+      const reminders = await tx.reminder.findMany({
+        where: { organizationId, invoiceId, sentAt: null },
+      });
+      await Promise.all(
+        reminders.map((reminder) =>
+          tx.reminder.update({
+            where: { id: reminder.id },
+            data: {
+              scheduledFor: new Date(reminder.scheduledFor.getTime() + days * 24 * 60 * 60 * 1000),
+            },
+          }),
+        ),
+      );
+      return reminders.length;
+    });
+  },
+
+  findCommunicationLogs(organizationId: string, invoiceId: string) {
+    return prisma.communicationLog.findMany({
+      where: { organizationId, invoiceId },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findEmailLogs(organizationId: string, invoiceId: string) {
+    return prisma.emailLog.findMany({
+      where: { organizationId, invoiceId },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findPaymentAllocations(organizationId: string, invoiceId: string) {
+    return prisma.paymentAllocation.findMany({
+      where: { organizationId, invoiceId, deletedAt: null },
+      include: { payment: true },
+      orderBy: { createdAt: "desc" },
     });
   },
 };

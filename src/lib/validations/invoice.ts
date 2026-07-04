@@ -29,5 +29,15 @@ export const bulkCreateInvoicesSchema = z.object({
   invoices: z.array(createInvoiceSchema).min(1).max(500),
 });
 
+export const snoozeSchema = z.object({
+  days: z.number().int().min(1).max(90),
+});
+
+export const writeOffSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
+export type SnoozeInput = z.infer<typeof snoozeSchema>;
+export type WriteOffInput = z.infer<typeof writeOffSchema>;

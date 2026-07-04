@@ -47,6 +47,16 @@ export interface DashboardStats {
   }[];
 }
 
+export interface TimelineEntry {
+  id: string;
+  at: string;
+  kind: "COMMUNICATION" | "PAYMENT";
+  channel?: "EMAIL" | "WHATSAPP";
+  status?: string;
+  amount?: string;
+  summary: string;
+}
+
 export interface InvoiceDto {
   id: string;
   clientName: string;
