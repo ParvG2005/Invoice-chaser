@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { NotFoundError, AppError } from "@/lib/api/errors";
+import { withAudit } from "@/server/services/audit.service";
 import { parseTallyEnvelope } from "@/lib/import/tally/xml";
 import { parseLedgers, parseStockItems } from "@/lib/import/tally/parse-masters";
 import { parseVouchers } from "@/lib/import/tally/parse-vouchers";
@@ -203,12 +204,59 @@ export const tallyImportService = {
   },
 
   async undoBatch(
-    _organizationId: string,
-    _actorUserId: string,
-    _batchId: string,
+    organizationId: string,
+    actorUserId: string,
+    batchId: string,
   ): Promise<ImportBatchDto> {
-    // Implemented in Task 9
-    throw new AppError("NOT_IMPLEMENTED", "undoBatch lands in Task 9", 501);
+    const batch = await tallyImportRepository.findBatchById(organizationId, batchId);
+    if (!batch) throw new NotFoundError("Import batch not found");
+    if (batch.status !== "COMPLETED" && batch.status !== "FAILED") {
+      throw new AppError(
+        "IMPORT_NOT_UNDOABLE",
+        `Cannot undo a batch in status ${batch.status}`,
+        409,
+      );
+    }
+
+    return withAudit(
+      { type: "USER", id: actorUserId },
+      "import.batch.undo",
+      { organizationId, entityType: "ImportBatch", entityId: batchId },
+      async () => {
+        const records = await tallyImportRepository.listRecords(organizationId, batchId);
+        let referencedCount = 0;
+
+        for (const record of [...records].reverse()) {
+          if (!record.entityId) continue;
+          const entityType = record.recordType as "Party" | "Item" | "Invoice" | "Bill" | "Payment";
+          if (record.status === "CREATED") {
+            referencedCount += await tallyImportRepository.countReferences(
+              organizationId,
+              entityType,
+              record.entityId,
+            );
+            await tallyImportRepository.softDeleteEntity(organizationId, entityType, record.entityId);
+          } else if (record.status === "UPDATED" && record.beforeJson) {
+            await tallyImportRepository.restoreEntitySnapshot(
+              organizationId,
+              entityType,
+              record.entityId,
+              record.beforeJson as Record<string, unknown>,
+            );
+          }
+        }
+
+        const updated = await tallyImportRepository.updateBatch(organizationId, batchId, {
+          status: "REVERTED",
+          completedAt: new Date(),
+          errorSummary:
+            referencedCount > 0
+              ? `${referencedCount} entities referenced by later imports were soft-deleted`
+              : null,
+        });
+        return toBatchDto(updated);
+      },
+    );
   },
 };
 
