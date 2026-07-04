@@ -91,10 +91,46 @@ function extraInvoiceFields(
 export const invoiceService = {
   async list(
     organizationId: string,
-    options: { status?: "PENDING" | "OVERDUE" | "PAID"; take?: number; cursor?: string } = {},
+    options: {
+      status?: "PENDING" | "OVERDUE" | "PAID";
+      take?: number;
+      cursor?: string;
+      partyId?: string;
+      dueBefore?: string;
+      dueAfter?: string;
+      search?: string;
+    } = {},
   ) {
     const invoices = await invoiceRepository.findMany(organizationId, options);
     return invoices.map(toInvoiceDto);
+  },
+
+  /** Bulk mutation for the invoices-list bulk-actions bar (Task 12). */
+  async bulkAction(
+    organizationId: string,
+    action: "delete" | "markPaid" | "sendReminders",
+    ids: string[],
+  ) {
+    if (action === "delete") {
+      for (const id of ids) {
+        await invoiceRepository.softDelete(organizationId, id);
+      }
+      return { action, count: ids.length };
+    }
+    if (action === "markPaid") {
+      for (const id of ids) {
+        await invoiceRepository.update(organizationId, id, {
+          status: "PAID",
+          paidAt: new Date(),
+        });
+      }
+      return { action, count: ids.length };
+    }
+    // sendReminders: trigger the org-wide reminder scan, same as the
+    // "Send reminder now" row action and POST /api/reminders/trigger.
+    const { reminderService } = await import("@/server/services/reminder.service");
+    await reminderService.scheduleRemindersForOrganization(organizationId);
+    return { action, count: ids.length };
   },
 
   async get(organizationId: string, id: string) {

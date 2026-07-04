@@ -28,6 +28,12 @@ vi.mock("@/lib/jobs/inngest/scheduler", () => ({
   getJobScheduler: vi.fn(),
 }));
 
+vi.mock("@/server/services/reminder.service", () => ({
+  reminderService: {
+    scheduleRemindersForOrganization: vi.fn().mockResolvedValue({ scheduled: 0 }),
+  },
+}));
+
 const ORG = "org-1";
 
 function fakeInvoice(overrides: Record<string, unknown> = {}) {
@@ -292,6 +298,77 @@ describe("invoiceService (characterization)", () => {
     it("throws NotFoundError for a missing invoice", async () => {
       vi.mocked(invoiceRepository.findById).mockResolvedValue(null);
       await expect(invoiceService.timeline(ORG, "missing")).rejects.toBeInstanceOf(NotFoundError);
+    });
+  });
+
+  describe("list (Task 12 additive filters)", () => {
+    beforeEach(() => {
+      vi.mocked(invoiceRepository.findMany).mockResolvedValue([fakeInvoice()] as never);
+    });
+
+    it("passes partyId through to the repository", async () => {
+      await invoiceService.list(ORG, { partyId: "party-1" });
+      expect(invoiceRepository.findMany).toHaveBeenCalledWith(
+        ORG,
+        expect.objectContaining({ partyId: "party-1" }),
+      );
+    });
+
+    it("passes dueBefore through to the repository", async () => {
+      await invoiceService.list(ORG, { dueBefore: "2026-08-01" });
+      expect(invoiceRepository.findMany).toHaveBeenCalledWith(
+        ORG,
+        expect.objectContaining({ dueBefore: "2026-08-01" }),
+      );
+    });
+
+    it("passes dueAfter through to the repository", async () => {
+      await invoiceService.list(ORG, { dueAfter: "2026-06-01" });
+      expect(invoiceRepository.findMany).toHaveBeenCalledWith(
+        ORG,
+        expect.objectContaining({ dueAfter: "2026-06-01" }),
+      );
+    });
+
+    it("passes search through to the repository", async () => {
+      await invoiceService.list(ORG, { search: "Acme" });
+      expect(invoiceRepository.findMany).toHaveBeenCalledWith(
+        ORG,
+        expect.objectContaining({ search: "Acme" }),
+      );
+    });
+
+    it("still supports calling with no filters (existing callers unaffected)", async () => {
+      await invoiceService.list(ORG);
+      expect(invoiceRepository.findMany).toHaveBeenCalledWith(ORG, {});
+    });
+  });
+
+  describe("bulkAction", () => {
+    it("soft-deletes every id for the delete action", async () => {
+      vi.mocked(invoiceRepository.softDelete).mockResolvedValue({ count: 1 } as never);
+      const result = await invoiceService.bulkAction(ORG, "delete", ["inv-1", "inv-2"]);
+      expect(invoiceRepository.softDelete).toHaveBeenCalledWith(ORG, "inv-1");
+      expect(invoiceRepository.softDelete).toHaveBeenCalledWith(ORG, "inv-2");
+      expect(result).toEqual({ action: "delete", count: 2 });
+    });
+
+    it("marks every id PAID for the markPaid action", async () => {
+      vi.mocked(invoiceRepository.update).mockResolvedValue({ count: 1 } as never);
+      const result = await invoiceService.bulkAction(ORG, "markPaid", ["inv-1"]);
+      expect(invoiceRepository.update).toHaveBeenCalledWith(
+        ORG,
+        "inv-1",
+        expect.objectContaining({ status: "PAID" }),
+      );
+      expect(result).toEqual({ action: "markPaid", count: 1 });
+    });
+
+    it("triggers the org-wide reminder scan for the sendReminders action", async () => {
+      const { reminderService } = await import("@/server/services/reminder.service");
+      const result = await invoiceService.bulkAction(ORG, "sendReminders", ["inv-1"]);
+      expect(reminderService.scheduleRemindersForOrganization).toHaveBeenCalledWith(ORG);
+      expect(result).toEqual({ action: "sendReminders", count: 1 });
     });
   });
 });

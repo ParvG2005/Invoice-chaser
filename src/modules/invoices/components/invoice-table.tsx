@@ -1,111 +1,108 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils/currency";
-import type { InvoiceDto } from "@/types";
+import { useMemo } from "react";
+import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Sparkles, Trash2 } from "lucide-react";
-
-const statusVariant: Record<string, "secondary" | "warning" | "success"> = {
-  PENDING: "secondary",
-  OVERDUE: "warning",
-  PAID: "success",
-};
+import { DataTable } from "@/components/shared/data-table";
+import { StatusChip } from "@/components/shared/status-chip";
+import { Money } from "@/components/shared/money";
+import { Checkbox } from "@/components/ui/checkbox";
+import { InvoiceRowActions } from "@/modules/invoices/components/invoice-row-actions";
+import type { InvoiceDto } from "@/types";
 
 interface InvoiceTableProps {
   invoices: InvoiceDto[];
-  onMarkPaid: (id: string) => void;
-  onGenerateEmail: (id: string) => void;
-  onDelete: (id: string) => void;
-  loadingId?: string | null;
-  deletingId?: string | null;
+  isLoading?: boolean;
+  selection: {
+    state: RowSelectionState;
+    onChange: (state: RowSelectionState) => void;
+  };
 }
 
-export function InvoiceTable({
-  invoices,
-  onMarkPaid,
-  onGenerateEmail,
-  onDelete,
-  loadingId,
-  deletingId,
-}: InvoiceTableProps) {
-  if (invoices.length === 0) {
+export function InvoiceTable({ invoices, isLoading, selection }: InvoiceTableProps) {
+  const columns = useMemo<ColumnDef<InvoiceDto, unknown>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label={`Select ${row.original.invoiceNumber}`}
+          />
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "invoiceNumber",
+        header: "Invoice #",
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.invoiceNumber}</span>
+        ),
+      },
+      {
+        accessorKey: "clientName",
+        header: "Client",
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-foreground">{row.original.clientName}</div>
+            <div className="text-xs text-muted-foreground">{row.original.clientEmail}</div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "amount",
+        header: "Amount",
+        cell: ({ row }) => <Money amount={row.original.amount} />,
+      },
+      {
+        accessorKey: "dueDate",
+        header: "Due",
+        cell: ({ row }) => format(new Date(row.original.dueDate), "MMM d, yyyy"),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => <StatusChip status={row.original.status} />,
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => <InvoiceRowActions invoice={row.original} />,
+        enableSorting: false,
+      },
+    ],
+    [],
+  );
+
+  if (!isLoading && invoices.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 p-12 text-center dark:border-zinc-700">
-        <p className="text-zinc-500">No invoices yet. Upload a CSV or create one manually.</p>
+      <div className="rounded-xl border border-dashed p-12 text-center">
+        <p className="text-muted-foreground">No invoices yet. Upload a CSV or create one manually.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full text-sm">
-        <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
-          <tr>
-            <th className="px-4 py-3 font-medium">Invoice #</th>
-            <th className="px-4 py-3 font-medium">Client</th>
-            <th className="px-4 py-3 font-medium">Amount</th>
-            <th className="px-4 py-3 font-medium">Due</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoices.map((invoice) => (
-            <tr key={invoice.id} className="border-t border-zinc-200 dark:border-zinc-800">
-              <td className="px-4 py-3 font-medium">{invoice.invoiceNumber}</td>
-              <td className="px-4 py-3">
-                <div className="font-medium text-zinc-900 dark:text-zinc-100">{invoice.clientName}</div>
-                <div className="text-xs text-zinc-500">{invoice.clientEmail}</div>
-                {invoice.clientPhone && (
-                  <div className="text-xs text-zinc-400 font-mono mt-0.5">{invoice.clientPhone}</div>
-                )}
-              </td>
-              <td className="px-4 py-3">{formatCurrency(invoice.amount)}</td>
-              <td className="px-4 py-3">{format(new Date(invoice.dueDate), "MMM d, yyyy")}</td>
-              <td className="px-4 py-3">
-                <Badge variant={statusVariant[invoice.status]}>{invoice.status}</Badge>
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={loadingId === invoice.id || invoice.status === "PAID"}
-                    onClick={() => onGenerateEmail(invoice.id)}
-                  >
-                    <Sparkles className="h-3 w-3" /> AI email
-                  </Button>
-                  {invoice.status !== "PAID" && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={loadingId === invoice.id}
-                      onClick={() => onMarkPaid(invoice.id)}
-                    >
-                      Mark paid
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                    disabled={deletingId === invoice.id}
-                    onClick={() => {
-                      if (confirm(`Delete invoice ${invoice.invoiceNumber}?`)) {
-                        onDelete(invoice.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={invoices}
+      isLoading={isLoading}
+      selection={{
+        state: selection.state,
+        onChange: selection.onChange,
+        getRowId: (invoice) => invoice.id,
+      }}
+    />
   );
 }

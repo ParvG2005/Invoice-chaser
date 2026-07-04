@@ -9,11 +9,19 @@ export const GET = withApiHandler(async (request, ctx) => {
   const takeParam = searchParams.get("limit");
   const cursor = searchParams.get("cursor");
   const take = takeParam ? Number(takeParam) : undefined;
+  const partyId = searchParams.get("partyId");
+  const dueBefore = searchParams.get("dueBefore");
+  const dueAfter = searchParams.get("dueAfter");
+  const search = searchParams.get("search");
 
   const invoices = await invoiceService.list(ctx.organizationId, {
     status: status ?? undefined,
     take: take && Number.isFinite(take) && take > 0 ? take : undefined,
     cursor: cursor ?? undefined,
+    partyId: partyId ?? undefined,
+    dueBefore: dueBefore ?? undefined,
+    dueAfter: dueAfter ?? undefined,
+    search: search ?? undefined,
   });
   return successResponse(invoices);
 });

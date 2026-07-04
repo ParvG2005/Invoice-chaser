@@ -9,6 +9,14 @@ export interface InvoiceListOptions {
   status?: InvoiceStatus;
   take?: number;
   cursor?: string;
+  /** Filter to invoices billed to this party (Task 12 invoices-list filter panel). */
+  partyId?: string;
+  /** ISO date string (inclusive upper bound on dueDate). */
+  dueBefore?: string;
+  /** ISO date string (inclusive lower bound on dueDate). */
+  dueAfter?: string;
+  /** Case-insensitive match against invoiceNumber or clientName. */
+  search?: string;
 }
 
 export interface InvoiceLineItemInput {
@@ -39,11 +47,25 @@ function lineItemsCreateManyData(
 export const invoiceRepository = {
   findMany(organizationId: string, options: InvoiceListOptions = {}) {
     const take = Math.min(options.take ?? INVOICE_PAGE_SIZE, INVOICE_MAX_PAGE_SIZE);
+    const dueDateFilter: Prisma.DateTimeFilter = {};
+    if (options.dueBefore) dueDateFilter.lte = new Date(options.dueBefore);
+    if (options.dueAfter) dueDateFilter.gte = new Date(options.dueAfter);
+
     return prisma.invoice.findMany({
       where: {
         organizationId,
         deletedAt: null,
         ...(options.status ? { status: options.status } : {}),
+        ...(options.partyId ? { partyId: options.partyId } : {}),
+        ...(Object.keys(dueDateFilter).length > 0 ? { dueDate: dueDateFilter } : {}),
+        ...(options.search
+          ? {
+              OR: [
+                { invoiceNumber: { contains: options.search, mode: "insensitive" as const } },
+                { clientName: { contains: options.search, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
       },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
       take,
