@@ -144,6 +144,8 @@ Phase 0 is **done** when: this plan is committed, all checklist accounts exist w
 
 **Gate:** design review with user on Stitch screens *before* implementation of each screen batch; all smoke tests green.
 
+**Status: DONE.** Signed off 2026-07-05 — see `docs/setup/PHASE-3-GATE.md`.
+
 ## Phase 4 — Communications: Email + WhatsApp side by side
 
 **Outcome:** dunning engine sends reminders over email and WhatsApp in parallel with full delivery tracking.
