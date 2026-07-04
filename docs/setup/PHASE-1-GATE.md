@@ -67,7 +67,9 @@ Post-merge, the Cloudflare Workers Build check-run (`Workers Builds: invoicechas
 2. Once past that, `Could not resolve "pg-cloudflare"` at the OpenNext bundling step — Next's output-file-tracing copied `pg-cloudflare`'s non-workerd build (missing the workerd-conditional `dist/index.js` the `@prisma/adapter-pg` driver needs). Fixed via `serverExternalPackages: ["pg", "pg-cloudflare"]` in `next.config.ts`.
 3. Also bumped `wrangler.jsonc` `compatibility_date` to match the installed workerd version (clears an unrelated warning), and excluded `.open-next/**` from eslint (was linting generated build output once it existed).
 
-Fixed in `4367cd0` (message-only, file-rename landed) + `3b8c9bf` (actual content, first commit's `git add` silently dropped everything but the rename). Verified locally: `npm run lint && npm run typecheck && npm test && npx opennextjs-cloudflare build` all exit 0. Cloudflare Workers Build re-run against `3b8c9bf` pending confirmation.
+Fixed in `4367cd0` (message-only, file-rename landed) + `3b8c9bf` (actual content, first commit's `git add` silently dropped everything but the rename). Verified locally: `npm run lint && npm run typecheck && npm test && npx opennextjs-cloudflare build` all exit 0.
+
+Three consecutive build attempts against `3b8c9bf`/`745f4b5` (including a cache-cleared retry) kept showing the pre-fix `compatibility_date` and middleware error despite GitHub confirming correct content on `main` at every commit — a stale Git-integration mirror on Cloudflare's side, not a code issue. Fixed by disconnecting and reconnecting the GitHub integration in the Cloudflare dashboard. Re-run pending confirmation on the next build.
 
 ## Open Risks / Carried-Forward Items
 
