@@ -1,6 +1,6 @@
-import type { EmailTone, InvoiceStatus, ReminderStatus } from "@/generated/prisma/client";
+import type { EmailTone, InvoiceStatus, PartyType, ReminderStatus } from "@/generated/prisma/client";
 
-export type { EmailTone, InvoiceStatus, ReminderStatus };
+export type { EmailTone, InvoiceStatus, PartyType, ReminderStatus };
 
 export interface ApiSuccess<T> {
   success: true;
@@ -43,6 +43,24 @@ export interface InvoiceDto {
   notes: string | null;
   status: InvoiceStatus;
   paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartyDto {
+  id: string;
+  type: PartyType;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  gstin: string | null;
+  billingAddress: string | null;
+  creditLimit: number | null;
+  creditDays: number | null;
+  openingBalance: number | null;
+  notes: string | null;
+  agentId: string | null;
   createdAt: string;
   updatedAt: string;
 }

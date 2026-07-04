@@ -1,5 +1,5 @@
-import type { Invoice } from "@/generated/prisma/client";
-import type { InvoiceDto } from "@/types";
+import type { Invoice, Party } from "@/generated/prisma/client";
+import type { InvoiceDto, PartyDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 
 export function toInvoiceDto(invoice: Invoice): InvoiceDto {
@@ -16,6 +16,26 @@ export function toInvoiceDto(invoice: Invoice): InvoiceDto {
     paidAt: invoice.paidAt?.toISOString() ?? null,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
+  };
+}
+
+export function toPartyDto(party: Party): PartyDto {
+  return {
+    id: party.id,
+    type: party.type,
+    name: party.name,
+    email: party.email,
+    phone: party.phone,
+    whatsapp: party.whatsapp,
+    gstin: party.gstin,
+    billingAddress: party.billingAddress,
+    creditLimit: party.creditLimit === null ? null : decimalToNumber(party.creditLimit),
+    creditDays: party.creditDays,
+    openingBalance: party.openingBalance === null ? null : decimalToNumber(party.openingBalance),
+    notes: party.notes,
+    agentId: party.agentId,
+    createdAt: party.createdAt.toISOString(),
+    updatedAt: party.updatedAt.toISOString(),
   };
 }
 
