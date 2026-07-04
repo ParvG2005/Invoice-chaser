@@ -126,11 +126,15 @@ export const tallyImportRepository = {
                 where: { id: allocation.invoiceId, organizationId, deletedAt: null },
               });
               if (current) {
+                const newAmountPaid = Number(current.amountPaid) - amount;
+                const total = Number(current.totalAmount ?? current.amount);
                 await tx.invoice.updateMany({
                   where: { id: allocation.invoiceId, organizationId, deletedAt: null },
                   data: {
                     amountPaid: { decrement: amount },
-                    ...(current.status === "PAID" ? { status: "PENDING", paidAt: null } : {}),
+                    ...(current.status === "PAID" && newAmountPaid < total
+                      ? { status: "PENDING", paidAt: null }
+                      : {}),
                   },
                 });
               }
@@ -139,11 +143,15 @@ export const tallyImportRepository = {
                 where: { id: allocation.billId, organizationId, deletedAt: null },
               });
               if (current) {
+                const newAmountPaid = Number(current.amountPaid) - amount;
+                const total = Number(current.amount);
                 await tx.bill.updateMany({
                   where: { id: allocation.billId, organizationId, deletedAt: null },
                   data: {
                     amountPaid: { decrement: amount },
-                    ...(current.status === "PAID" ? { status: "PENDING", paidAt: null } : {}),
+                    ...(current.status === "PAID" && newAmountPaid < total
+                      ? { status: "PENDING", paidAt: null }
+                      : {}),
                   },
                 });
               }

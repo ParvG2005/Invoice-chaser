@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findFirst } = vi.hoisted(() => ({ findFirst: vi.fn().mockResolvedValue(null) }));
+const { findFirst, transaction } = vi.hoisted(() => ({
+  findFirst: vi.fn().mockResolvedValue(null),
+  transaction: vi.fn(),
+}));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     importBatch: { findFirst, findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
@@ -10,6 +13,7 @@ vi.mock("@/lib/db/prisma", () => ({
     invoice: { findFirst },
     bill: { findFirst },
     payment: { findFirst },
+    $transaction: transaction,
   },
 }));
 
@@ -110,5 +114,102 @@ describe("tallyImportRepository org scoping", () => {
         status: "CREATED",
       },
     });
+  });
+});
+
+describe("tallyImportRepository.softDeleteEntity Payment undo", () => {
+  beforeEach(() => {
+    transaction.mockReset();
+  });
+
+  function makeTx(overrides: {
+    allocations: Array<{ id: string; amount: unknown; invoiceId: string | null; billId: string | null }>;
+    invoiceFindFirst?: (args: unknown) => Promise<unknown>;
+    billFindFirst?: (args: unknown) => Promise<unknown>;
+  }) {
+    const invoiceUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const billUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      paymentAllocation: {
+        findMany: vi.fn().mockResolvedValue(overrides.allocations),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      invoice: {
+        findFirst: overrides.invoiceFindFirst ?? vi.fn().mockResolvedValue(null),
+        updateMany: invoiceUpdateMany,
+      },
+      bill: {
+        findFirst: overrides.billFindFirst ?? vi.fn().mockResolvedValue(null),
+        updateMany: billUpdateMany,
+      },
+      stockMovement: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      payment: { update: vi.fn().mockResolvedValue({}) },
+    };
+    return { tx, invoiceUpdateMany, billUpdateMany };
+  }
+
+  it("keeps an Invoice PAID when amountPaid still covers the total after undoing one of several allocations", async () => {
+    const { tx, invoiceUpdateMany } = makeTx({
+      allocations: [{ id: "alloc-1", amount: 40, invoiceId: "inv-1", billId: null }],
+      invoiceFindFirst: vi.fn().mockResolvedValue({
+        id: "inv-1",
+        status: "PAID",
+        amountPaid: 140,
+        totalAmount: 100,
+        amount: 100,
+      }),
+    });
+    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+
+    const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
+    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+
+    const data = invoiceUpdateMany.mock.calls.at(-1)?.[0]?.data;
+    expect(data.amountPaid).toEqual({ decrement: 40 });
+    expect(data.status).toBeUndefined();
+    expect(data.paidAt).toBeUndefined();
+  });
+
+  it("downgrades an Invoice to PENDING when the undo drops amountPaid below the total", async () => {
+    const { tx, invoiceUpdateMany } = makeTx({
+      allocations: [{ id: "alloc-1", amount: 100, invoiceId: "inv-1", billId: null }],
+      invoiceFindFirst: vi.fn().mockResolvedValue({
+        id: "inv-1",
+        status: "PAID",
+        amountPaid: 100,
+        totalAmount: 100,
+        amount: 100,
+      }),
+    });
+    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+
+    const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
+    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+
+    const data = invoiceUpdateMany.mock.calls.at(-1)?.[0]?.data;
+    expect(data.amountPaid).toEqual({ decrement: 100 });
+    expect(data.status).toBe("PENDING");
+    expect(data.paidAt).toBeNull();
+  });
+
+  it("keeps a Bill PAID when amountPaid still covers the total after undoing one of several allocations", async () => {
+    const { tx, billUpdateMany } = makeTx({
+      allocations: [{ id: "alloc-1", amount: 30, invoiceId: null, billId: "bill-1" }],
+      billFindFirst: vi.fn().mockResolvedValue({
+        id: "bill-1",
+        status: "PAID",
+        amountPaid: 130,
+        amount: 100,
+      }),
+    });
+    transaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb(tx));
+
+    const { tallyImportRepository } = await import("@/server/repositories/tally-import.repository");
+    await tallyImportRepository.softDeleteEntity("org-1", "Payment", "pay-1");
+
+    const data = billUpdateMany.mock.calls.at(-1)?.[0]?.data;
+    expect(data.amountPaid).toEqual({ decrement: 30 });
+    expect(data.status).toBeUndefined();
+    expect(data.paidAt).toBeUndefined();
   });
 });
