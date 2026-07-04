@@ -12,6 +12,8 @@ vi.mock("@/server/repositories/party.repository", () => ({
     create: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
+    findByIdWithLedgerRelations: vi.fn(),
+    findManagedParties: vi.fn(),
   },
 }));
 
@@ -92,5 +94,126 @@ describe("partyService", () => {
     vi.mocked(partyRepository.findById).mockResolvedValue(fakeParty() as never);
     vi.mocked(partyRepository.softDelete).mockResolvedValue({ count: 0 } as never);
     await expect(partyService.remove(ORG, "party-1")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  describe("ledger", () => {
+    it("nets a CUSTOMER refund (OUT payment) as a debit, opposite sign from a normal IN payment", async () => {
+      vi.mocked(partyRepository.findByIdWithLedgerRelations).mockResolvedValue({
+        ...fakeParty({ type: "CUSTOMER" }),
+        openingBalance: 0,
+        invoices: [
+          {
+            invoiceNumber: "INV-1",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            totalAmount: 1000,
+            amount: 1000,
+            currency: "INR",
+          },
+        ],
+        bills: [],
+        payments: [
+          {
+            id: "pay-normal-00000000",
+            reference: "PMT-NORMAL",
+            paymentDate: new Date("2026-01-02T00:00:00.000Z"),
+            amount: 400,
+            direction: "IN",
+            currency: "INR",
+          },
+          {
+            id: "pay-refund-00000000",
+            reference: "PMT-REFUND",
+            paymentDate: new Date("2026-01-03T00:00:00.000Z"),
+            amount: 100,
+            direction: "OUT",
+            currency: "INR",
+          },
+        ],
+      } as never);
+
+      const ledger = await partyService.ledger(ORG, "party-1");
+
+      // Invoice: +1000 -> balance 1000
+      expect(ledger[0]).toMatchObject({ docType: "INVOICE", debit: "1000.00", credit: null, balance: "1000.00" });
+      // Normal IN payment is a credit (reduces balance): 1000 - 400 = 600
+      expect(ledger[1]).toMatchObject({
+        docType: "PAYMENT",
+        docNumber: "PMT-NORMAL",
+        debit: null,
+        credit: "400.00",
+        balance: "600.00",
+      });
+      // Refund (OUT) inverts to a debit (increases balance again): 600 + 100 = 700
+      expect(ledger[2]).toMatchObject({
+        docType: "PAYMENT",
+        docNumber: "PMT-REFUND",
+        debit: "100.00",
+        credit: null,
+        balance: "700.00",
+      });
+    });
+
+    it("nets a BOTH-type party's invoice (receivable) and bill (payable) into one real net balance", async () => {
+      vi.mocked(partyRepository.findByIdWithLedgerRelations).mockResolvedValue({
+        ...fakeParty({ type: "BOTH" }),
+        openingBalance: 0,
+        invoices: [
+          {
+            invoiceNumber: "INV-1",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            totalAmount: 1000,
+            amount: 1000,
+            currency: "INR",
+          },
+        ],
+        bills: [
+          {
+            billNumber: "BILL-1",
+            billDate: new Date("2026-01-02T00:00:00.000Z"),
+            createdAt: new Date("2026-01-02T00:00:00.000Z"),
+            amount: 300,
+            currency: "INR",
+          },
+        ],
+        payments: [],
+      } as never);
+
+      const ledger = await partyService.ledger(ORG, "party-1");
+
+      // Invoice (receivable side): balance += 1000 -> 1000
+      expect(ledger[0]).toMatchObject({ docType: "INVOICE", debit: "1000.00", balance: "1000.00" });
+      // Bill (payable side): net balance -= 300 -> 700 (a real net owed-to-us figure)
+      expect(ledger[1]).toMatchObject({ docType: "BILL", debit: "300.00", balance: "700.00" });
+    });
+
+    it("carries each entry's currency from its own source document, not a hardcoded default", async () => {
+      vi.mocked(partyRepository.findByIdWithLedgerRelations).mockResolvedValue({
+        ...fakeParty({ type: "CUSTOMER" }),
+        openingBalance: 0,
+        invoices: [
+          {
+            invoiceNumber: "INV-USD",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            totalAmount: 500,
+            amount: 500,
+            currency: "USD",
+          },
+          {
+            invoiceNumber: "INV-INR",
+            createdAt: new Date("2026-01-02T00:00:00.000Z"),
+            totalAmount: 500,
+            amount: 500,
+            currency: "INR",
+          },
+        ],
+        bills: [],
+        payments: [],
+      } as never);
+
+      const ledger = await partyService.ledger(ORG, "party-1");
+
+      expect(ledger[0]).toMatchObject({ docNumber: "INV-USD", currency: "USD" });
+      expect(ledger[1]).toMatchObject({ docNumber: "INV-INR", currency: "INR" });
+    });
   });
 });

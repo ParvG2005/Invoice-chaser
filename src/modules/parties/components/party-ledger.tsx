@@ -16,6 +16,7 @@ interface LedgerEntry {
   debit: string | null;
   credit: string | null;
   balance: string;
+  currency: string;
 }
 
 const DOC_TYPE_LABELS: Record<LedgerEntry["docType"], string> = {
@@ -49,17 +50,27 @@ export function PartyLedger({ partyId }: { partyId: string }) {
       {
         accessorKey: "debit",
         header: "Debit",
-        cell: ({ row }) => (row.original.debit ? <Money amount={row.original.debit} /> : "—"),
+        cell: ({ row }) =>
+          row.original.debit ? (
+            <Money amount={row.original.debit} currency={row.original.currency} />
+          ) : (
+            "—"
+          ),
       },
       {
         accessorKey: "credit",
         header: "Credit",
-        cell: ({ row }) => (row.original.credit ? <Money amount={row.original.credit} /> : "—"),
+        cell: ({ row }) =>
+          row.original.credit ? (
+            <Money amount={row.original.credit} currency={row.original.currency} />
+          ) : (
+            "—"
+          ),
       },
       {
         accessorKey: "balance",
         header: "Balance",
-        cell: ({ row }) => <Money amount={row.original.balance} />,
+        cell: ({ row }) => <Money amount={row.original.balance} currency={row.original.currency} />,
       },
     ],
     [],

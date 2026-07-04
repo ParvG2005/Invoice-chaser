@@ -12,6 +12,7 @@ export interface LedgerEntry {
   debit: string | null;
   credit: string | null;
   balance: string;
+  currency: string;
 }
 
 export interface AgentRollupEntry {
@@ -131,10 +132,34 @@ export const partyService = {
    *
    * Debit/credit sign convention: for CUSTOMER (or BOTH) parties, invoices
    * increase what they owe us (debit); for SUPPLIER (or BOTH) parties,
-   * bills increase what we owe them (debit). Payments always reduce the
-   * balance (credit) — a party only ever has IN payments (customer paying
-   * us) or OUT payments (us paying a supplier), so the direction is
-   * already implied by which party the payment is attached to.
+   * bills increase what we owe them (debit).
+   *
+   * Payments are direction-aware (`Payment.direction`, `IN`/`OUT`) rather
+   * than always being a credit:
+   *  - CUSTOMER side: a normal `IN` payment (customer pays us) is a credit
+   *    (reduces what they owe); an `OUT` payment (refund to the customer)
+   *    inverts to a debit (increases what they owe again).
+   *  - SUPPLIER side: a normal `OUT` payment (we pay the supplier) is a
+   *    credit (reduces what we owe); an `IN` payment (supplier refunds us)
+   *    inverts to a debit (increases what we owe again).
+   *  - BOTH: a payment's `direction` also selects *which* side it nets
+   *    against — `IN` behaves like a CUSTOMER-side (receivable) payment,
+   *    `OUT` like a SUPPLIER-side (payable) payment — since a payment row
+   *    here isn't joined to the specific invoice/bill it settles
+   *    (`PaymentAllocation`). This means refund-inversion isn't detectable
+   *    for BOTH-type payments (direction is already spent choosing the
+   *    side); they're always treated as a normal, side-reducing credit.
+   *
+   * For a BOTH-type party, all entries (invoices, bills, payments) are
+   * merged into one chronological ledger with a single running `balance`
+   * that is a genuine net amount owed to/by the party: RECEIVABLE-side
+   * entries (invoices, IN payments) accumulate balance += debit - credit
+   * as usual, while PAYABLE-side entries (bills, OUT payments) accumulate
+   * with the opposite sign (balance += credit - debit), since a payable
+   * moves the net position in the *opposite* direction from a receivable.
+   * This inversion is only applied for BOTH-type parties — a pure
+   * SUPPLIER (or CUSTOMER) party keeps its existing single-sided
+   * convention (balance += debit - credit) unchanged.
    */
   async ledger(organizationId: string, partyId: string): Promise<LedgerEntry[]> {
     const party = await partyRepository.findByIdWithLedgerRelations(organizationId, partyId);
@@ -143,12 +168,16 @@ export const partyService = {
     const includeInvoicesAsDebit = party.type === "CUSTOMER" || party.type === "BOTH";
     const includeBillsAsDebit = party.type === "SUPPLIER" || party.type === "BOTH";
 
+    type Side = "RECEIVABLE" | "PAYABLE";
+
     interface RawEntry {
       date: Date;
       docType: LedgerEntry["docType"];
       docNumber: string;
       debit: number;
       credit: number;
+      currency: string;
+      side: Side;
     }
 
     const raw: RawEntry[] = [];
@@ -161,6 +190,8 @@ export const partyService = {
           docNumber: invoice.invoiceNumber,
           debit: decimalToNumber(invoice.totalAmount ?? invoice.amount),
           credit: 0,
+          currency: invoice.currency,
+          side: "RECEIVABLE",
         });
       }
     }
@@ -173,17 +204,29 @@ export const partyService = {
           docNumber: bill.billNumber,
           debit: decimalToNumber(bill.amount),
           credit: 0,
+          currency: bill.currency,
+          side: "PAYABLE",
         });
       }
     }
 
     for (const payment of party.payments) {
+      const amount = decimalToNumber(payment.amount);
+      // For CUSTOMER/SUPPLIER parties the side is fixed by party.type; for
+      // BOTH, `direction` itself selects the side (see docstring above).
+      const isPayableSide =
+        party.type === "SUPPLIER" || (party.type === "BOTH" && payment.direction === "OUT");
+      const expectedDirection = isPayableSide ? "OUT" : "IN";
+      const isNormal = payment.direction === expectedDirection;
+
       raw.push({
         date: payment.paymentDate,
         docType: "PAYMENT",
         docNumber: payment.reference ?? `PMT-${payment.id.slice(0, 8).toUpperCase()}`,
-        debit: 0,
-        credit: decimalToNumber(payment.amount),
+        debit: isNormal ? 0 : amount,
+        credit: isNormal ? amount : 0,
+        currency: payment.currency,
+        side: isPayableSide ? "PAYABLE" : "RECEIVABLE",
       });
     }
 
@@ -193,7 +236,9 @@ export const partyService = {
 
     let balance = party.openingBalance ? decimalToNumber(party.openingBalance) : 0;
     return raw.map((entry) => {
-      balance += entry.debit - entry.credit;
+      const net = entry.debit - entry.credit;
+      const invertForNetting = party.type === "BOTH" && entry.side === "PAYABLE";
+      balance += invertForNetting ? -net : net;
       return {
         date: entry.date.toISOString(),
         docType: entry.docType,
@@ -201,6 +246,7 @@ export const partyService = {
         debit: entry.debit ? entry.debit.toFixed(2) : null,
         credit: entry.credit ? entry.credit.toFixed(2) : null,
         balance: balance.toFixed(2),
+        currency: entry.currency,
       };
     });
   },

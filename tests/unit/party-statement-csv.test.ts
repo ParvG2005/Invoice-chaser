@@ -19,6 +19,7 @@ describe("buildStatementCsv", () => {
         debit: "10000.00",
         credit: null,
         balance: "10000.00",
+        currency: "INR",
       },
       {
         date: "2026-01-05T00:00:00.000Z",
@@ -27,6 +28,7 @@ describe("buildStatementCsv", () => {
         debit: null,
         credit: "5000.00",
         balance: "5000.00",
+        currency: "INR",
       },
     ];
 
