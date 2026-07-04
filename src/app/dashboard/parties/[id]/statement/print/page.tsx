@@ -15,6 +15,7 @@ interface LedgerEntry {
   debit: string | null;
   credit: string | null;
   balance: string;
+  currency: string;
 }
 
 /**
@@ -97,9 +98,13 @@ export default function PartyStatementPrintPage() {
               <td className="py-2">
                 {entry.docType} {entry.docNumber}
               </td>
-              <td className="py-2 text-right">{entry.debit ? formatMoney(entry.debit) : "—"}</td>
-              <td className="py-2 text-right">{entry.credit ? formatMoney(entry.credit) : "—"}</td>
-              <td className="py-2 text-right">{formatMoney(entry.balance)}</td>
+              <td className="py-2 text-right">
+                {entry.debit ? formatMoney(entry.debit, entry.currency) : "—"}
+              </td>
+              <td className="py-2 text-right">
+                {entry.credit ? formatMoney(entry.credit, entry.currency) : "—"}
+              </td>
+              <td className="py-2 text-right">{formatMoney(entry.balance, entry.currency)}</td>
             </tr>
           ))}
         </tbody>
