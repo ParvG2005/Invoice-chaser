@@ -54,3 +54,13 @@ Both screens below are **candidate** designs generated/iterated in Stitch projec
 **Known pre-existing issue, now resolved for this screen (was documented above under "Pilot screen" for other screens):** the "Receivables Aging" bar chart's bars previously rendered invisible in the static Stitch screenshot (hand-rolled flex-height CSS bug, same root cause as the Analytics Date/Stock tab bug). Fixed here as described above. The Analytics screen's own aging/date charts are out of scope for this task and still carry the original bug — still recorded there. The "Receivables by Status" chart uses a stacked single bar + legend instead of individual per-status bars and was never affected. Phase 3 implementation should still rebuild both charts with a real charting library (Recharts/Chart.js), not port Stitch's hand-rolled div bars or its load-time height-reset animation.
 
 **Approval status:** ✅ approved by user, 2026-07-04 (Task 6 — Design Review Gate A). Screens approved: App Shell light `b45d601ef84a43ef9f281b4ce335ef26` / dark `c6bc199a32bd4667ac9b039bf7d26e9f`; Dashboard light `02ba53d311074691b57ebc91e149a29a` / dark `797bc74525ad4798935defd075c7aac7` (post-fix versions, sidebar reconciled + aging chart bars fixed).
+
+## Task 9 — Invoices (Batch B), pending review
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav. Not yet design-reviewed.
+
+- **Invoices list** — light `8c946ec5cbf741ea979655494d454b0c` / dark `03773a9a6414433e8b39c08b055ecaf6`. Saved-filter tabs, 5-status filter chips w/ counts, party/date/search filters, selectable table, floating bulk-action bar.
+- **Invoice detail** — light `effd2bcc564242cdb30c5dbed797b1f3` / dark `ffa68e86d3c04a368536a288c8151c87`. Header + status + balance due, action row (mark paid/partial/reminder/snooze/duplicate/write-off/PDF), line items, unified timeline (comms + payments interleaved).
+- **Invoice editor** — light `d24e9453f9a444628a89f75ca142a68e` / dark `ddb3ff75f6054c19943ed50c9883ca9f`. Party combobox w/ inline create, line-item editor w/ stock picker, totals footer, notes, Save / Save & Send.
+
+**Concerns:** the first dark-mode generation for Invoice detail (`ed8a6b9905734bc696f9ebeeb90b7516`, now superseded) drifted off-brand (wrong logo/nav, missing items) — fixed via `edit_screens`, new id `ffa68e86d3c04a368536a288c8151c87` is canonical. `edit_screens`/`generate_variants` continue to mint new screen IDs rather than updating in place (same behavior as Batch A).
