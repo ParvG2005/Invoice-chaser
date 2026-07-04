@@ -380,6 +380,7 @@ model StockMovement {
   sourceType     StockSourceType @map("source_type")
   sourceId       String?         @map("source_id")
   godown         String?
+  notes          String?
   movementDate   DateTime        @default(now()) @map("movement_date")
   createdAt      DateTime        @default(now()) @map("created_at")
   deletedAt      DateTime?       @map("deleted_at")

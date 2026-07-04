@@ -64,4 +64,29 @@ describe("stockService", () => {
       currentQty: 74.5,
     });
   });
+
+  it("adjust records an ADJUSTMENT movement carrying the reason as notes", async () => {
+    vi.mocked(itemRepository.findById).mockResolvedValue({ id: "item-1", openingQty: 50 } as never);
+    vi.mocked(stockRepository.createMovement).mockResolvedValue({
+      id: "mv-2",
+      organizationId: ORG,
+      itemId: "item-1",
+      qty: -5,
+      rate: null,
+      sourceType: "ADJUSTMENT",
+      sourceId: null,
+      godown: null,
+      notes: "damaged",
+      movementDate: new Date("2026-07-04T00:00:00.000Z"),
+      createdAt: new Date("2026-07-04T00:00:00.000Z"),
+      deletedAt: null,
+    } as never);
+
+    const dto = await stockService.adjust(ORG, "item-1", { qty: -5, reason: "damaged" });
+
+    expect(dto).toMatchObject({ id: "mv-2", itemId: "item-1", qty: -5, sourceType: "ADJUSTMENT", notes: "damaged" });
+    expect(stockRepository.createMovement).toHaveBeenCalledWith(
+      expect.objectContaining({ qty: -5, sourceType: "ADJUSTMENT", notes: "damaged" }),
+    );
+  });
 });

@@ -2,18 +2,39 @@ import { NotFoundError, ValidationError } from "@/lib/api/errors";
 import type { CreateItemInput, UpdateItemInput } from "@/lib/validations/item";
 import { itemRepository, type ItemListOptions } from "@/server/repositories/item.repository";
 import { toItemDto } from "@/server/services/mappers";
+import { stockService } from "@/server/services/stock.service";
 import { withAudit, SYSTEM_ACTOR, type AuditActor } from "@/server/services/audit.service";
+import { decimalToNumber } from "@/lib/utils/currency";
 
 export const itemService = {
+  /**
+   * `lowStockOnly` isn't a Prisma `where` filter — stockOnHand is computed
+   * (openingQty + movements sum), not a stored column — so this fetches the
+   * page, batches the stock computation via `stockService.getStockForItems`
+   * (no N+1), attaches `stockOnHand`/`valuation` to every row, then filters
+   * post-query. Acceptable at this data scale per the item-catalog page size
+   * (see `ITEM_PAGE_SIZE`); revisit with a materialized/denormalized stock
+   * column if the catalog grows large enough for this to matter.
+   */
   async list(organizationId: string, options: ItemListOptions = {}) {
-    const items = await itemRepository.findMany(organizationId, options);
-    return items.map(toItemDto);
+    const { lowStockOnly, ...repoOptions } = options;
+    const items = await itemRepository.findMany(organizationId, repoOptions);
+    const stockByItemId = await stockService.getStockForItems(
+      organizationId,
+      items.map((item) => ({ id: item.id, openingQty: decimalToNumber(item.openingQty) })),
+    );
+    const dtos = items.map((item) =>
+      toItemDto(item, stockByItemId.get(item.id) ?? decimalToNumber(item.openingQty)),
+    );
+    if (!lowStockOnly) return dtos;
+    return dtos.filter((dto) => dto.reorderLevel !== null && dto.stockOnHand <= dto.reorderLevel);
   },
 
   async get(organizationId: string, id: string) {
     const item = await itemRepository.findById(organizationId, id);
     if (!item) throw new NotFoundError("Item not found");
-    return toItemDto(item);
+    const stock = await stockService.getItemStock(organizationId, id);
+    return toItemDto(item, stock.currentQty);
   },
 
   async create(organizationId: string, input: CreateItemInput, actor: AuditActor = SYSTEM_ACTOR) {
@@ -35,7 +56,9 @@ export const itemService = {
         tallyGuid: input.tallyGuid ?? null,
         tallyAlterId: input.tallyAlterId ?? null,
       });
-      return toItemDto(item);
+      // No movements exist yet on a freshly created item, so stockOnHand is
+      // just its opening quantity — no need for a stock query here.
+      return toItemDto(item, decimalToNumber(item.openingQty));
     });
   },
 

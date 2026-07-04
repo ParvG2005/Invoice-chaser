@@ -125,6 +125,10 @@ export interface ItemDto {
   salePrice: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Computed on read: openingQty + net movements (`stockService.getStockForItems`/`getItemStock`), not a persisted column. */
+  stockOnHand: number;
+  /** Computed on read: `stockOnHand * salePrice` (0 when salePrice is unset), rounded to 2dp. */
+  valuation: number;
 }
 
 /**
@@ -151,6 +155,7 @@ export interface StockMovementDto {
   sourceType: "INVOICE" | "BILL" | "ADJUSTMENT" | "OPENING";
   sourceId: string | null;
   godown: string | null;
+  notes: string | null;
   movementDate: string;
   createdAt: string;
 }

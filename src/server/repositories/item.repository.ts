@@ -8,6 +8,14 @@ export interface ItemListOptions {
   search?: string;
   take?: number;
   cursor?: string;
+  /**
+   * Not applied in this repository's `where` — low stock depends on
+   * `stockOnHand`, which is computed (openingQty + movements sum), not a
+   * stored column. Declared here purely so callers can pass the full
+   * `ItemListOptions` through; `itemService.list` strips it before calling
+   * `findMany` and applies the filter itself after computing stockOnHand.
+   */
+  lowStockOnly?: boolean;
 }
 
 export const itemRepository = {

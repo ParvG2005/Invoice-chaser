@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { itemService } from "@/server/services/item.service";
 import { itemRepository } from "@/server/repositories/item.repository";
+import { stockRepository } from "@/server/repositories/stock.repository";
 import { NotFoundError, ValidationError } from "@/lib/api/errors";
 
 vi.mock("@/server/repositories/item.repository", () => ({
@@ -11,6 +12,13 @@ vi.mock("@/server/repositories/item.repository", () => ({
     create: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
+  },
+}));
+
+vi.mock("@/server/repositories/stock.repository", () => ({
+  stockRepository: {
+    sumQty: vi.fn(),
+    sumQtyByItemIds: vi.fn(),
   },
 }));
 
@@ -60,5 +68,28 @@ describe("itemService", () => {
   it("get throws NotFoundError when missing", async () => {
     vi.mocked(itemRepository.findById).mockResolvedValue(null);
     await expect(itemService.get(ORG, "missing")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("list attaches computed stockOnHand/valuation per item", async () => {
+    vi.mocked(itemRepository.findMany).mockResolvedValue([
+      fakeItem({ id: "item-1", openingQty: 50, reorderLevel: 10, salePrice: 500 }),
+    ] as never);
+    vi.mocked(stockRepository.sumQtyByItemIds).mockResolvedValue(new Map([["item-1", -5]]));
+
+    const dtos = await itemService.list(ORG, {});
+    expect(dtos).toEqual([
+      expect.objectContaining({ id: "item-1", stockOnHand: 45, valuation: 22500 }),
+    ]);
+  });
+
+  it("list with lowStockOnly filters out items above their reorder level", async () => {
+    vi.mocked(itemRepository.findMany).mockResolvedValue([
+      fakeItem({ id: "item-1", openingQty: 50, reorderLevel: 10 }), // stockOnHand 50 > 10
+      fakeItem({ id: "item-2", openingQty: 5, reorderLevel: 10 }), // stockOnHand 5 <= 10
+    ] as never);
+    vi.mocked(stockRepository.sumQtyByItemIds).mockResolvedValue(new Map());
+
+    const dtos = await itemService.list(ORG, { lowStockOnly: true });
+    expect(dtos.map((d) => d.id)).toEqual(["item-2"]);
   });
 });

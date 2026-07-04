@@ -78,7 +78,16 @@ export function toPartyDto(party: Party): PartyDto {
   };
 }
 
-export function toItemDto(item: Item): ItemDto {
+/**
+ * `stockOnHand` is computed on read (openingQty + net movements, via
+ * `stockService.getItemStock`/`getStockForItems`) rather than stored, so
+ * callers pass it in explicitly; it defaults to 0 for call sites (e.g. audit
+ * "before" snapshots) that don't need an accurate figure. `valuation` is
+ * derived from it here (`stockOnHand * salePrice`, 2dp) so every caller gets
+ * a consistent computation.
+ */
+export function toItemDto(item: Item, stockOnHand = 0): ItemDto {
+  const salePrice = item.salePrice === null ? null : decimalToNumber(item.salePrice);
   return {
     id: item.id,
     name: item.name,
@@ -89,9 +98,11 @@ export function toItemDto(item: Item): ItemDto {
     openingQty: decimalToNumber(item.openingQty),
     reorderLevel: item.reorderLevel === null ? null : decimalToNumber(item.reorderLevel),
     purchasePrice: item.purchasePrice === null ? null : decimalToNumber(item.purchasePrice),
-    salePrice: item.salePrice === null ? null : decimalToNumber(item.salePrice),
+    salePrice,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
+    stockOnHand,
+    valuation: Math.round(stockOnHand * (salePrice ?? 0) * 100) / 100,
   };
 }
 
@@ -104,6 +115,7 @@ export function toStockMovementDto(movement: StockMovement): StockMovementDto {
     sourceType: movement.sourceType,
     sourceId: movement.sourceId,
     godown: movement.godown,
+    notes: movement.notes,
     movementDate: movement.movementDate.toISOString(),
     createdAt: movement.createdAt.toISOString(),
   };
