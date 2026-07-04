@@ -222,3 +222,36 @@ describe("tallyImportService.runBatch — masters/stockitems", () => {
     expect(repo.updateBatch.mock.calls.at(-1)?.[2].status).toBe("COMPLETED");
   });
 });
+
+describe("tallyImportService.runBatch — PROCESSING guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repo.findPartyByGuid.mockResolvedValue(null);
+  });
+
+  it("rejects with IMPORT_ALREADY_RUNNING when PROCESSING started recently (real concurrent run)", async () => {
+    repo.findBatchById.mockResolvedValue(
+      batchRow({ status: "PROCESSING", startedAt: new Date(Date.now() - 30 * 1000) }),
+    );
+    await expect(tallyImportService.runBatch("org-1", "batch-1")).rejects.toThrow(
+      /already running/i,
+    );
+    expect(repo.updateBatch).not.toHaveBeenCalled();
+  });
+
+  it("resumes a stale PROCESSING batch (startedAt older than the crash-detection threshold) instead of throwing", async () => {
+    repo.findBatchById.mockResolvedValue(
+      batchRow({ status: "PROCESSING", startedAt: new Date(Date.now() - 11 * 60 * 1000) }),
+    );
+    const result = await tallyImportService.runBatch("org-1", "batch-1");
+    expect(result.status).toBe("COMPLETED");
+    const finalUpdate = repo.updateBatch.mock.calls.at(-1)?.[2];
+    expect(finalUpdate?.status).toBe("COMPLETED");
+  });
+
+  it("resumes a PROCESSING batch with no startedAt (defensive: treated as stale, not blocked forever)", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ status: "PROCESSING", startedAt: null }));
+    const result = await tallyImportService.runBatch("org-1", "batch-1");
+    expect(result.status).toBe("COMPLETED");
+  });
+});

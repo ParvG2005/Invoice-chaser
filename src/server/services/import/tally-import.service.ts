@@ -23,6 +23,14 @@ import type { ImportBatch, ImportRecord } from "@/generated/prisma/client";
 
 const log = createLogger("tally-import");
 
+// If a batch is left at PROCESSING for longer than this, we treat it as a
+// crashed run (e.g. worker OOM/deploy restart killed the process mid-batch)
+// rather than a genuine concurrent run, and allow a retry to resume it.
+// Every import step in this service is idempotent by GUID+ALTERID, so
+// re-running a stale/crashed batch is safe. This is well past any realistic
+// single-batch run time.
+const STALE_PROCESSING_MS = 10 * 60 * 1000;
+
 // Deviation from brief: the real `ImportSource` Prisma enum also has legacy
 // `TALLY_XML`/`CSV` values (unused by this service, kept for compatibility —
 // see Task 0 reconciliation note). This service only ever creates/consumes
@@ -157,7 +165,19 @@ export const tallyImportService = {
     const batch = await tallyImportRepository.findBatchById(organizationId, batchId);
     if (!batch) throw new NotFoundError("Import batch not found");
     if (batch.status === "PROCESSING") {
-      throw new AppError("IMPORT_ALREADY_RUNNING", "Batch is already running", 409);
+      const startedAt = batch.startedAt?.getTime() ?? 0;
+      const isStale = Date.now() - startedAt >= STALE_PROCESSING_MS;
+      if (!isStale) {
+        throw new AppError("IMPORT_ALREADY_RUNNING", "Batch is already running", 409);
+      }
+      // Stale PROCESSING batch — most likely the worker crashed mid-run
+      // (OOM, deploy restart, etc.) rather than a JS error caught below.
+      // Fall through and resume: every import step is idempotent by
+      // GUID+ALTERID, so re-running it is safe.
+      log.warn("Resuming stale PROCESSING batch (likely crashed mid-run)", {
+        batchId,
+        startedAt: batch.startedAt,
+      });
     }
     if (!batch.rawContent) {
       throw new AppError("IMPORT_NO_CONTENT", "Batch has no stored file content", 422);

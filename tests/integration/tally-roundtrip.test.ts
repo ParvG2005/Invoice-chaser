@@ -79,6 +79,16 @@ describe("tally round-trip on real fixtures", () => {
       (b) => b.source === "TALLY_VOUCHERS" && b.status === "COMPLETED" && b.createdCount > 0,
     );
     expect(voucherBatch).toBeDefined();
+
+    const countAll = async () => ({
+      parties: await prisma.party.count({ where: { organizationId, deletedAt: null } }),
+      items: await prisma.item.count({ where: { organizationId, deletedAt: null } }),
+      invoices: await prisma.invoice.count({ where: { organizationId, deletedAt: null } }),
+      bills: await prisma.bill.count({ where: { organizationId, deletedAt: null } }),
+      payments: await prisma.payment.count({ where: { organizationId, deletedAt: null } }),
+    });
+    const beforeUndo = await countAll();
+
     const user = await prisma.user.findFirstOrThrow();
     await tallyImportService.undoBatch(organizationId, user.id, voucherBatch!.id);
     expect(
@@ -95,6 +105,14 @@ describe("tally round-trip on real fixtures", () => {
     const rerun = await tallyImportService.runBatch(organizationId, batch.id);
     expect(rerun.status).toBe("COMPLETED");
     expect(rerun.erroredCount).toBe(0);
+
+    // Prove restoration, not just a "COMPLETED, no errors" run: the
+    // voucher-derived counts after undo+re-import must match what existed
+    // immediately before the undo (masters/items are unaffected by
+    // undoing a TALLY_VOUCHERS batch, so this is a same-org before/after
+    // comparison, not a full re-import from empty).
+    const afterReimport = await countAll();
+    expect(afterReimport).toEqual(beforeUndo);
   });
 
   it("receivables total matches Tally outstanding (user-verified figure)", async () => {
