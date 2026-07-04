@@ -100,9 +100,11 @@ export function parseDueDate(value: string): Date {
 
 export function computeInvoiceStatus(
   dueDate: Date,
-  explicit?: "PENDING" | "OVERDUE" | "PAID",
-): "PENDING" | "OVERDUE" | "PAID" {
-  if (explicit === "PAID") return "PAID";
+  explicit?: "PENDING" | "OVERDUE" | "PAID" | "PARTIALLY_PAID" | "WRITTEN_OFF",
+): "PENDING" | "OVERDUE" | "PAID" | "PARTIALLY_PAID" | "WRITTEN_OFF" {
+  if (explicit === "PAID" || explicit === "PARTIALLY_PAID" || explicit === "WRITTEN_OFF") {
+    return explicit;
+  }
   if (explicit === "OVERDUE") return "OVERDUE";
   const now = new Date();
   return dueDate < now ? "OVERDUE" : "PENDING";

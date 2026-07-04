@@ -11,6 +11,8 @@ enum InvoiceStatus {
   PENDING
   OVERDUE
   PAID
+  PARTIALLY_PAID
+  WRITTEN_OFF
 }
 
 enum EmailTone {

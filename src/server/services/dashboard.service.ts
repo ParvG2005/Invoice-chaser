@@ -32,7 +32,13 @@ export const dashboardService = {
       }),
     ]);
 
-    const invoiceCountByStatus = { PENDING: 0, OVERDUE: 0, PAID: 0 };
+    const invoiceCountByStatus = {
+      PENDING: 0,
+      OVERDUE: 0,
+      PAID: 0,
+      PARTIALLY_PAID: 0,
+      WRITTEN_OFF: 0,
+    };
     let totalUnpaidAmount = 0;
     let recoveredAmount = 0;
 
