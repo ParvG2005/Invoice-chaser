@@ -33,26 +33,16 @@ Result: **all green.**
 - `test`: 14 test files, 66 tests, all passed (mappers, invoice.service, tally-parser, party-backfill, audit.service, party.service, item.service, stock.service, bill.service, payment-allocation, payment.service, roles, api-handler, and one more)
 - `build`: Next.js 16.2.10 (Turbopack) production build compiled successfully, all routes generated
 
-## Step 1 — Prod-Copy Migration Rehearsal (USER ACTION — not yet run)
+## Step 1 — Prod-Copy Migration Rehearsal (N/A — superseded)
 
-This sandbox has no IPv6 route to the direct Supabase DB host and no authorization to run prod-data operations autonomously. **TODO — user to run:**
+**Result: not applicable, by design, not skipped.** This project is pre-launch: there is no separate production database with real customer data. `sikdvtqrdqynknlvpsls` ("Invoice Chaser" on Supabase) is the only database, and it already has the Phase 1 migration (`0_init` + `20260704070457_phase1_core_data_model`) applied live — done directly during Task 4 and controller-verified against `_prisma_migrations`. A `pg_dump`/branch-and-restore rehearsal now would just be dumping a DB that's already past the schema state the rehearsal exists to de-risk (applying migrations to a copy of the *pre-migration* schema).
 
-```bash
-# Point DATABASE_URL/DIRECT_URL at a copy of prod (Supabase/Neon branch, or pg_dump→psql restore)
-npx prisma migrate resolve --applied 0_init
-npx prisma migrate deploy
-npm run db:backfill-parties
-npm run db:backfill-parties   # second run must report 0 created / 0 linked
-```
+Confirmed with the user (2026-07-04) before deciding to skip rather than run a redundant dump: this is the only DB, no distinct prod project exists yet.
 
-Then record:
-```sql
-SELECT count(*) FROM invoices WHERE deleted_at IS NULL AND party_id IS NULL AND client_name <> '';
--- expected: 0
-SELECT count(*) FROM parties;  -- expected: = number of distinct (org, lower(trim(client_name)))
-```
-
-**Result: _TODO — pending user run. Fill in exit codes and query counts here._**
+What this means in practice: the equivalent verification already happened for real, just not as a disposable rehearsal —
+- `npx prisma migrate deploy` was run for real against `sikdvtqrdqynknlvpsls` in Task 4, and the migration applied cleanly (see Task 4 row above).
+- `npm run db:backfill-parties` was run for real against the same DB in Task 5 — 0 invoices existed at the time, so the create/reuse/link path only exercised the empty case (already flagged as an open risk below); the idempotency logic itself is unit-tested against the pure grouping function.
+- Before this database ever holds real customer data (i.e. before this app actually launches), re-run the backfill idempotency check (call it twice, second run must report 0 created/0 linked) against real invoice rows once some exist — that's the point at which this rehearsal becomes meaningful, and it should happen then rather than now.
 
 ## Step 3 — Manual Regression (USER ACTION — not yet run)
 
@@ -98,12 +88,12 @@ Strengths noted: the repository layer is remarkably consistent (every read/write
 **Conditional go.** All coding work is complete: 13 tasks implemented, each individually reviewed, plus a final whole-branch review — 3 real bugs caught across the whole process (`Bill.paidAt` overwrite, `parseRole` prototype-chain bypass, payment allocation org-scoping + duplicate-overpay), all fixed and regression-tested. Full suite green (67/67), typecheck/lint/build clean.
 
 What remains before this phase can be called fully verified and merged:
-1. Run the prod-copy migration rehearsal (Step 1) and record real counts.
+1. ~~Prod-copy migration rehearsal~~ — N/A, see Step 1 above (pre-launch, single DB, already migrated live).
 2. Run the manual browser regression (Step 3) with a live Clerk session.
 3. Push the CI workflow branch, open a PR, and confirm all gates (`lint`, `typecheck`, `test`, `migrate-check`, `build`) go green against real GitHub Actions infrastructure — the workflow has only been validated by reading its YAML, not by running it.
 4. User sign-off below.
 
-Given the size and financial sensitivity of this phase (payment allocation, RBAC), recommend completing all four before starting Phase 2 work, even though the automatable coding work is solid and has been reviewed at both the task and whole-branch level.
+Given the small current user base (2-3 users, not yet production-scale) but real financial logic in this phase (payment allocation, RBAC), recommend at minimum #2 and #3 before starting Phase 2 work — the automatable coding work is solid and has been reviewed at both the task and whole-branch level, but neither has been exercised end-to-end in a live browser session.
 
 ## Sign-off
 
