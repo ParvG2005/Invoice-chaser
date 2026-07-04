@@ -93,3 +93,14 @@ Candidate screens in `projects/7229335890257417243` against `assets/505295280152
 - **Imports wizard & history** — light `0e6372a7b72e4cc0a681bb7a55c5ca9e` / dark `7a8d3fff095e42e0857b36776478d260`. Stepper (Upload/Preview/Done), warnings banner, preview table (Row/Entity/Action badge/Message), Commit/Cancel buttons, Batch history table (Date/Source/Status/counts/actions). Not yet design-reviewed — pending its own approval before Task 23 implementation.
 
 **Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Stock/Items `3ee8a8d2608c4774a61b7dbf1f4f7a9f`, `b1dd90cf972a481d93e9cce6255e969b`; Imports wizard `928d3fcee80844f59e8dbf0c5bf215ba`. The Imports wizard specifically required 6 generation attempts before one landed server-side (unlike Stock/Item-detail's 2-3) — no known cause, just Stitch service flakiness that session.
+
+## Task 24 — Reminders + Settings (Batch E)
+
+**Approved by user, 2026-07-05.**
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav.
+
+- **Reminders** — light `08c2513bbe32488ab23ac0aebe57b745` / dark `8b7128ebac1742bda97a0d10f17d284f`. Org-level sequence editor (offset/tone/Email+WhatsApp toggle rows, WhatsApp disabled w/ "Available after Phase 4" hint, add/remove step, quiet hours), "Upcoming reminders" queue table (invoice/party/channel/scheduled date/Send now/Snooze).
+- **Settings** — light `998bf0c99d994274a3382516b970de61` / dark `bbf2dd8c04ed401f88b06c511f0ab9c0`. Sectioned cards: Organization, Sender identity, Reminder defaults, WhatsApp ("Connects in Phase 4" status card), Appearance (theme selector), Danger zone (delete org).
+
+**Duplicate generated and discarded** (same client-timeout/server-landed pattern as prior batches) — do not use: Reminders `ec40dcae8aac439ab7dfd89552bff574` ("Reminders Management").
