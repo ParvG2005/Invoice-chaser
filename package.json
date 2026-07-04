@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "pages-build": "prisma generate && prisma migrate deploy && npx opennextjs-cloudflare build",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "db:generate": "prisma generate",

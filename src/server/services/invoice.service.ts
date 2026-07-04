@@ -33,6 +33,28 @@ export interface InvoiceServiceCreateInput extends Omit<CreateInvoiceInput, "cli
  * `update` handles disconnect separately since only it needs to support
  * clearing an existing partyId.
  */
+/**
+ * The overdue-check enqueue is a best-effort background job trigger, not
+ * part of create/update's correctness contract. Without this guard, a
+ * transient Inngest failure (e.g. missing INNGEST_EVENT_KEY in an
+ * environment that hasn't configured it — dev, CI, or a misconfigured
+ * import worker) throws from inside `create`/`update` *after* the Invoice
+ * row has already been durably written, making the whole call look failed
+ * to the caller even though the write succeeded. Bulk import paths (see
+ * tally-import.service.ts's importSalesVoucher) treat any thrown error as
+ * "nothing was created" and log an ERRORED ImportRecord with no entityId —
+ * silently orphaning the row it can no longer find to undo. Swallow and log
+ * instead of throwing so a persisted write is never rolled back by a
+ * notification side effect failing.
+ */
+async function enqueueOverdueCheckBestEffort(organizationId: string): Promise<void> {
+  try {
+    await getJobScheduler().enqueueOverdueCheck(organizationId);
+  } catch (error) {
+    console.error("invoiceService: enqueueOverdueCheck failed (non-fatal)", error);
+  }
+}
+
 function extraInvoiceFields(
   input: Partial<InvoiceServiceCreateInput>,
 ): Partial<Prisma.InvoiceCreateInput> {
@@ -83,7 +105,7 @@ export const invoiceService = {
       ? await invoiceRepository.createWithLineItems(data, input.lineItems)
       : await invoiceRepository.create(data);
 
-    await getJobScheduler().enqueueOverdueCheck(organizationId);
+    await enqueueOverdueCheckBestEffort(organizationId);
     return toInvoiceDto(invoice);
   },
 
@@ -104,7 +126,7 @@ export const invoiceService = {
     });
 
     await invoiceRepository.createMany(data);
-    await getJobScheduler().enqueueOverdueCheck(organizationId);
+    await enqueueOverdueCheckBestEffort(organizationId);
 
     // Return only the invoices from this batch (bounded by input size) rather than
     // re-reading the whole table.

@@ -105,6 +105,16 @@ export const tallyImportRepository = {
    * their allocations' effect on the target document's amountPaid/status
    * before soft-deleting the allocation, mirroring (in reverse)
    * `applyAllocation` in payment.repository.ts.
+   *
+   * Also frees the org-scoped unique constraints (`tallyGuid`, and the
+   * non-nullable business key — invoiceNumber/billNumber/name) so that
+   * undo followed by a fresh re-import of the same Tally document doesn't
+   * hit a unique-constraint violation against the now-soft-deleted row
+   * (Postgres unique indexes here are not partial/filtered on
+   * `deletedAt IS NULL`, so a plain soft delete alone still occupies the
+   * slot). Found by Task 13's round-trip integration test: "undo then
+   * re-import" failed on every entity type with "Unique constraint failed"
+   * until this was added.
    */
   async softDeleteEntity(
     organizationId: string,
@@ -175,7 +185,7 @@ export const tallyImportRepository = {
 
           await tx.payment.update({
             where: { id: entityId, organizationId },
-            data: { deletedAt: now },
+            data: { deletedAt: now, tallyGuid: null },
           });
         });
         break;
@@ -190,9 +200,14 @@ export const tallyImportRepository = {
             where: { organizationId, sourceType: "INVOICE", sourceId: entityId, deletedAt: null },
             data: { deletedAt: now },
           });
+          const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: entityId } });
           await tx.invoice.update({
             where: { id: entityId, organizationId },
-            data: { deletedAt: now },
+            data: {
+              deletedAt: now,
+              tallyGuid: null,
+              invoiceNumber: `${invoice.invoiceNumber}__deleted-${entityId}`,
+            },
           });
         });
         break;
@@ -203,19 +218,32 @@ export const tallyImportRepository = {
             where: { organizationId, sourceType: "BILL", sourceId: entityId, deletedAt: null },
             data: { deletedAt: now },
           });
+          const bill = await tx.bill.findUniqueOrThrow({ where: { id: entityId } });
           await tx.bill.update({
             where: { id: entityId, organizationId },
-            data: { deletedAt: now },
+            data: {
+              deletedAt: now,
+              tallyGuid: null,
+              billNumber: `${bill.billNumber}__deleted-${entityId}`,
+            },
           });
         });
         break;
       }
       case "Party": {
-        await prisma.party.update({ where: { id: entityId, organizationId }, data: { deletedAt: now } });
+        const party = await prisma.party.findUniqueOrThrow({ where: { id: entityId } });
+        await prisma.party.update({
+          where: { id: entityId, organizationId },
+          data: { deletedAt: now, tallyGuid: null, name: `${party.name}__deleted-${entityId}` },
+        });
         break;
       }
       case "Item": {
-        await prisma.item.update({ where: { id: entityId, organizationId }, data: { deletedAt: now } });
+        const item = await prisma.item.findUniqueOrThrow({ where: { id: entityId } });
+        await prisma.item.update({
+          where: { id: entityId, organizationId },
+          data: { deletedAt: now, tallyGuid: null, name: `${item.name}__deleted-${entityId}` },
+        });
         break;
       }
     }
