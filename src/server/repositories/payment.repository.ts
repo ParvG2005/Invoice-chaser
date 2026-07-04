@@ -71,6 +71,16 @@ async function applyAllocation(
         where: { id: allocation.documentId, organizationId, deletedAt: null },
         data: { status: "PAID", paidAt: new Date() },
       });
+    } else if (
+      current.status !== "PAID" &&
+      current.status !== "PARTIALLY_PAID" &&
+      newAmountPaid > 0 &&
+      newAmountPaid < total
+    ) {
+      await tx.invoice.updateMany({
+        where: { id: allocation.documentId, organizationId, deletedAt: null },
+        data: { status: "PARTIALLY_PAID" },
+      });
     }
   } else {
     const current = await tx.bill.findFirst({
@@ -84,10 +94,21 @@ async function applyAllocation(
     });
 
     const newAmountPaid = Number(current.amountPaid) + allocation.amount;
-    if (current.status !== "PAID" && newAmountPaid >= Number(current.amount)) {
+    const total = Number(current.amount);
+    if (current.status !== "PAID" && newAmountPaid >= total) {
       await tx.bill.updateMany({
         where: { id: allocation.documentId, organizationId, deletedAt: null },
         data: { status: "PAID", paidAt: new Date() },
+      });
+    } else if (
+      current.status !== "PAID" &&
+      current.status !== "PARTIALLY_PAID" &&
+      newAmountPaid > 0 &&
+      newAmountPaid < total
+    ) {
+      await tx.bill.updateMany({
+        where: { id: allocation.documentId, organizationId, deletedAt: null },
+        data: { status: "PARTIALLY_PAID" },
       });
     }
   }
