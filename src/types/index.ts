@@ -1,4 +1,4 @@
-import type { EmailTone, InvoiceStatus, ReminderStatus } from "@prisma/client";
+import type { EmailTone, InvoiceStatus, ReminderStatus } from "@/generated/prisma/client";
 
 export type { EmailTone, InvoiceStatus, ReminderStatus };
 

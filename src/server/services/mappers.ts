@@ -1,4 +1,4 @@
-import type { Invoice } from "@prisma/client";
+import type { Invoice } from "@/generated/prisma/client";
 import type { InvoiceDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 

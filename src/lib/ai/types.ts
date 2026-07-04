@@ -1,4 +1,4 @@
-import type { EmailTone } from "@prisma/client";
+import type { EmailTone } from "@/generated/prisma/client";
 
 export interface AiCompletionRequest {
   systemPrompt: string;

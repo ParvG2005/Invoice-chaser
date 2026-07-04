@@ -1,7 +1,7 @@
 import { NotFoundError } from "@/lib/api/errors";
 import { getAiProvider } from "@/lib/ai";
 import { buildReminderEmailPrompts } from "@/lib/ai/prompts/reminder-email";
-import type { EmailTone } from "@prisma/client";
+import type { EmailTone } from "@/generated/prisma/client";
 import { renderBaseEmailTemplate, textToHtmlParagraphs } from "@/lib/email/templates/base";
 import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { organizationRepository } from "@/server/repositories/organization.repository";

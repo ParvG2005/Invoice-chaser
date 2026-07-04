@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { clerkClient } from "@clerk/nextjs/server";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { organizationRepository } from "@/server/repositories/organization.repository";
 import { userRepository } from "@/server/repositories/user.repository";
 import { createLogger } from "@/lib/logger";

@@ -1,4 +1,4 @@
-import type { EmailTone } from "@prisma/client";
+import type { EmailTone } from "@/generated/prisma/client";
 import type { ReminderEmailContext } from "@/lib/ai/types";
 
 const toneInstructions: Record<EmailTone, string> = {

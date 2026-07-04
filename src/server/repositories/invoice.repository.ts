@@ -1,4 +1,4 @@
-import type { InvoiceStatus, Prisma } from "@prisma/client";
+import type { InvoiceStatus, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 /** Default page size for list endpoints; also a hard cap to avoid unbounded reads. */
