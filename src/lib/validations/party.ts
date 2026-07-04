@@ -15,6 +15,8 @@ export const createPartySchema = z.object({
   openingBalance: z.coerce.number().optional(),
   notes: z.string().max(2000).optional(),
   agentId: z.string().uuid().optional(),
+  tallyGuid: z.string().optional(),
+  tallyAlterId: z.number().int().optional(),
 });
 
 export const updatePartySchema = createPartySchema.partial();

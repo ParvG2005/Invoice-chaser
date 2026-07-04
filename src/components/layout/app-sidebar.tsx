@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Settings, Zap, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, Upload, Zap, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { UserButton, useClerk } from "@clerk/nextjs";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
+  { href: "/dashboard/imports", label: "Imports", icon: Upload },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

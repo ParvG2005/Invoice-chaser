@@ -50,4 +50,19 @@ export const stockService = {
     const movements = await stockRepository.listMovements(organizationId, itemId, options);
     return movements.map(toStockMovementDto);
   },
+
+  /**
+   * Clears every movement previously recorded against a source document, so
+   * a re-imported voucher (newer ALTERID) can have its stock effect
+   * re-recorded from scratch instead of double-counting. No withAudit here —
+   * this is an internal step of the import's own audited write, mirroring
+   * the other simple stock read/write helpers above.
+   */
+  async replaceMovementsForSource(
+    organizationId: string,
+    sourceType: RecordMovementInput["sourceType"],
+    sourceId: string,
+  ) {
+    await stockRepository.softDeleteMovementsForSource(organizationId, sourceType, sourceId);
+  },
 };

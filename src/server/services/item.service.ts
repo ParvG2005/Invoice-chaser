@@ -32,6 +32,8 @@ export const itemService = {
         reorderLevel: input.reorderLevel ?? null,
         purchasePrice: input.purchasePrice ?? null,
         salePrice: input.salePrice ?? null,
+        tallyGuid: input.tallyGuid ?? null,
+        tallyAlterId: input.tallyAlterId ?? null,
       });
       return toItemDto(item);
     });
@@ -66,6 +68,8 @@ export const itemService = {
           reorderLevel: input.reorderLevel,
           purchasePrice: input.purchasePrice,
           salePrice: input.salePrice,
+          tallyGuid: input.tallyGuid,
+          tallyAlterId: input.tallyAlterId,
         });
         return this.get(organizationId, id);
       },

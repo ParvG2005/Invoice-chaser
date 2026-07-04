@@ -2638,3 +2638,91 @@ Phase 5 (analytics) may now be planned; Phases 3–4 unblock per the master sequ
 - **Deliberate scope decisions:** changed money vouchers are SKIPPED-with-message rather than updated (safe re-allocation needs a deallocation API this phase doesn't own — undo + re-import is the documented path); files > 4 MB are rejected with a documented split-by-period workaround (application-level cap, see Global Constraints) instead of building blob-storage streaming; godowns/batches from the master plan §0.1 schema list are parsed-through but not modeled (no `godown` field landed in the §0.3 blueprint's `StockMovement` "Key fields" the contract froze — if Phase 1 shipped one, populate it during Task 0 reconciliation from the inventory entry's `GODOWNNAME`).
 - **Type consistency:** `tallyImportService` signatures in Task 6's Produces block are the ones used by Tasks 9–13; repository surface fixed in Task 5 and consumed unchanged; parser types fixed in Task 1. Assumed Phase 1 shapes are all funneled through Task 0's reconciliation step so a mismatch is caught before code.
 - **Placeholder scan:** the only deferred implementations are explicit `NOT_IMPLEMENTED` stubs that a named later task replaces with shown code (Task 6 → 7/8, Task 6 → 9); fixture-dependent exact counts are pinned by in-test computation from the fixture bytes (no TBD values). Task 7 Step 1 and Task 12 Step 3 specify behavior as testable spec tables/bullets with exact names and values rather than full listings — every referenced function/type is defined in a Produces block.
+
+---
+
+## Task 0 Reconciliation Note (controller pre-flight, verified against `prisma/schema.prisma` and `src/server/services/*` / `src/server/repositories/*` / `src/lib/validations/*` as landed at commit `3b8c9bf`)
+
+`ImportBatch`/`ImportRecord`/`ImportSource`/`ImportBatchStatus`/`ImportRecordStatus` exist in the schema but are **completely unused** by any repository/service/route (`grep -rn` under `src/` returns zero hits) — free to extend without breaking a live consumer. Phase 1's actual "Tally import" is an unrelated client-only flat CSV/XML → `/api/invoices/bulk` shim (`src/lib/import/tally-parser.ts`, `src/modules/invoices/components/import-dialog.tsx`) that Task 12 retires per its Step 6.
+
+Every later task in this file must use the **real** names below in place of the plan's assumed ones. Where the assumed shape doesn't exist at all, the note states the resolution.
+
+### Prisma import path
+Use `import type { ... } from "@/generated/prisma/client"` for enums/types (`Prisma`, `PartyType`, `PaymentDirection`, etc.) and `import { prisma } from "@/lib/db/prisma"` for the client singleton — this project uses a custom Prisma generator output path, not the default `@prisma/client`. Every repository file in this plan (Task 5) must import from `@/generated/prisma/client`, not `@prisma/client`.
+
+### Audit
+There is no `auditService.withAudit`. The real export is a free function:
+```typescript
+import { withAudit, SYSTEM_ACTOR, type AuditActor } from "@/server/services/audit.service";
+await withAudit(actor: AuditActor, action: string, entity: { organizationId: string; entityType: string; entityId?: string; before?: unknown }, fn: () => Promise<T>): Promise<T>
+```
+`AuditActor = { type: ActorType; id: string | null }` where `ActorType` is `"USER" | "ASSISTANT" | "SYSTEM"`. Use `withAudit(...)` (not `auditService.withAudit(...)`) in Tasks 6 and 9. `SYSTEM_ACTOR` is available for system-initiated writes (the import job runs as `{ type: "SYSTEM", id: null }` except `undoBatch`, which is user-initiated per Task 9).
+
+### `ImportBatch` / `ImportRecord` / enums — real fields, and schema additions Task 0 must make
+Real `ImportBatch` fields (before Task 0's additions): `id, organizationId, source: ImportSource, fileName: String?, fileHash, status: ImportBatchStatus, createdCount, updatedCount, skippedCount, errorCount, errorSummary: String?, startedAt, completedAt, createdAt, updatedAt, deletedAt`. **No `totalCount`, `processedCount`, or `rawContent`.**
+Real `ImportRecord` fields: `id, organizationId, batchId, recordType: String, tallyGuid: String?, alterId: String?, entityId: String?, status: ImportRecordStatus, message: String?, createdAt`. **No `beforeJson`.**
+Real enums: `ImportSource { TALLY_XML CSV }`, `ImportBatchStatus { PENDING PROCESSING COMPLETED FAILED REVERTED }` (no `RUNNING` value), `ImportRecordStatus { CREATED UPDATED SKIPPED ERRORED }` (same four values the plan called `ImportRecordAction`, just a different enum name and the model field is `status` not `action`).
+
+Task 0's migration must, in addition to the plan's Step 2, apply these **additive-only** changes (no renames/removals, to keep the migration a single safe `ALTER TYPE ... ADD VALUE` / `ADD COLUMN` set):
+- `ImportSource`: add enum values `TALLY_MASTERS_LEDGERS`, `TALLY_MASTERS_STOCKITEMS`, `TALLY_VOUCHERS` (keep `TALLY_XML`/`CSV`, unused elsewhere, for compatibility). Everywhere in this plan, use these three as the batch source discriminator; `classifyVoucherKind`/parser selection is unaffected (parsers are chosen by `source`, not derived from XML).
+- `ImportBatch`: add `totalCount Int @default(0) @map("total_count")`, `processedCount Int @default(0) @map("processed_count")`, `rawContent String? @map("raw_content") @db.Text` (the plan's own Step 2 already adds `rawContent`; fold `totalCount`/`processedCount` into the same migration).
+- `ImportRecord`: add `beforeJson Json? @map("before_json")` (per the plan's Step 2) and **change `alterId` from `String?` to `Int?`** (no data exists yet — safe type change) so idempotency comparisons (`existing.tallyAlterId >= voucher.alterId`) are numeric, not string, everywhere in Tasks 6–9.
+- `Party`, `Item`, `Invoice`, `Bill`, `Payment`: **none of these have `tallyAlterId` today** (only `tallyGuid` landed in Phase 1). Add `tallyAlterId Int? @map("tally_alter_id")` to all five models. This is required — every idempotency check in Tasks 6–9 depends on it.
+
+Everywhere this plan writes `action:` on an `ImportRecord`, write `status:` instead (real field name). Everywhere it writes `entityType:` on an `ImportRecord`, write `recordType:` instead. Everywhere it reads/writes `ImportBatch.erroredCount`/`error`/`finishedAt`, use the real names `errorCount`/`errorSummary`/`completedAt`. Everywhere it writes `status: "RUNNING"`, use `status: "PROCESSING"` (the real enum has no `RUNNING` value — `PROCESSING` is the in-flight state). `Task 5`'s repository interface, `Task 6`'s `ImportBatchDto`/`ImportRecordDto`, and the wizard (`Task 12`) must all use these real names; the DTO's public JSON shape may still use friendlier keys (e.g. expose `erroredCount` in the DTO by reading from `batch.errorCount`) as long as the Prisma field access is correct.
+
+### Party / Item / Bill validation — additive tally fields
+`createPartySchema`/`updatePartySchema` (`src/lib/validations/party.ts`), `createItemSchema`/`updateItemSchema` (`item.ts`), and `createBillSchema`/`updateBillSchema` (`bill.ts`) have **no `tallyGuid`/`tallyAlterId` field today**. Task 6 (and Task 7 for Bill) must add `tallyGuid: z.string().optional()` and `tallyAlterId: z.number().int().optional()` to all three create/update schemas, thread them through `partyService.create/update`, `itemService.create/update`, `billService.create/update` into the respective `prisma.<model>.create/update` calls (repository `create`/`update` methods already accept arbitrary `Prisma.<Model>(Unchecked)?(Create|Update)Input`, so no repository signature change is needed — just pass the two extra fields through in the service). Run each service's existing unit test file after this change — these are additive optional fields and must not change any existing test's behavior.
+
+### Invoice — the biggest gap: no `partyId`, `type`, `lineItems`, or tally fields at all
+`invoiceService.create`/`update` today only accept `CreateInvoiceInput`/`UpdateInvoiceInput` (`clientName`, `clientEmail` **required** `.email()`, `clientPhone?`, `amount`, `dueDate`, `invoiceNumber`, `notes?`, `status?`) and write a flat `Invoice` row with no `partyId`, no line items, no tally fields, even though the `Invoice` Prisma model already has all of them (`partyId`, `type`, `subtotal`, `taxAmount`, `totalAmount`, `tallyGuid`, and the new `tallyAlterId`) plus a full `InvoiceLineItem` relation that `invoiceService` never touches.
+
+Resolution (Task 7 must do this, not Task 6, since it's only needed once vouchers are imported): widen the service-level input type beyond the zod-inferred `CreateInvoiceInput` — add an interface in `invoice.service.ts`:
+```typescript
+export interface InvoiceServiceCreateInput extends Omit<CreateInvoiceInput, "clientEmail"> {
+  clientEmail?: string; // HTTP layer still requires it via createInvoiceSchema; service layer allows omission for Tally parties with no email on file
+  partyId?: string;
+  type?: "RECEIVABLE" | "PAYABLE";
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  tallyGuid?: string;
+  tallyAlterId?: number;
+  lineItems?: Array<{ itemId?: string; description: string; quantity: number; rate: number; amount: number }>;
+}
+```
+`invoiceService.create(organizationId, input: InvoiceServiceCreateInput)` / `update(organizationId, id, input: Partial<InvoiceServiceCreateInput>)` — existing HTTP callers (`createInvoiceSchema.parse(...)`) still satisfy this structurally (their required `clientEmail` is assignable to the now-optional field) so the existing route and its tests are unaffected. Inside `create`, default `clientEmail: input.clientEmail ?? ""` when persisting (the DB column is `NOT NULL`; Tally-derived parties frequently have no email — this is intentional and matches the plan's "warnings, not failures" philosophy: the invoice still imports, and the wizard/party page is where the user is told to fill in the email before reminders can be sent, per Task 12's warning copy). Add repository methods mirroring the existing `paymentRepository.createWithAllocations` pattern: `invoiceRepository.createWithLineItems(data, lineItems)` and `invoiceRepository.replaceLineItems(organizationId, invoiceId, lineItems)` (both wrap a `prisma.$transaction`), and have `invoiceService.create`/`update` call these when `lineItems` is present, plain `create`/`update` otherwise (preserves all existing non-import call sites unchanged).
+
+### Bill — no line items exist on the model at all
+`Bill` has **no `InvoiceLineItem`-equivalent relation** in the Phase 1 schema (only `Invoice` has `lineItems`). Scope decision (document in Task 7's commit message and the plan's Self-Review Notes): Purchase vouchers create a `Bill` with the aggregate `amount`/`dueDate`/`notes`/`tallyGuid`/`tallyAlterId` only — no bill-level line items — while still recording one `StockMovement` (direction IN) per inventory entry, exactly as the plan already specifies for stock. This matches the real schema; do not add a `BillLineItem` model (YAGNI — nothing consumes it). Extend `createBillSchema`/`updateBillSchema` with the same optional `tallyGuid`/`tallyAlterId` as above; no other change needed to `billService`.
+
+### Stock — field is `qty`, not `quantity`; add a replace-for-source helper
+`stockService.recordMovement(organizationId, input: RecordMovementInput)` where `RecordMovementInput = { itemId: string; qty: number; rate?: number; sourceType: "INVOICE"|"BILL"|"ADJUSTMENT"|"OPENING"; sourceId?: string; godown?: string; movementDate?: Date }` — **the field is `qty`, not `quantity`** as the plan's code samples use everywhere in Tasks 7–8; rename every `quantity:` key to `qty:` when calling `stockService.recordMovement`. There is no `stockService.replaceMovementsForSource`; Task 7 must add it (service wrapping a new `stockRepository.softDeleteMovementsForSource(organizationId, sourceType, sourceId)` that sets `deletedAt` on matching rows — keeps the layering and the soft-delete Global Constraint) and call it from `importSalesVoucher`'s/`importPurchaseVoucher`'s update branch exactly where the plan's Task 7 code already calls the not-yet-existing method.
+
+### Payment — real signature differs; allocations are inline on `create`, not a separate call
+`createPaymentSchema` today has `{ partyId: uuid; direction: "IN"|"OUT"; amount: positive; mode: PaymentMode (default BANK_TRANSFER); paymentDate?: coerce.date; reference?: string; notes?: string; allocations?: ExplicitAllocation[] }` where `PaymentMode = "CASH"|"BANK_TRANSFER"|"UPI"|"CHEQUE"|"CARD"|"OTHER"` (**not** a free-text ledger name — the plan's Task 8 code sets `mode` to the non-party ledger name like `"HDFC Bank"` or the literal string `"CREDIT_NOTE"`, neither of which is a valid enum value) and `ExplicitAllocation = { documentId: string (uuid); amount: number }` — one field for both invoice and bill targets, disambiguated by the payment's `direction` (IN → invoice, OUT → bill), not the plan's separate `invoiceId`/`billId` keys.
+
+`paymentService.allocatePayment(organizationId: string, paymentId: string, allocations?: ExplicitAllocation[], actor?: AuditActor)` is a **positional-args** method for adding allocations to an *existing* payment's unallocated balance — it is not needed at all for the import path, because `paymentService.create` already accepts `allocations` inline and validates them against open documents in one call. Task 8 must therefore call `paymentService.create` once per money voucher with allocations included, not `create` followed by `allocatePayment`:
+```typescript
+await paymentService.create(organizationId, {
+  partyId,
+  direction: config.direction,       // "IN" | "OUT"
+  amount: Math.abs(partyEntry.amount),
+  mode: inferPaymentMode(mode),      // see below — never pass the raw ledger name as `mode`
+  reference: mode,                   // raw ledger name / "Credit Note" / "Debit Note" preserved here
+  paymentDate: voucher.date,
+  tallyGuid: voucher.guid,
+  tallyAlterId: voucher.alterId,
+  allocations: allocations.length > 0 ? allocations.map(a => ({ documentId: a.id, amount: a.amount })) : undefined,
+});
+```
+Add a small pure helper `inferPaymentMode(raw: string): "CASH"|"BANK_TRANSFER"|"UPI"|"CHEQUE"|"CARD"|"OTHER"` (case-insensitive substring match: "cash"→CASH, "upi"→UPI, "cheque"/"chq"→CHEQUE, "card"→CARD, "bank"/any bank-name-like default→BANK_TRANSFER, else OTHER; credit/debit notes always map to OTHER) in `tally-import.service.ts`, and extend `createPaymentSchema`/`CreatePaymentInput` with the same optional `tallyGuid`/`tallyAlterId` pattern as Party/Item/Bill. `paymentService.create`'s existing allocation validation (`validateExplicitAllocations`) already throws `ValidationError` if an allocation exceeds a document's outstanding balance or targets a non-open document — Task 8's "unmatched ref" handling must catch that case *before* calling `create` (by checking `findInvoiceByNumber`/`findBillByNumber` returns null, exactly as the plan's Task 8 already does) so a stale/foreign Agst-Ref never reaches `paymentService.create` and never throws.
+
+### No `/api/bills` (or parties/items/payments/stock) routes exist yet
+Only `/api/invoices*`, `/api/dashboard*`, `/api/ai/*`, `/api/reminders/*`, `/api/inngest` exist. This doesn't block Task 10 — `tallyImportService` calls `partyService`/`itemService`/`billService`/`invoiceService`/`paymentService`/`stockService` directly (server-side), never over HTTP — but Task 10's routes should mirror `src/app/api/invoices/route.ts` (the only real example) exactly: `ApiContext = { userId, clerkId, organizationId, role }`, `withApiHandler(handler, { requireAuth?, rateLimit?, requiredRole? })`, `successResponse(data, status = 200)`, `errorResponse(code, message, status = 400, details?)`.
+
+### No integration-test DB harness exists
+There is no `tests/integration/` directory and no `resetDatabase`/`createTestOrganization`/`TEST_DATABASE_URL` helper anywhere in the repo — Task 13's assumption of reusing a "Phase 1 helper" is false. Task 13 must create `tests/integration/helpers/db.ts` from scratch, exporting `resetDatabase(): Promise<void>` (truncate/delete in FK-safe order: `PaymentAllocation, Payment, InvoiceLineItem, StockMovement, Invoice, Bill, ImportRecord, ImportBatch, Item, Party, Organization` cascades handle most children, but `deleteMany` on `Organization` with `onDelete: Cascade` on its children is sufficient and simplest) and `createTestOrganization(): Promise<{ id: string }>` (creates an `Organization` row and one `User` row referencing it, since the round-trip test calls `prisma.user.findFirstOrThrow()`). Requires `TEST_DATABASE_URL` (or reuse `DATABASE_URL` against a disposable local/CI Postgres) — check `package.json`/`vitest.config.ts` for any existing env convention before inventing one.
+
+### Everything else
+`billRepository`, `partyRepository`, `itemRepository` `create`/`update` accept `Prisma.<Model>(Unchecked)?(Create|Update)Input` already, so Task 5's repository (`findPartyByGuid`, etc.) can be written exactly as the plan shows, just importing enum/types from `@/generated/prisma/client`. `invoiceRepository`/`billRepository` have no `findByGuid` helpers yet — Task 5 adds them fresh (`findFirst` on the org-scoped `tallyGuid` unique index), exactly as the plan's Task 5 code already does.

@@ -75,6 +75,28 @@ describe("invoiceService (characterization)", () => {
     expect(enqueueOverdueCheck).toHaveBeenCalledWith(ORG);
   });
 
+  it("create does not throw and still returns the invoice when enqueueOverdueCheck fails", async () => {
+    // Regression: Task 13's round-trip integration test found that a real
+    // Inngest send failure (e.g. missing INNGEST_EVENT_KEY) thrown from
+    // enqueueOverdueCheck propagated out of `create` even though the
+    // Invoice row had already been durably written — the caller (including
+    // tally-import's importSalesVoucher) treated this as "nothing created"
+    // and lost the entityId, orphaning the row from undo.
+    vi.mocked(invoiceRepository.create).mockResolvedValue(fakeInvoice() as never);
+    enqueueOverdueCheck.mockRejectedValueOnce(new Error("Failed to send event"));
+
+    const dto = await invoiceService.create(ORG, {
+      clientName: "Acme Traders",
+      clientEmail: "billing@acme.test",
+      amount: 1500.5,
+      dueDate: "2026-08-01",
+      invoiceNumber: "INV-002",
+    });
+
+    expect(dto).toMatchObject({ id: "inv-1" });
+    expect(enqueueOverdueCheck).toHaveBeenCalledWith(ORG);
+  });
+
   it("get throws NotFoundError when the repo returns null", async () => {
     vi.mocked(invoiceRepository.findById).mockResolvedValue(null);
     await expect(invoiceService.get(ORG, "missing")).rejects.toBeInstanceOf(NotFoundError);

@@ -144,9 +144,15 @@ export const paymentService = {
 
     const openDocuments = await loadOpenDocuments(organizationId, input.partyId, input.direction);
 
-    const plan = input.allocations?.length
-      ? validateExplicitAllocations(input.amount, input.allocations, openDocuments)
-      : planAllocations(input.amount, openDocuments);
+    // `allocations: undefined` (key omitted) means "no explicit intent" -> auto
+    // FIFO. `allocations: []` is a deliberate explicit choice (e.g. importers
+    // resolving refs to real documents beforehand and finding none matched)
+    // and must leave the full amount unallocated rather than silently
+    // FIFO-applying it to unrelated open documents.
+    const plan =
+      input.allocations !== undefined
+        ? validateExplicitAllocations(input.amount, input.allocations, openDocuments)
+        : planAllocations(input.amount, openDocuments);
 
     return withAudit(
       actor,
@@ -164,6 +170,8 @@ export const paymentService = {
             paymentDate: input.paymentDate,
             reference: input.reference ?? null,
             notes: input.notes ?? null,
+            tallyGuid: input.tallyGuid ?? null,
+            tallyAlterId: input.tallyAlterId ?? null,
           },
           plan.allocations,
         );
