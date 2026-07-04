@@ -55,7 +55,9 @@ Both screens below are **candidate** designs generated/iterated in Stitch projec
 
 **Approval status:** ✅ approved by user, 2026-07-04 (Task 6 — Design Review Gate A). Screens approved: App Shell light `b45d601ef84a43ef9f281b4ce335ef26` / dark `c6bc199a32bd4667ac9b039bf7d26e9f`; Dashboard light `02ba53d311074691b57ebc91e149a29a` / dark `797bc74525ad4798935defd075c7aac7` (post-fix versions, sidebar reconciled + aging chart bars fixed).
 
-## Task 9 — Invoices (Batch B), pending review
+## Task 9 — Invoices (Batch B)
+
+**Approved by user, 2026-07-04.**
 
 Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav. Not yet design-reviewed.
 
