@@ -19,7 +19,7 @@ Branch: `worktree-phase-1-foundation-data-model` (worktree at `.claude/worktrees
 | 9 | Bill repository + service | Done | `9473c22` + fix `81d7467`. One review round: `paidAt` was being overwritten on every update to an already-PAID bill, not just the transition into PAID — fixed and covered by a regression test. |
 | 10 | Payment service with FIFO/bill-wise allocation | Done | `eec0819`. Review clean (opus-level review given financial logic). The `paidAt` re-stomp risk (same class as Task 9's bug) was traced and confirmed structurally impossible: `applyAllocation` guards `status !== "PAID"` before setting `paidAt`, and only open (non-PAID) documents ever reach an allocation write path. Two findings surfaced during the *final whole-branch review* (below) and were fixed in `6717844`. |
 | 11 | RBAC — role enforcement in `lib/api/handler` | Done | `2a45b40` + fix `1ff42cd`. One review round: `parseRole` used `value in ROLE_RANK`, which matched `Object.prototype` property names (`"constructor"`, `"toString"`, etc.) instead of failing closed to `"viewer"` — fixed with `hasOwnProperty.call` and a regression test. |
-| 12 | CI — test/migrate-check gates, `pages-build` script | Done (Steps 1–3 only) | `b51536e`. Steps 4–5 (push branch, open draft PR, confirm CI green against a live Postgres service, and the Cloudflare Pages dashboard build-command configuration) are **deferred** — pushing branches/opening PRs is a shared-visibility action left for explicit user action, not delegated to a subagent. |
+| 12 | CI — test/migrate-check gates, `pages-build` script | Done | `b51536e`. Pushed directly to `main` (no PR) per user instruction; CI confirmed green against real GitHub Actions infra (run `28701821276` and subsequent). Cloudflare Workers Build was separately broken (see below) — fixed in `4367cd0`/`3b8c9bf`. |
 
 ## Step 2 — Full Automated Check (this session, on the worktree branch)
 
@@ -44,20 +44,30 @@ What this means in practice: the equivalent verification already happened for re
 - `npm run db:backfill-parties` was run for real against the same DB in Task 5 — 0 invoices existed at the time, so the create/reuse/link path only exercised the empty case (already flagged as an open risk below); the idempotency logic itself is unit-tested against the pure grouping function.
 - Before this database ever holds real customer data (i.e. before this app actually launches), re-run the backfill idempotency check (call it twice, second run must report 0 created/0 linked) against real invoice rows once some exist — that's the point at which this rehearsal becomes meaningful, and it should happen then rather than now.
 
-## Step 3 — Manual Regression (USER ACTION — not yet run)
+## Step 3 — Manual Regression (USER ACTION — done)
 
-No live Clerk session is available in this sandbox. **TODO — user to verify against `npm run dev`:**
+Run by the user against a live Clerk session (2026-07-04).
 
-- [ ] Sign in
-- [ ] Dashboard loads with correct stats
-- [ ] Invoices list loads
-- [ ] Create invoice
-- [ ] Edit invoice to PAID
-- [ ] CSV/Tally import page still parses a file
-- [ ] Trigger a reminder (or verify reminders settings save)
-- [ ] No console/server errors during the above
+- [x] Sign in
+- [x] Dashboard loads with correct stats
+- [x] Invoices list loads
+- [x] Create invoice
+- [x] Edit invoice to PAID
+- [x] CSV/Tally import page still parses a file
+- [x] Trigger a reminder (or verify reminders settings save)
+- [x] No console/server errors during the above
 
-**Result: _TODO — pending user verification._**
+**Result: all pass clean, no console/server errors reported.**
+
+## Step 4 — Cloudflare Workers Build (found broken, fixed)
+
+Post-merge, the Cloudflare Workers Build check-run (`Workers Builds: invoicechaser`) was failing on every push, separate from GitHub Actions CI:
+
+1. `ERROR Node.js middleware is not currently supported` — Next 16's `proxy.ts` convention always runs Node.js runtime; OpenNext's Cloudflare adapter can't execute it. Fixed by reverting to the pre-16 `middleware.ts` convention with `runtime: "experimental-edge"`.
+2. Once past that, `Could not resolve "pg-cloudflare"` at the OpenNext bundling step — Next's output-file-tracing copied `pg-cloudflare`'s non-workerd build (missing the workerd-conditional `dist/index.js` the `@prisma/adapter-pg` driver needs). Fixed via `serverExternalPackages: ["pg", "pg-cloudflare"]` in `next.config.ts`.
+3. Also bumped `wrangler.jsonc` `compatibility_date` to match the installed workerd version (clears an unrelated warning), and excluded `.open-next/**` from eslint (was linting generated build output once it existed).
+
+Fixed in `4367cd0` (message-only, file-rename landed) + `3b8c9bf` (actual content, first commit's `git add` silently dropped everything but the rename). Verified locally: `npm run lint && npm run typecheck && npm test && npx opennextjs-cloudflare build` all exit 0. Cloudflare Workers Build re-run against `3b8c9bf` pending confirmation.
 
 ## Open Risks / Carried-Forward Items
 
@@ -68,7 +78,7 @@ No live Clerk session is available in this sandbox. **TODO — user to verify ag
 - **Task 9 (Bill)**: `computeInvoiceStatus`'s full return signature wasn't visible in the Task 9 diff context (typecheck confirms it's fine); `list`/`remove` untested beyond the brief's mandated cases.
 - **Task 10 (Payment)**: two findings from the task-level review were promoted to Important during the final whole-branch review and fixed in `6717844` (see below): non-org-scoped allocation writes, and duplicate-`documentId` overpay in explicit allocations. Remaining non-blocking items: `Payment.amount` isn't rounded to 2dp before persistence (DB truncates safely); `applyAllocation` now silently no-ops if a pre-update read finds nothing instead of throwing (unreachable today — all ids come from org-scoped reads); `round2` is defined three times across payment.service/payment-allocation/mappers (worth hoisting to `lib/utils/currency`); the `applyAllocation`/`paidAt` guard has no direct test coverage (all payment.service tests mock the repository layer).
 - **Task 11 (RBAC)**: manual live-Clerk owner-login smoke test not run (see top-level risk above); `requiredRole` check lives inside the `if (requireAuth)` block in `handler.ts` — a future route combining `{ requireAuth: false, requiredRole: "member" }` would silently skip the role check (not triggered by any of the current 7 routes, all default `requireAuth: true`).
-- **Task 12 (CI)**: workflow has not yet been run on real GitHub Actions infrastructure (Steps 4–5 deferred); Cloudflare Pages dashboard build-command has not been configured; **production must be baselined** (`prisma migrate resolve --applied 0_init` against prod) before the first deploy using `pages-build`, or `migrate deploy` will refuse the non-empty schema.
+- **Task 12 (CI)**: GitHub Actions CI confirmed green on real infra; Cloudflare Workers Build was broken (Next 16 Proxy/pg-cloudflare, see Step 4) and is now fixed pending a live re-run confirmation. **Production must be baselined** (`prisma migrate resolve --applied 0_init` against prod) before the first deploy using `pages-build`, or `migrate deploy` will refuse the non-empty schema — not yet done.
 - **WhatsApp template approval status** — carried from Phase 0, still open as of this gate.
 
 ## Final Whole-Branch Review
@@ -85,15 +95,15 @@ Strengths noted: the repository layer is remarkably consistent (every read/write
 
 ## Go/No-Go Recommendation
 
-**Conditional go.** All coding work is complete: 13 tasks implemented, each individually reviewed, plus a final whole-branch review — 3 real bugs caught across the whole process (`Bill.paidAt` overwrite, `parseRole` prototype-chain bypass, payment allocation org-scoping + duplicate-overpay), all fixed and regression-tested. Full suite green (67/67), typecheck/lint/build clean.
+**Go.** All coding work is complete: 13 tasks implemented, each individually reviewed, plus a final whole-branch review — 3 real bugs caught across the whole process (`Bill.paidAt` overwrite, `parseRole` prototype-chain bypass, payment allocation org-scoping + duplicate-overpay), all fixed and regression-tested. Full suite green (67/67), typecheck/lint/build clean.
 
-What remains before this phase can be called fully verified and merged:
+Status of prior open items:
 1. ~~Prod-copy migration rehearsal~~ — N/A, see Step 1 above (pre-launch, single DB, already migrated live).
-2. Run the manual browser regression (Step 3) with a live Clerk session.
-3. Push the CI workflow branch, open a PR, and confirm all gates (`lint`, `typecheck`, `test`, `migrate-check`, `build`) go green against real GitHub Actions infrastructure — the workflow has only been validated by reading its YAML, not by running it.
-4. User sign-off below.
+2. Manual browser regression (Step 3) — **done**, all 8 items pass clean, no console/server errors.
+3. CI on real GitHub Actions infra — **done**, confirmed green (`lint`, `typecheck`, `test`, `migrate-check`, `build`). Cloudflare Workers Build found broken separately and fixed (Step 4) — live re-run confirmation still pending.
+4. User sign-off — below.
 
-Given the small current user base (2-3 users, not yet production-scale) but real financial logic in this phase (payment allocation, RBAC), recommend at minimum #2 and #3 before starting Phase 2 work — the automatable coding work is solid and has been reviewed at both the task and whole-branch level, but neither has been exercised end-to-end in a live browser session.
+Remaining before *fully* closed: confirm the Cloudflare Workers Build check-run goes green on `3b8c9bf`, and baseline production (`prisma migrate resolve --applied 0_init`) before the first `pages-build` deploy.
 
 ## Sign-off
 
