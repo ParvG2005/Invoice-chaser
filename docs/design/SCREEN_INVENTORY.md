@@ -84,13 +84,12 @@ Candidate screens in `projects/7229335890257417243` against `assets/505295280152
 
 **Fix pass (pre-review):** Bills screens had a stray sidebar "New Invoice" quick-action button — removed via `edit_screens`, in place, same IDs. Payments screens had a non-canonical sidebar footer (standalone "Ask Assistant" button + enabled "Analytics" link instead of the disabled "Coming Soon" section) — replaced via `edit_screens`, in place, same IDs. A follow-up edit restored the "Coming Soon" caption + "SOON" pills on Bills after the first fix over-removed them.
 
-## Task 20 — Stock (Batch D, partial — Imports wizard pending)
+## Task 20 — Stock + Imports Wizard (Batch D)
 
-Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav. Not yet design-reviewed.
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav.
 
-- **Stock / Items list** — light `861f491132e648ba9343e05ed4e5ea6a` / dark `c08dd3379824497e8fbb9acc975715f3`. Search + "Low stock only" toggle, items table (name/SKU/unit/stock on hand/reorder level/low-stock badge/valuation), "New item".
-- **Item detail** — light `836b7fc7581c4382b0d85a24b9b90ca7` / dark `3d6678f9f2ad49cd84647230844197e5`. Info card (SKU/unit/sale price/reorder level/stock/valuation), stock movements table (date/type badge/qty/rate/source doc link), "Adjust stock" dialog (qty +/-, reason).
+- **Stock / Items list** — light `861f491132e648ba9343e05ed4e5ea6a` / dark `c08dd3379824497e8fbb9acc975715f3`. Search + "Low stock only" toggle, items table (name/SKU/unit/stock on hand/reorder level/low-stock badge/valuation), "New item". Approved by user 2026-07-04 (Task 21, Stock-only partial gate).
+- **Item detail** — light `836b7fc7581c4382b0d85a24b9b90ca7` / dark `3d6678f9f2ad49cd84647230844197e5`. Info card (SKU/unit/sale price/reorder level/stock/valuation), stock movements table (date/type badge/qty/rate/source doc link), "Adjust stock" dialog (qty +/-, reason). Approved by user 2026-07-04 (Task 21, Stock-only partial gate).
+- **Imports wizard & history** — light `0e6372a7b72e4cc0a681bb7a55c5ca9e` / dark `7a8d3fff095e42e0857b36776478d260`. Stepper (Upload/Preview/Done), warnings banner, preview table (Row/Entity/Action badge/Message), Commit/Cancel buttons, Batch history table (Date/Source/Status/counts/actions). Not yet design-reviewed — pending its own approval before Task 23 implementation.
 
-**Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Stock/Items `3ee8a8d2608c4774a61b7dbf1f4f7a9f`, `b1dd90cf972a481d93e9cce6255e969b`.
-
-**Imports wizard — not yet generated.** Five `generate_screen_from_text` attempts (one detailed prompt x2, two shortened prompts, one retry) all timed out client-side; unlike the Stock and Item-detail screens, none landed server-side after repeated polling. Deferred pending a decision on how to proceed (retry further / build directly to the Task 23 spec / revisit later). Stock and Item detail can proceed through the Task 21 review gate independently; Imports wizard design + Task 23 implementation will follow once resolved.
+**Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Stock/Items `3ee8a8d2608c4774a61b7dbf1f4f7a9f`, `b1dd90cf972a481d93e9cce6255e969b`; Imports wizard `928d3fcee80844f59e8dbf0c5bf215ba`. The Imports wizard specifically required 6 generation attempts before one landed server-side (unlike Stock/Item-detail's 2-3) — no known cause, just Stitch service flakiness that session.
