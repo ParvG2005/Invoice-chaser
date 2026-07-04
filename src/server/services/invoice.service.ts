@@ -126,10 +126,10 @@ export const invoiceService = {
       }
       return { action, count: ids.length };
     }
-    // sendReminders: trigger the org-wide reminder scan, same as the
-    // "Send reminder now" row action and POST /api/reminders/trigger.
+    // sendReminders: scope the scan to just the selected invoices, same as
+    // the "Send reminder now" row action and POST /api/reminders/trigger.
     const { reminderService } = await import("@/server/services/reminder.service");
-    await reminderService.scheduleRemindersForOrganization(organizationId);
+    await reminderService.scheduleRemindersForInvoices(organizationId, ids);
     return { action, count: ids.length };
   },
 

@@ -63,7 +63,7 @@ export function InvoiceTable({ invoices, isLoading, selection }: InvoiceTablePro
       {
         accessorKey: "amount",
         header: "Amount",
-        cell: ({ row }) => <Money amount={row.original.amount} />,
+        cell: ({ row }) => <Money amount={row.original.amount} currency={row.original.currency} />,
       },
       {
         accessorKey: "dueDate",

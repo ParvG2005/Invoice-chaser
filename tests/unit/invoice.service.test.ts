@@ -31,6 +31,7 @@ vi.mock("@/lib/jobs/inngest/scheduler", () => ({
 vi.mock("@/server/services/reminder.service", () => ({
   reminderService: {
     scheduleRemindersForOrganization: vi.fn().mockResolvedValue({ scheduled: 0 }),
+    scheduleRemindersForInvoices: vi.fn().mockResolvedValue({ scheduled: 0 }),
   },
 }));
 
@@ -44,6 +45,7 @@ function fakeInvoice(overrides: Record<string, unknown> = {}) {
     clientEmail: "billing@acme.test",
     clientPhone: null,
     amount: 1500.5, // decimalToNumber passes numbers through
+    currency: "INR",
     dueDate: new Date("2026-07-10T12:00:00.000Z"),
     invoiceNumber: "INV-001",
     notes: null,
@@ -364,11 +366,15 @@ describe("invoiceService (characterization)", () => {
       expect(result).toEqual({ action: "markPaid", count: 1 });
     });
 
-    it("triggers the org-wide reminder scan for the sendReminders action", async () => {
+    it("scopes the reminder scan to the selected invoice ids for the sendReminders action", async () => {
       const { reminderService } = await import("@/server/services/reminder.service");
-      const result = await invoiceService.bulkAction(ORG, "sendReminders", ["inv-1"]);
-      expect(reminderService.scheduleRemindersForOrganization).toHaveBeenCalledWith(ORG);
-      expect(result).toEqual({ action: "sendReminders", count: 1 });
+      const result = await invoiceService.bulkAction(ORG, "sendReminders", ["inv-1", "inv-2"]);
+      expect(reminderService.scheduleRemindersForInvoices).toHaveBeenCalledWith(ORG, [
+        "inv-1",
+        "inv-2",
+      ]);
+      expect(reminderService.scheduleRemindersForOrganization).not.toHaveBeenCalled();
+      expect(result).toEqual({ action: "sendReminders", count: 2 });
     });
   });
 });

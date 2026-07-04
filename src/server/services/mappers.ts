@@ -9,6 +9,7 @@ export function toInvoiceDto(invoice: Invoice): InvoiceDto {
     clientEmail: invoice.clientEmail,
     clientPhone: invoice.clientPhone,
     amount: decimalToNumber(invoice.amount),
+    currency: invoice.currency,
     dueDate: invoice.dueDate.toISOString(),
     invoiceNumber: invoice.invoiceNumber,
     notes: invoice.notes,

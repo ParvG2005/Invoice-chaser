@@ -189,6 +189,38 @@ export const invoiceRepository = {
   },
 
   /**
+   * Same as `findOverdue`, but scoped to a caller-supplied set of invoice
+   * ids. The `organizationId` filter still applies, so any id that doesn't
+   * belong to this org (or isn't actually overdue) is silently excluded
+   * rather than trusted — used by the per-invoice reminder trigger.
+   */
+  findOverdueByIds(organizationId: string, ids: string[], asOf = new Date()) {
+    return prisma.invoice.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        id: { in: ids },
+        status: { in: ["PENDING", "OVERDUE"] },
+        dueDate: { lt: asOf },
+      },
+    });
+  },
+
+  /** Id-scoped counterpart to `markOverdueBatch`, for the per-invoice reminder trigger. */
+  markOverdueByIds(organizationId: string, ids: string[], asOf = new Date()) {
+    return prisma.invoice.updateMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        id: { in: ids },
+        status: "PENDING",
+        dueDate: { lt: asOf },
+      },
+      data: { status: "OVERDUE" },
+    });
+  },
+
+  /**
    * Shifts every not-yet-sent Reminder for the invoice forward by `days`.
    * Prisma's `updateMany` can't do relative date math, so this reads the
    * pending rows and rewrites `scheduledFor` individually inside a

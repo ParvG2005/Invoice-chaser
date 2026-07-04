@@ -57,7 +57,11 @@ export function InvoiceRowActions({ invoice }: { invoice: InvoiceDto }) {
   });
 
   const sendReminder = useMutation({
-    mutationFn: () => apiFetch("/api/reminders/trigger", { method: "POST" }),
+    mutationFn: () =>
+      apiFetch("/api/reminders/trigger", {
+        method: "POST",
+        body: JSON.stringify({ invoiceId: invoice.id }),
+      }),
     onSuccess: () => {
       toast.success("Reminder queued");
       invalidateInvoices();

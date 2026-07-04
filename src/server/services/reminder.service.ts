@@ -13,6 +13,71 @@ import type { ReminderSettingsDto } from "@/types";
 
 const log = createLogger("reminder-service");
 
+/**
+ * Shared batching logic for `scheduleRemindersForOrganization` and
+ * `scheduleRemindersForInvoices`: given an already-scoped list of overdue
+ * invoices, work out which (invoice, dayOffset) reminders are still missing
+ * and create + enqueue them.
+ */
+async function scheduleForOverdueInvoices(
+  organizationId: string,
+  settings: NonNullable<Awaited<ReturnType<typeof reminderRepository.getSettings>>>,
+  overdue: Awaited<ReturnType<typeof invoiceRepository.findOverdue>>,
+) {
+  if (overdue.length === 0) return { scheduled: 0 };
+
+  // One query for every (invoice, dayOffset) already in flight, instead of a
+  // per-invoice existence check inside the loop (was O(invoices × offsets) queries).
+  const existing = await reminderRepository.findExistingOffsets(overdue.map((i) => i.id));
+  const seen = new Set(existing.map((e) => `${e.invoiceId}:${e.dayOffset}`));
+
+  const today = startOfDay(new Date());
+  const toCreate: Array<{
+    id: string;
+    organizationId: string;
+    invoiceId: string;
+    scheduledFor: Date;
+    tone: typeof settings.emailTone;
+    dayOffset: number;
+    status: "SCHEDULED";
+  }> = [];
+
+  for (const invoice of overdue) {
+    if (invoice.status === "PAID") continue;
+
+    const daysPastDue = differenceInCalendarDays(today, startOfDay(invoice.dueDate));
+
+    for (const dayOffset of settings.reminderDays) {
+      if (daysPastDue < dayOffset) continue;
+
+      const key = `${invoice.id}:${dayOffset}`;
+      if (seen.has(key)) continue;
+      seen.add(key); // dedupe duplicate offsets within reminderDays too
+
+      toCreate.push({
+        id: crypto.randomUUID(),
+        organizationId,
+        invoiceId: invoice.id,
+        scheduledFor: new Date(),
+        tone: settings.emailTone,
+        dayOffset,
+        status: "SCHEDULED",
+      });
+    }
+  }
+
+  if (toCreate.length === 0) {
+    return { scheduled: 0 };
+  }
+
+  // Batch insert, then a single batched enqueue.
+  await reminderRepository.createManyScheduled(toCreate);
+  await getJobScheduler().enqueueReminders(toCreate.map((r) => r.id));
+
+  log.info("Scheduled reminders", { organizationId, scheduled: toCreate.length });
+  return { scheduled: toCreate.length };
+}
+
 export const reminderService = {
   async getSettings(organizationId: string): Promise<ReminderSettingsDto> {
     const settings = await reminderRepository.getSettings(organizationId);
@@ -41,58 +106,27 @@ export const reminderService = {
     await invoiceRepository.markOverdueBatch(organizationId);
 
     const overdue = await invoiceRepository.findOverdue(organizationId);
-    if (overdue.length === 0) return { scheduled: 0 };
+    return scheduleForOverdueInvoices(organizationId, settings, overdue);
+  },
 
-    // One query for every (invoice, dayOffset) already in flight, instead of a
-    // per-invoice existence check inside the loop (was O(invoices × offsets) queries).
-    const existing = await reminderRepository.findExistingOffsets(overdue.map((i) => i.id));
-    const seen = new Set(existing.map((e) => `${e.invoiceId}:${e.dayOffset}`));
+  /**
+   * Same as `scheduleRemindersForOrganization`, but scoped to a caller-supplied
+   * set of invoice ids (used by the per-invoice "Send reminder now" row action
+   * and the bulk-actions "Send reminders" action). Every id is re-verified
+   * against `organizationId` at the repository layer, so ids from other orgs
+   * or that were tampered with client-side are simply excluded rather than
+   * trusted, and invoices outside the given set are never touched.
+   */
+  async scheduleRemindersForInvoices(organizationId: string, invoiceIds: string[]) {
+    if (invoiceIds.length === 0) return { scheduled: 0 };
 
-    const today = startOfDay(new Date());
-    const toCreate: Array<{
-      id: string;
-      organizationId: string;
-      invoiceId: string;
-      scheduledFor: Date;
-      tone: typeof settings.emailTone;
-      dayOffset: number;
-      status: "SCHEDULED";
-    }> = [];
+    const settings = await reminderRepository.getSettings(organizationId);
+    if (!settings?.autoSend) return { scheduled: 0 };
 
-    for (const invoice of overdue) {
-      if (invoice.status === "PAID") continue;
+    await invoiceRepository.markOverdueByIds(organizationId, invoiceIds);
 
-      const daysPastDue = differenceInCalendarDays(today, startOfDay(invoice.dueDate));
-
-      for (const dayOffset of settings.reminderDays) {
-        if (daysPastDue < dayOffset) continue;
-
-        const key = `${invoice.id}:${dayOffset}`;
-        if (seen.has(key)) continue;
-        seen.add(key); // dedupe duplicate offsets within reminderDays too
-
-        toCreate.push({
-          id: crypto.randomUUID(),
-          organizationId,
-          invoiceId: invoice.id,
-          scheduledFor: new Date(),
-          tone: settings.emailTone,
-          dayOffset,
-          status: "SCHEDULED",
-        });
-      }
-    }
-
-    if (toCreate.length === 0) {
-      return { scheduled: 0 };
-    }
-
-    // Batch insert, then a single batched enqueue.
-    await reminderRepository.createManyScheduled(toCreate);
-    await getJobScheduler().enqueueReminders(toCreate.map((r) => r.id));
-
-    log.info("Scheduled reminders", { organizationId, scheduled: toCreate.length });
-    return { scheduled: toCreate.length };
+    const overdue = await invoiceRepository.findOverdueByIds(organizationId, invoiceIds);
+    return scheduleForOverdueInvoices(organizationId, settings, overdue);
   },
 
   async processDueReminders() {

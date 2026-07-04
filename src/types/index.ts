@@ -63,6 +63,7 @@ export interface InvoiceDto {
   clientEmail: string;
   clientPhone: string | null;
   amount: number;
+  currency: string;
   dueDate: string;
   invoiceNumber: string;
   notes: string | null;
