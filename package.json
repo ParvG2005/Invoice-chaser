@@ -18,7 +18,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:backfill-parties": "tsx scripts/backfill-parties.ts",
+    "db:backfill-parties": "tsx --env-file=.env scripts/backfill-parties.ts",
     "postinstall": "prisma generate",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
