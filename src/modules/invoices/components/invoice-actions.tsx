@@ -47,6 +47,13 @@ export function InvoiceActions({ invoice }: { invoice: InvoiceDto }) {
       <Button
         type="button"
         variant="outline"
+        onClick={() => router.push(`/dashboard/invoices/${invoice.id}/edit`)}
+      >
+        Edit
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
         onClick={() => router.push(`/dashboard/payments?record=1&invoiceId=${invoice.id}`)}
       >
         Record payment

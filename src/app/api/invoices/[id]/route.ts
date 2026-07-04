@@ -14,8 +14,11 @@ export const PATCH = withApiHandler(
     const { lineItems, ...rest } = updateInvoiceSchema.parse(body);
 
     // Same server-authoritative recompute as POST /api/invoices — see
-    // computeLineItemsForInvoice.
-    const computed = lineItems && lineItems.length > 0 ? computeLineItemsForInvoice(lineItems) : null;
+    // computeLineItemsForInvoice. `lineItems` must be distinguished from
+    // "key absent" (undefined, preserve existing line items/amounts) vs.
+    // "explicitly sent as []" (clear to zero line items — recompute via the
+    // same totals([]) path, which yields all-zero subtotal/tax/total).
+    const computed = lineItems !== undefined ? computeLineItemsForInvoice(lineItems) : null;
 
     const invoice = await invoiceService.update(ctx.organizationId, params.id, {
       ...rest,

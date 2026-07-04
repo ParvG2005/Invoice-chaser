@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 import { InvoiceTable } from "@/modules/invoices/components/invoice-table";
 import { InvoiceFiltersBar } from "@/modules/invoices/components/invoice-filters";
 import { BulkActionsBar } from "@/modules/invoices/components/bulk-actions-bar";
-import { CreateInvoiceDialog } from "@/modules/invoices/components/create-invoice-dialog";
 import { ImportDialog } from "@/modules/invoices/components/import-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,9 @@ export default function InvoicesPage() {
         </div>
         <div className="flex gap-2">
           <ImportDialog />
-          <CreateInvoiceDialog />
+          <Button asChild>
+            <Link href="/dashboard/invoices/new">New invoice</Link>
+          </Button>
         </div>
       </div>
 
