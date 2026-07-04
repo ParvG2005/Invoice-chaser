@@ -65,6 +65,33 @@ export interface PartyDto {
   updatedAt: string;
 }
 
+export interface ItemDto {
+  id: string;
+  name: string;
+  sku: string | null;
+  unit: string;
+  hsnCode: string | null;
+  gstRate: number | null;
+  openingQty: number;
+  reorderLevel: number | null;
+  purchasePrice: number | null;
+  salePrice: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockMovementDto {
+  id: string;
+  itemId: string;
+  qty: number;
+  rate: number | null;
+  sourceType: "INVOICE" | "BILL" | "ADJUSTMENT" | "OPENING";
+  sourceId: string | null;
+  godown: string | null;
+  movementDate: string;
+  createdAt: string;
+}
+
 export interface ReminderSettingsDto {
   reminderDays: number[];
   emailTone: EmailTone;

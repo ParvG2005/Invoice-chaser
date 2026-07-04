@@ -1,5 +1,5 @@
-import type { Invoice, Party } from "@/generated/prisma/client";
-import type { InvoiceDto, PartyDto } from "@/types";
+import type { Invoice, Item, Party, StockMovement } from "@/generated/prisma/client";
+import type { InvoiceDto, ItemDto, PartyDto, StockMovementDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 
 export function toInvoiceDto(invoice: Invoice): InvoiceDto {
@@ -36,6 +36,37 @@ export function toPartyDto(party: Party): PartyDto {
     agentId: party.agentId,
     createdAt: party.createdAt.toISOString(),
     updatedAt: party.updatedAt.toISOString(),
+  };
+}
+
+export function toItemDto(item: Item): ItemDto {
+  return {
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+    hsnCode: item.hsnCode,
+    gstRate: item.gstRate === null ? null : decimalToNumber(item.gstRate),
+    openingQty: decimalToNumber(item.openingQty),
+    reorderLevel: item.reorderLevel === null ? null : decimalToNumber(item.reorderLevel),
+    purchasePrice: item.purchasePrice === null ? null : decimalToNumber(item.purchasePrice),
+    salePrice: item.salePrice === null ? null : decimalToNumber(item.salePrice),
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+}
+
+export function toStockMovementDto(movement: StockMovement): StockMovementDto {
+  return {
+    id: movement.id,
+    itemId: movement.itemId,
+    qty: decimalToNumber(movement.qty),
+    rate: movement.rate === null ? null : decimalToNumber(movement.rate),
+    sourceType: movement.sourceType,
+    sourceId: movement.sourceId,
+    godown: movement.godown,
+    movementDate: movement.movementDate.toISOString(),
+    createdAt: movement.createdAt.toISOString(),
   };
 }
 
