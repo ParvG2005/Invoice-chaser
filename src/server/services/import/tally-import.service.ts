@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { prisma } from "@/lib/db/prisma";
 import { NotFoundError, AppError } from "@/lib/api/errors";
 import { withAudit } from "@/server/services/audit.service";
 import { parseTallyEnvelope } from "@/lib/import/tally/xml";
@@ -244,36 +245,63 @@ export const tallyImportService = {
       { organizationId, entityType: "ImportBatch", entityId: batchId },
       async () => {
         const records = await tallyImportRepository.listRecords(organizationId, batchId);
-        let referencedCount = 0;
 
-        for (const record of [...records].reverse()) {
-          if (!record.entityId) continue;
-          const entityType = record.recordType as "Party" | "Item" | "Invoice" | "Bill" | "Payment";
-          if (record.status === "CREATED") {
-            referencedCount += await tallyImportRepository.countReferences(
-              organizationId,
-              entityType,
-              record.entityId,
-            );
-            await tallyImportRepository.softDeleteEntity(organizationId, entityType, record.entityId);
-          } else if (record.status === "UPDATED" && record.beforeJson) {
-            await tallyImportRepository.restoreEntitySnapshot(
-              organizationId,
-              entityType,
-              record.entityId,
-              record.beforeJson as Record<string, unknown>,
-            );
+        // Every per-entity revert AND the final batch-status update run
+        // inside one outer transaction, so a crash or a later entity's
+        // revert throwing partway through leaves nothing changed at all —
+        // never a batch stuck COMPLETED with only some entities reverted
+        // (which the double-undo guard above couldn't even retry, since it
+        // only allows undo from COMPLETED/FAILED).
+        const updated = await prisma.$transaction(async (tx) => {
+          let referencedCount = 0;
+
+          for (const record of [...records].reverse()) {
+            if (!record.entityId) continue;
+            const entityType = record.recordType as
+              | "Party"
+              | "Item"
+              | "Invoice"
+              | "Bill"
+              | "Payment";
+            if (record.status === "CREATED") {
+              referencedCount += await tallyImportRepository.countReferences(
+                tx,
+                organizationId,
+                entityType,
+                record.entityId,
+              );
+              await tallyImportRepository.softDeleteEntity(
+                tx,
+                organizationId,
+                entityType,
+                record.entityId,
+              );
+            } else if (record.status === "UPDATED" && record.beforeJson) {
+              await tallyImportRepository.restoreEntitySnapshot(
+                tx,
+                organizationId,
+                entityType,
+                record.entityId,
+                record.beforeJson as Record<string, unknown>,
+              );
+            }
           }
-        }
 
-        const updated = await tallyImportRepository.updateBatch(organizationId, batchId, {
-          status: "REVERTED",
-          completedAt: new Date(),
-          errorSummary:
-            referencedCount > 0
-              ? `${referencedCount} entities referenced by later imports were soft-deleted`
-              : null,
+          return tallyImportRepository.updateBatch(
+            organizationId,
+            batchId,
+            {
+              status: "REVERTED",
+              completedAt: new Date(),
+              errorSummary:
+                referencedCount > 0
+                  ? `${referencedCount} entities referenced by later imports were soft-deleted`
+                  : null,
+            },
+            tx,
+          );
         });
+
         return toBatchDto(updated);
       },
     );

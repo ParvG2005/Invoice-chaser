@@ -9,6 +9,14 @@ export interface InvoiceListOptions {
   status?: InvoiceStatus;
   take?: number;
   cursor?: string;
+  /** Filter to invoices billed to this party (Task 12 invoices-list filter panel). */
+  partyId?: string;
+  /** ISO date string (inclusive upper bound on dueDate). */
+  dueBefore?: string;
+  /** ISO date string (inclusive lower bound on dueDate). */
+  dueAfter?: string;
+  /** Case-insensitive match against invoiceNumber or clientName. */
+  search?: string;
 }
 
 export interface InvoiceLineItemInput {
@@ -17,6 +25,12 @@ export interface InvoiceLineItemInput {
   quantity: number;
   rate: number;
   amount: number;
+  /** Discount percentage (0-100). Optional for backward compatibility with
+   * existing callers (tally-import, `duplicate`) that don't track discount;
+   * defaults to 0, matching the column's DB default. */
+  discount?: number;
+  /** Tax rate percentage (0-100), same optionality/default rationale as `discount`. */
+  taxRate?: number;
 }
 
 function lineItemsCreateManyData(
@@ -32,6 +46,8 @@ function lineItemsCreateManyData(
     quantity: li.quantity,
     rate: li.rate,
     amount: li.amount,
+    discount: li.discount ?? 0,
+    taxRate: li.taxRate ?? 0,
     sortOrder: index,
   }));
 }
@@ -39,11 +55,25 @@ function lineItemsCreateManyData(
 export const invoiceRepository = {
   findMany(organizationId: string, options: InvoiceListOptions = {}) {
     const take = Math.min(options.take ?? INVOICE_PAGE_SIZE, INVOICE_MAX_PAGE_SIZE);
+    const dueDateFilter: Prisma.DateTimeFilter = {};
+    if (options.dueBefore) dueDateFilter.lte = new Date(options.dueBefore);
+    if (options.dueAfter) dueDateFilter.gte = new Date(options.dueAfter);
+
     return prisma.invoice.findMany({
       where: {
         organizationId,
         deletedAt: null,
         ...(options.status ? { status: options.status } : {}),
+        ...(options.partyId ? { partyId: options.partyId } : {}),
+        ...(Object.keys(dueDateFilter).length > 0 ? { dueDate: dueDateFilter } : {}),
+        ...(options.search
+          ? {
+              OR: [
+                { invoiceNumber: { contains: options.search, mode: "insensitive" as const } },
+                { clientName: { contains: options.search, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
       },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
       take,
@@ -65,6 +95,29 @@ export const invoiceRepository = {
   findById(organizationId: string, id: string) {
     return prisma.invoice.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: {
+        party: true,
+        lineItems: { where: { deletedAt: null }, orderBy: { sortOrder: "asc" } },
+      },
+    });
+  },
+
+  findByIdWithLineItems(organizationId: string, id: string) {
+    return prisma.invoice.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      include: { lineItems: { where: { deletedAt: null }, orderBy: { sortOrder: "asc" } } },
+    });
+  },
+
+  /**
+   * Looks up an invoice by number regardless of soft-delete state, since the
+   * `@@unique([organizationId, invoiceNumber])` constraint is enforced at the
+   * DB level across all rows (soft-deleted included). Used by `duplicate` to
+   * pick a collision-free number for the copy.
+   */
+  findByInvoiceNumber(organizationId: string, invoiceNumber: string) {
+    return prisma.invoice.findFirst({
+      where: { organizationId, invoiceNumber },
     });
   },
 
@@ -144,6 +197,85 @@ export const invoiceRepository = {
         dueDate: { lt: asOf },
       },
       data: { status: "OVERDUE" },
+    });
+  },
+
+  /**
+   * Same as `findOverdue`, but scoped to a caller-supplied set of invoice
+   * ids. The `organizationId` filter still applies, so any id that doesn't
+   * belong to this org (or isn't actually overdue) is silently excluded
+   * rather than trusted — used by the per-invoice reminder trigger.
+   */
+  findOverdueByIds(organizationId: string, ids: string[], asOf = new Date()) {
+    return prisma.invoice.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        id: { in: ids },
+        status: { in: ["PENDING", "OVERDUE"] },
+        dueDate: { lt: asOf },
+      },
+    });
+  },
+
+  /** Id-scoped counterpart to `markOverdueBatch`, for the per-invoice reminder trigger. */
+  markOverdueByIds(organizationId: string, ids: string[], asOf = new Date()) {
+    return prisma.invoice.updateMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        id: { in: ids },
+        status: "PENDING",
+        dueDate: { lt: asOf },
+      },
+      data: { status: "OVERDUE" },
+    });
+  },
+
+  /**
+   * Shifts every not-yet-sent Reminder for the invoice forward by `days`.
+   * Prisma's `updateMany` can't do relative date math, so this reads the
+   * pending rows and rewrites `scheduledFor` individually inside a
+   * transaction. Returns the number of reminders shifted.
+   */
+  shiftPendingReminders(organizationId: string, invoiceId: string, days: number) {
+    return prisma.$transaction(async (tx) => {
+      const reminders = await tx.reminder.findMany({
+        where: { organizationId, invoiceId, sentAt: null },
+      });
+      await Promise.all(
+        reminders.map((reminder) =>
+          tx.reminder.update({
+            where: { id: reminder.id },
+            data: {
+              scheduledFor: new Date(reminder.scheduledFor.getTime() + days * 24 * 60 * 60 * 1000),
+            },
+          }),
+        ),
+      );
+      return reminders.length;
+    });
+  },
+
+  findCommunicationLogs(organizationId: string, invoiceId: string) {
+    return prisma.communicationLog.findMany({
+      where: { organizationId, invoiceId },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findEmailLogs(organizationId: string, invoiceId: string) {
+    return prisma.emailLog.findMany({
+      where: { organizationId, invoiceId },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  findPaymentAllocations(organizationId: string, invoiceId: string) {
+    return prisma.paymentAllocation.findMany({
+      where: { organizationId, invoiceId, deletedAt: null },
+      include: { payment: true },
+      orderBy: { createdAt: "desc" },
     });
   },
 };

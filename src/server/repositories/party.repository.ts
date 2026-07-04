@@ -63,4 +63,36 @@ export const partyRepository = {
       data: { deletedAt: new Date() },
     });
   },
+
+  /**
+   * Party + its non-deleted invoices/bills/payments, for building the
+   * ledger statement (Task 17). Additive relation-include on top of the
+   * bare `findById` shape used everywhere else.
+   */
+  findByIdWithLedgerRelations(organizationId: string, id: string) {
+    return prisma.party.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      include: {
+        invoices: { where: { deletedAt: null } },
+        bills: { where: { deletedAt: null } },
+        payments: { where: { deletedAt: null } },
+      },
+    });
+  },
+
+  /**
+   * Parties managed by `agentId` (i.e. `party.agentId === agentId`), with
+   * their non-deleted invoices/bills for the agent rollup's outstanding
+   * total (Task 17).
+   */
+  findManagedParties(organizationId: string, agentId: string) {
+    return prisma.party.findMany({
+      where: { organizationId, agentId, deletedAt: null },
+      include: {
+        invoices: { where: { deletedAt: null } },
+        bills: { where: { deletedAt: null } },
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    });
+  },
 };

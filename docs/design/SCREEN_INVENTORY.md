@@ -5,7 +5,7 @@ The 12 screens from the parent plan §0.1 decision 6. Phase 3 iterates each of t
 | # | Screen | Purpose | Primary actions | Data shown | Phase |
 |---|---|---|---|---|---|
 | 1 | App shell / navigation | Persistent frame: sidebar nav, org switcher, user menu, assistant entry point | Switch org, open assistant, sign out | Nav items, current org, current user | 3 |
-| 2 | Dashboard | At-a-glance financial health (pilot screen generated in Phase 0) | Jump to invoices due soon, remind, view aging detail | Money to come/pay, overdue, collection rate, aging chart, recent activity, invoices due soon table | 3 |
+| 2 | Dashboard | At-a-glance financial health (pilot screen generated in Phase 0, restyled in Task 5) | Jump to invoices due soon, remind, view aging detail, quick-create invoice/payment/import | Money to come/pay, pending invoices count+value, overdue value, aging chart, receivables-by-status chart, recent activity, invoices due soon table | 3 |
 | 3 | Invoices — list | Browse/filter/bulk-act on receivables | Filter (status/party/date), bulk remind, bulk export, create invoice | Invoice list: party, number, amount, due date, status | 3 |
 | 4 | Invoices — detail | Single invoice deep-dive incl. history | Mark paid/partial, send reminder now, snooze, write-off, duplicate, export PDF | Line items, balance due, payment history, communication timeline | 3 |
 | 5 | Invoices — editor | Create/edit an invoice | Add/remove line items, pick stock item, set party, save/send | Party picker, item picker, tax calc, totals | 3 |
@@ -22,3 +22,85 @@ The 12 screens from the parent plan §0.1 decision 6. Phase 3 iterates each of t
 Note: the parent plan's decision-6 list names 12 screens conceptually but splits Invoices into list/detail/editor (3 screens) — the table above enumerates 14 concrete Stitch screens to cover that split plus the Assistant drawer, matching how Phase 3's plan will actually iterate them.
 
 **Row 10 footnote (Task 12):** the Imports wizard shipped directly against this row's spec (stepper, upload steps, preview/warnings, progress, created/updated/skipped/errored counts, download report, undo) using this codebase's existing hand-rolled UI conventions — it did **not** go through a Stitch design pass. Design sign-off for this screen is deferred to a human follow-up; if Stitch iteration later changes the visual design, update this row's Phase back to include a "3 (design pass)" note and record the screen ID/approval here as the other rows do.
+
+## Task 5 — App Shell + Dashboard (Batch A), pending human design review
+
+Both screens below are **candidate** designs generated/iterated in Stitch project `projects/7229335890257417243` against design-system asset `assets/5052952801528952529`. They are recorded here for the Task 6 human design-review gate — not yet marked approved.
+
+### Row 1 — App shell / navigation (new screen)
+
+| Variant | Screen ID | Notes |
+|---|---|---|
+| Light (desktop) | `projects/7229335890257417243/screens/b45d601ef84a43ef9f281b4ce335ef26` | New screen — did not exist from the Phase 0 pilot. Fixed 260px sidebar with nav in brief order (Dashboard active, Invoices, Bills, Parties, Stock, Payments, Imports, Reminders, Settings), a visually separated "Coming soon" section with **disabled** "Analytics" and "Assistant" items each carrying a "Soon" pill, a collapse-toggle affordance at the sidebar foot (for icon-only tablet collapse / off-canvas mobile drawer, described in the prompt since Stitch renders one static breakpoint), pinned "Ask Assistant" button, Help/Support links, and org/user footer. Top bar: page title ("Dashboard") + org breadcrumb ("Mehta Global Ventures"), global search, theme toggle, notification bell with unread dot, user avatar. Content area shows a placeholder 2x2 dashed-border grid to demonstrate the reusable `max-w-7xl` frame. |
+| Dark | `projects/7229335890257417243/screens/c6bc199a32bd4667ac9b039bf7d26e9f` | `generate_variants` (COLOR_SCHEME, REFINE) off the light shell — near-black background/near-white foreground, same layout/copy/nav, moon icon shown active in the theme toggle, sidebar/card surfaces use a lighter near-black tier for depth. Verified visually: identical structure to light, only palette changed. |
+
+**Design decision:** the app shell is a new screen (not present in the Phase 0 pilot); its sidebar is the canonical nav treatment (10 real items + 2 disabled "soon" slots) that later screens — including the existing pilot Dashboard/Analytics, whose sidebars predate this shell and still show Analytics as a live item — should be reconciled against during Task 7/8 implementation.
+
+### Row 2 — Dashboard (iterated from Phase 0 pilot)
+
+| Variant | Screen ID | Notes |
+|---|---|---|
+| Light (desktop) | ~~`projects/7229335890257417243/screens/8e8b9689715e460bbfbfde024762eabd`~~ → **`projects/7229335890257417243/screens/02ba53d311074691b57ebc91e149a29a`** ("InvoicePilot Dashboard - Navigation & Chart Fix") | Iterated via `edit_screens` off the approved pilot (`062263df22594523a01541d0268d1b53`), which is left untouched. Reused as-is: "Recent Activity" feed, "Invoices Due Soon" table with sortable columns + search (pre-existing and already approved). Added: (1) KPI row's 4th tile swapped from "Collection Rate" to "Pending Invoices" showing count ("12 Invoices") + total pending value, alongside the existing Money-to-Come/Money-to-Pay/Overdue tiles; (2) a new "Receivables by Status" stacked-bar + legend card next to the aging chart, breaking outstanding value into the 5 binding statuses (amber Pending, red Overdue, emerald Paid, blue Partially Paid, gray Written Off); (3) a "Quick Actions" row (New Invoice primary button, Record Payment and Import from Tally secondary/outline buttons) between the KPI tiles and the charts row. **Post design-review fix pass (see below):** sidebar reconciled to match the App Shell canonical nav, and the Receivables Aging chart bars fixed to render visibly. `edit_screens` produced a **new screen ID** (`02ba53d311074691b57ebc91e149a29a`) rather than updating `8e8b9689715e460bbfbfde024762eabd` in place — the old ID is now superseded/stale and should not be used. |
+| Dark | ~~`projects/7229335890257417243/screens/a5fb9b5329c9411ebdc4a18afc353eb0`~~ → **`projects/7229335890257417243/screens/797bc74525ad4798935defd075c7aac7`** ("InvoicePilot Dashboard - Dark Mode Refinement") | `generate_variants` (COLOR_SCHEME, REFINE) off the fixed light dashboard (`02ba53d311074691b57ebc91e149a29a`) — same layout/data/copy, near-black background, status chips keep their dark-tinted semantic colors (verified visually: amber/red/emerald/blue chips all legible against dark cards). Also produced a **new screen ID**, superseding `a5fb9b5329c9411ebdc4a18afc353eb0`. |
+
+**Design decision:** reused the approved pilot Dashboard rather than regenerating from scratch, since its structure (4-tile KPI row, chart pair, recent activity, invoices-due-soon table, sidebar) already matched the brief; only added the 3 pieces the brief asked for that were missing (Pending Invoices tile, receivables-by-status chart, quick actions row).
+
+**Fix pass (post Task 6 design review) — both resolved:**
+1. **Sidebar mismatch:** the Dashboard's sidebar previously showed "Parties & Agents" (should be "Parties") and a live/enabled "Analytics" nav item with no "Assistant" slot — inconsistent with the App Shell screen's canonical sidebar. Fixed via `edit_screens`: renamed to "Parties", removed "Analytics" from the main list, and added a "Coming Soon" section below Settings with disabled "Analytics" and "Assistant" rows (opacity-60/cursor-not-allowed, each with a "SOON" pill badge) — now matching the App Shell screen (`b45d601ef84a43ef9f281b4ce335ef26`) exactly. Verified via HTML grep and screenshot for both light and dark variants.
+2. **Receivables Aging chart invisible bars:** root cause confirmed — each bar's track wrapper used `style="height: 100%"` while its parent flex column (inside an `items-end` row) had no explicit height, so the percentage resolved to zero. Fixed by changing each track wrapper to an explicit `style="height: 200px; width: 100%;"`. Verified two ways per the task's instructions: (a) visually, the downloaded screenshots for both light and dark now show four clearly filled bars of varying height/color; (b) via `grep` on the downloaded HTML confirming `height: 200px` (non-zero, non-percentage) on all 4 bar-track wrappers in both variants. This is a genuine fix, not just a lucky render — the underlying CSS no longer depends on an unresolved percentage. Residual note: the HTML still contains a `window.addEventListener('load', ...)` animation that sets each `.chart-bar`'s height to `0` then restores it via `setTimeout(..., 200)` — harmless for Stitch's own static screenshot (which evidently captures after the timeout or the animation doesn't affect Stitch's renderer) but worth stripping when this markup is used as an implementation reference, since a naive port of that JS could reintroduce a flash-of-empty-chart in real code.
+
+**Note on `edit_screens` screen-ID behavior:** for this fix pass, `edit_screens` did **not** update the existing screen ID in place — an initial edit call returned a response that looked applied (chat text + a `dom_operations` event referencing the original screen ID) but never actually changed the screen's stored HTML even after several minutes of polling; a second, more explicit edit call instead returned a full new screen resource (`screenMetadata.status: "COMPLETE"`) under a **new** screen ID. Treat the new IDs above as canonical; the old Row 2 IDs are stale/abandoned, not deleted.
+
+**Known pre-existing issue, now resolved for this screen (was documented above under "Pilot screen" for other screens):** the "Receivables Aging" bar chart's bars previously rendered invisible in the static Stitch screenshot (hand-rolled flex-height CSS bug, same root cause as the Analytics Date/Stock tab bug). Fixed here as described above. The Analytics screen's own aging/date charts are out of scope for this task and still carry the original bug — still recorded there. The "Receivables by Status" chart uses a stacked single bar + legend instead of individual per-status bars and was never affected. Phase 3 implementation should still rebuild both charts with a real charting library (Recharts/Chart.js), not port Stitch's hand-rolled div bars or its load-time height-reset animation.
+
+**Approval status:** ✅ approved by user, 2026-07-04 (Task 6 — Design Review Gate A). Screens approved: App Shell light `b45d601ef84a43ef9f281b4ce335ef26` / dark `c6bc199a32bd4667ac9b039bf7d26e9f`; Dashboard light `02ba53d311074691b57ebc91e149a29a` / dark `797bc74525ad4798935defd075c7aac7` (post-fix versions, sidebar reconciled + aging chart bars fixed).
+
+## Task 9 — Invoices (Batch B)
+
+**Approved by user, 2026-07-04.**
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav. Not yet design-reviewed.
+
+- **Invoices list** — light `8c946ec5cbf741ea979655494d454b0c` / dark `03773a9a6414433e8b39c08b055ecaf6`. Saved-filter tabs, 5-status filter chips w/ counts, party/date/search filters, selectable table, floating bulk-action bar.
+- **Invoice detail** — light `effd2bcc564242cdb30c5dbed797b1f3` / dark `ffa68e86d3c04a368536a288c8151c87`. Header + status + balance due, action row (mark paid/partial/reminder/snooze/duplicate/write-off/PDF), line items, unified timeline (comms + payments interleaved).
+- **Invoice editor** — light `d24e9453f9a444628a89f75ca142a68e` / dark `ddb3ff75f6054c19943ed50c9883ca9f`. Party combobox w/ inline create, line-item editor w/ stock picker, totals footer, notes, Save / Save & Send.
+
+**Concerns:** the first dark-mode generation for Invoice detail (`ed8a6b9905734bc696f9ebeeb90b7516`, now superseded) drifted off-brand (wrong logo/nav, missing items) — fixed via `edit_screens`, new id `ffa68e86d3c04a368536a288c8151c87` is canonical. `edit_screens`/`generate_variants` continue to mint new screen IDs rather than updating in place (same behavior as Batch A).
+
+**Sidebar fix pass (post human design review):** detail and editor sidebars didn't match the App Shell canonical nav — detail's Analytics/Assistant lacked the "Coming Soon" separator/"Soon" pills (looked like plain nav items); editor's sidebar was missing Payments/Imports/Reminders/Settings and the Coming Soon section entirely (cut off). Fixed via `edit_screens` on all 4 screens (nothing else touched). This time `edit_screens` updated the screens **in place** — IDs unchanged: detail light `effd2bcc564242cdb30c5dbed797b1f3` / dark `ffa68e86d3c04a368536a288c8151c87`; editor light `d24e9453f9a444628a89f75ca142a68e` / dark `ddb3ff75f6054c19943ed50c9883ca9f`. Verified via downloaded HTML (grep for "Coming Soon"/"SOON") and a real-browser screenshot (chrome-devtools, not Stitch's own screenshot service) for all 4 — full 9-item nav + separated "Coming Soon" section with disabled Analytics/Assistant + "Soon" pills renders correctly. Note: Stitch's own screenshot for detail-light was stale/blank below "Settings" despite correct HTML — a rendering glitch in Stitch's screenshot service, not a real defect; confirmed by rendering the downloaded HTML directly in a browser. Invoices list (`8c946ec5cbf741ea979655494d454b0c` / `03773a9a6414433e8b39c08b055ecaf6`) was already correct and untouched.
+
+## Task 15 — Parties & Agents, Payments, Bills (Batch C)
+
+**Approved by user, 2026-07-04.**
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav.
+
+- **Parties & Agents directory** — light `d5c8dfdb4aa54c328b1a709ea0fea0e8` / dark `d9b1b77f3bfa4cb9a3b55ae64db61cbe`. Type filter tabs, directory table (name, type badge, agent, outstanding, credit-limit usage bar, last payment), "New party".
+- **Party detail** — light `d83dfd884e8045c099497b55997c939c` / dark `647fe152b97b4db794e6750af73b8d22`. Contact + credit-terms cards, Invoices/Bills/Payments/Statement tabs, ledger statement w/ running balance, "Download statement" split button (CSV/PDF), agent-rollup section (managed parties + total row).
+- **Payments** — light `ff0be9e109da4580825d8307c18aaf66` / dark `4996d765bb184bbbb9139ee51294edf2`. Payments register table (date/party/direction/mode/amount/allocation status), "Record payment" opens two-step sheet (party/direction/amount/mode/date → allocation table w/ auto-allocate-oldest + unallocated remainder).
+- **Bills list** — light `f8b1b8b0bdb742bcb59f1d954215090d` / dark `b77e42b58ff74106942e0ccc758788a3`. Mirrors Invoices list: status filter chips, selectable table (supplier/bill#/due/total/balance/status), row-actions kebab (mark paid/record payment/duplicate/write-off/export), bulk-action bar, "New bill".
+
+**Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Parties directory `d2fdd0ce166f4f1f9b6fe504e61223eb`, Party detail `fb1edebf84fc41ed9c2adec5a152c693`, Bills list `4370a7e568054801b77a8bd981d43953`.
+
+**Fix pass (pre-review):** Bills screens had a stray sidebar "New Invoice" quick-action button — removed via `edit_screens`, in place, same IDs. Payments screens had a non-canonical sidebar footer (standalone "Ask Assistant" button + enabled "Analytics" link instead of the disabled "Coming Soon" section) — replaced via `edit_screens`, in place, same IDs. A follow-up edit restored the "Coming Soon" caption + "SOON" pills on Bills after the first fix over-removed them.
+
+## Task 20 — Stock + Imports Wizard (Batch D)
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav.
+
+- **Stock / Items list** — light `861f491132e648ba9343e05ed4e5ea6a` / dark `c08dd3379824497e8fbb9acc975715f3`. Search + "Low stock only" toggle, items table (name/SKU/unit/stock on hand/reorder level/low-stock badge/valuation), "New item". Approved by user 2026-07-04 (Task 21, Stock-only partial gate).
+- **Item detail** — light `836b7fc7581c4382b0d85a24b9b90ca7` / dark `3d6678f9f2ad49cd84647230844197e5`. Info card (SKU/unit/sale price/reorder level/stock/valuation), stock movements table (date/type badge/qty/rate/source doc link), "Adjust stock" dialog (qty +/-, reason). Approved by user 2026-07-04 (Task 21, Stock-only partial gate).
+- **Imports wizard & history** — light `0e6372a7b72e4cc0a681bb7a55c5ca9e` / dark `7a8d3fff095e42e0857b36776478d260`. Stepper (Upload/Preview/Done), warnings banner, preview table (Row/Entity/Action badge/Message), Commit/Cancel buttons, Batch history table (Date/Source/Status/counts/actions). Not yet design-reviewed — pending its own approval before Task 23 implementation.
+
+**Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Stock/Items `3ee8a8d2608c4774a61b7dbf1f4f7a9f`, `b1dd90cf972a481d93e9cce6255e969b`; Imports wizard `928d3fcee80844f59e8dbf0c5bf215ba`. The Imports wizard specifically required 6 generation attempts before one landed server-side (unlike Stock/Item-detail's 2-3) — no known cause, just Stitch service flakiness that session.
+
+## Task 24 — Reminders + Settings (Batch E)
+
+**Approved by user, 2026-07-05.**
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav.
+
+- **Reminders** — light `08c2513bbe32488ab23ac0aebe57b745` / dark `8b7128ebac1742bda97a0d10f17d284f`. Org-level sequence editor (offset/tone/Email+WhatsApp toggle rows, WhatsApp disabled w/ "Available after Phase 4" hint, add/remove step, quiet hours), "Upcoming reminders" queue table (invoice/party/channel/scheduled date/Send now/Snooze).
+- **Settings** — light `998bf0c99d994274a3382516b970de61` / dark `bbf2dd8c04ed401f88b06c511f0ab9c0`. Sectioned cards: Organization, Sender identity, Reminder defaults, WhatsApp ("Connects in Phase 4" status card), Appearance (theme selector), Danger zone (delete org).
+
+**Duplicate generated and discarded** (same client-timeout/server-landed pattern as prior batches) — do not use: Reminders `ec40dcae8aac439ab7dfd89552bff574` ("Reminders Management").

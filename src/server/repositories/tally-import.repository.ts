@@ -41,8 +41,9 @@ export const tallyImportRepository = {
     organizationId: string,
     id: string,
     data: Prisma.ImportBatchUpdateInput,
+    tx: Prisma.TransactionClient | typeof prisma = prisma,
   ): Promise<ImportBatch> {
-    return prisma.importBatch.update({
+    return tx.importBatch.update({
       where: { id, organizationId, deletedAt: null },
       data,
     });
@@ -115,8 +116,14 @@ export const tallyImportRepository = {
    * slot). Found by Task 13's round-trip integration test: "undo then
    * re-import" failed on every entity type with "Unique constraint failed"
    * until this was added.
+   *
+   * Takes the caller's transaction client (rather than opening its own
+   * nested `$transaction`) so `undoBatch` can wrap every entity's revert —
+   * plus the final batch-status update — in a single outer transaction,
+   * making the whole undo all-or-nothing.
    */
   async softDeleteEntity(
+    tx: Prisma.TransactionClient,
     organizationId: string,
     entityType: "Party" | "Item" | "Invoice" | "Bill" | "Payment",
     entityId: string,
@@ -124,123 +131,117 @@ export const tallyImportRepository = {
     const now = new Date();
     switch (entityType) {
       case "Payment": {
-        await prisma.$transaction(async (tx) => {
-          const allocations = await tx.paymentAllocation.findMany({
-            where: { organizationId, paymentId: entityId, deletedAt: null },
-          });
+        const allocations = await tx.paymentAllocation.findMany({
+          where: { organizationId, paymentId: entityId, deletedAt: null },
+        });
 
-          for (const allocation of allocations) {
-            const amount = Number(allocation.amount);
-            if (allocation.invoiceId) {
-              const current = await tx.invoice.findFirst({
-                where: { id: allocation.invoiceId, organizationId, deletedAt: null },
-              });
-              if (current) {
-                const newAmountPaid = Number(current.amountPaid) - amount;
-                const total = Number(current.totalAmount ?? current.amount);
-                await tx.invoice.updateMany({
-                  where: { id: allocation.invoiceId, organizationId, deletedAt: null },
-                  data: {
-                    amountPaid: { decrement: amount },
-                    ...(current.status === "PAID" && newAmountPaid < total
-                      ? { status: "PENDING", paidAt: null }
-                      : {}),
-                  },
-                });
-              }
-            } else if (allocation.billId) {
-              const current = await tx.bill.findFirst({
-                where: { id: allocation.billId, organizationId, deletedAt: null },
-              });
-              if (current) {
-                const newAmountPaid = Number(current.amountPaid) - amount;
-                const total = Number(current.amount);
-                await tx.bill.updateMany({
-                  where: { id: allocation.billId, organizationId, deletedAt: null },
-                  data: {
-                    amountPaid: { decrement: amount },
-                    ...(current.status === "PAID" && newAmountPaid < total
-                      ? { status: "PENDING", paidAt: null }
-                      : {}),
-                  },
-                });
-              }
-            }
-
-            await tx.paymentAllocation.update({
-              where: { id: allocation.id },
-              data: { deletedAt: now },
+        for (const allocation of allocations) {
+          const amount = Number(allocation.amount);
+          if (allocation.invoiceId) {
+            const current = await tx.invoice.findFirst({
+              where: { id: allocation.invoiceId, organizationId, deletedAt: null },
             });
+            if (current) {
+              const newAmountPaid = Number(current.amountPaid) - amount;
+              const total = Number(current.totalAmount ?? current.amount);
+              await tx.invoice.updateMany({
+                where: { id: allocation.invoiceId, organizationId, deletedAt: null },
+                data: {
+                  amountPaid: { decrement: amount },
+                  ...(current.status === "PAID" && newAmountPaid < total
+                    ? { status: "PENDING", paidAt: null }
+                    : {}),
+                },
+              });
+            }
+          } else if (allocation.billId) {
+            const current = await tx.bill.findFirst({
+              where: { id: allocation.billId, organizationId, deletedAt: null },
+            });
+            if (current) {
+              const newAmountPaid = Number(current.amountPaid) - amount;
+              const total = Number(current.amount);
+              await tx.bill.updateMany({
+                where: { id: allocation.billId, organizationId, deletedAt: null },
+                data: {
+                  amountPaid: { decrement: amount },
+                  ...(current.status === "PAID" && newAmountPaid < total
+                    ? { status: "PENDING", paidAt: null }
+                    : {}),
+                },
+              });
+            }
           }
 
-          await tx.stockMovement.updateMany({
-            where: {
-              organizationId,
-              sourceType: "ADJUSTMENT",
-              sourceId: entityId,
-              deletedAt: null,
-            },
+          await tx.paymentAllocation.update({
+            where: { id: allocation.id },
             data: { deletedAt: now },
           });
+        }
 
-          await tx.payment.update({
-            where: { id: entityId, organizationId },
-            data: { deletedAt: now, tallyGuid: null },
-          });
+        await tx.stockMovement.updateMany({
+          where: {
+            organizationId,
+            sourceType: "ADJUSTMENT",
+            sourceId: entityId,
+            deletedAt: null,
+          },
+          data: { deletedAt: now },
+        });
+
+        await tx.payment.update({
+          where: { id: entityId, organizationId },
+          data: { deletedAt: now, tallyGuid: null },
         });
         break;
       }
       case "Invoice": {
-        await prisma.$transaction(async (tx) => {
-          await tx.invoiceLineItem.updateMany({
-            where: { organizationId, invoiceId: entityId, deletedAt: null },
-            data: { deletedAt: now },
-          });
-          await tx.stockMovement.updateMany({
-            where: { organizationId, sourceType: "INVOICE", sourceId: entityId, deletedAt: null },
-            data: { deletedAt: now },
-          });
-          const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: entityId } });
-          await tx.invoice.update({
-            where: { id: entityId, organizationId },
-            data: {
-              deletedAt: now,
-              tallyGuid: null,
-              invoiceNumber: `${invoice.invoiceNumber}__deleted-${entityId}`,
-            },
-          });
+        await tx.invoiceLineItem.updateMany({
+          where: { organizationId, invoiceId: entityId, deletedAt: null },
+          data: { deletedAt: now },
+        });
+        await tx.stockMovement.updateMany({
+          where: { organizationId, sourceType: "INVOICE", sourceId: entityId, deletedAt: null },
+          data: { deletedAt: now },
+        });
+        const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: entityId } });
+        await tx.invoice.update({
+          where: { id: entityId, organizationId },
+          data: {
+            deletedAt: now,
+            tallyGuid: null,
+            invoiceNumber: `${invoice.invoiceNumber}__deleted-${entityId}`,
+          },
         });
         break;
       }
       case "Bill": {
-        await prisma.$transaction(async (tx) => {
-          await tx.stockMovement.updateMany({
-            where: { organizationId, sourceType: "BILL", sourceId: entityId, deletedAt: null },
-            data: { deletedAt: now },
-          });
-          const bill = await tx.bill.findUniqueOrThrow({ where: { id: entityId } });
-          await tx.bill.update({
-            where: { id: entityId, organizationId },
-            data: {
-              deletedAt: now,
-              tallyGuid: null,
-              billNumber: `${bill.billNumber}__deleted-${entityId}`,
-            },
-          });
+        await tx.stockMovement.updateMany({
+          where: { organizationId, sourceType: "BILL", sourceId: entityId, deletedAt: null },
+          data: { deletedAt: now },
+        });
+        const bill = await tx.bill.findUniqueOrThrow({ where: { id: entityId } });
+        await tx.bill.update({
+          where: { id: entityId, organizationId },
+          data: {
+            deletedAt: now,
+            tallyGuid: null,
+            billNumber: `${bill.billNumber}__deleted-${entityId}`,
+          },
         });
         break;
       }
       case "Party": {
-        const party = await prisma.party.findUniqueOrThrow({ where: { id: entityId } });
-        await prisma.party.update({
+        const party = await tx.party.findUniqueOrThrow({ where: { id: entityId } });
+        await tx.party.update({
           where: { id: entityId, organizationId },
           data: { deletedAt: now, tallyGuid: null, name: `${party.name}__deleted-${entityId}` },
         });
         break;
       }
       case "Item": {
-        const item = await prisma.item.findUniqueOrThrow({ where: { id: entityId } });
-        await prisma.item.update({
+        const item = await tx.item.findUniqueOrThrow({ where: { id: entityId } });
+        await tx.item.update({
           where: { id: entityId, organizationId },
           data: { deletedAt: now, tallyGuid: null, name: `${item.name}__deleted-${entityId}` },
         });
@@ -256,6 +257,7 @@ export const tallyImportRepository = {
    * the write — only real scalar columns on the model are passed through.
    */
   async restoreEntitySnapshot(
+    tx: Prisma.TransactionClient | typeof prisma,
     organizationId: string,
     entityType: "Party" | "Item" | "Invoice" | "Bill" | "Payment",
     entityId: string,
@@ -278,19 +280,19 @@ export const tallyImportRepository = {
 
     switch (entityType) {
       case "Party":
-        await prisma.party.update({ where: { id: entityId, organizationId }, data });
+        await tx.party.update({ where: { id: entityId, organizationId }, data });
         break;
       case "Item":
-        await prisma.item.update({ where: { id: entityId, organizationId }, data });
+        await tx.item.update({ where: { id: entityId, organizationId }, data });
         break;
       case "Invoice":
-        await prisma.invoice.update({ where: { id: entityId, organizationId }, data });
+        await tx.invoice.update({ where: { id: entityId, organizationId }, data });
         break;
       case "Bill":
-        await prisma.bill.update({ where: { id: entityId, organizationId }, data });
+        await tx.bill.update({ where: { id: entityId, organizationId }, data });
         break;
       case "Payment":
-        await prisma.payment.update({ where: { id: entityId, organizationId }, data });
+        await tx.payment.update({ where: { id: entityId, organizationId }, data });
         break;
     }
   },
@@ -302,6 +304,7 @@ export const tallyImportRepository = {
    * Payment) have no dependents in this schema.
    */
   async countReferences(
+    tx: Prisma.TransactionClient | typeof prisma,
     organizationId: string,
     entityType: "Party" | "Item" | "Invoice" | "Bill" | "Payment",
     entityId: string,
@@ -309,16 +312,16 @@ export const tallyImportRepository = {
     switch (entityType) {
       case "Party": {
         const [invoices, bills, payments] = await Promise.all([
-          prisma.invoice.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
-          prisma.bill.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
-          prisma.payment.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
+          tx.invoice.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
+          tx.bill.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
+          tx.payment.count({ where: { organizationId, partyId: entityId, deletedAt: null } }),
         ]);
         return invoices + bills + payments;
       }
       case "Item": {
         const [lineItems, movements] = await Promise.all([
-          prisma.invoiceLineItem.count({ where: { organizationId, itemId: entityId, deletedAt: null } }),
-          prisma.stockMovement.count({ where: { organizationId, itemId: entityId, deletedAt: null } }),
+          tx.invoiceLineItem.count({ where: { organizationId, itemId: entityId, deletedAt: null } }),
+          tx.stockMovement.count({ where: { organizationId, itemId: entityId, deletedAt: null } }),
         ]);
         return lineItems + movements;
       }

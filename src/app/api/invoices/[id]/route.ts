@@ -1,7 +1,7 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { successResponse } from "@/lib/api/response";
 import { updateInvoiceSchema } from "@/lib/validations/invoice";
-import { invoiceService } from "@/server/services/invoice.service";
+import { computeLineItemsForInvoice, invoiceService } from "@/server/services/invoice.service";
 
 export const GET = withApiHandler(async (_request, ctx, params) => {
   const invoice = await invoiceService.get(ctx.organizationId, params.id);
@@ -11,8 +11,27 @@ export const GET = withApiHandler(async (_request, ctx, params) => {
 export const PATCH = withApiHandler(
   async (request, ctx, params) => {
     const body = await request.json();
-    const input = updateInvoiceSchema.parse(body);
-    const invoice = await invoiceService.update(ctx.organizationId, params.id, input);
+    const { lineItems, ...rest } = updateInvoiceSchema.parse(body);
+
+    // Same server-authoritative recompute as POST /api/invoices — see
+    // computeLineItemsForInvoice. `lineItems` must be distinguished from
+    // "key absent" (undefined, preserve existing line items/amounts) vs.
+    // "explicitly sent as []" (clear to zero line items — recompute via the
+    // same totals([]) path, which yields all-zero subtotal/tax/total).
+    const computed = lineItems !== undefined ? computeLineItemsForInvoice(lineItems) : null;
+
+    const invoice = await invoiceService.update(ctx.organizationId, params.id, {
+      ...rest,
+      ...(computed
+        ? {
+            amount: computed.totalAmount,
+            lineItems: computed.lineItems,
+            subtotal: computed.subtotal,
+            taxAmount: computed.taxAmount,
+            totalAmount: computed.totalAmount,
+          }
+        : {}),
+    });
     return successResponse(invoice);
   },
   { requiredRole: "member" },

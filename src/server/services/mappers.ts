@@ -1,14 +1,33 @@
-import type { Bill, Invoice, Item, Party, StockMovement } from "@/generated/prisma/client";
+import type {
+  Bill,
+  Invoice,
+  InvoiceLineItem,
+  Item,
+  Party,
+  StockMovement,
+} from "@/generated/prisma/client";
 import type { BillDto, InvoiceDto, ItemDto, PartyDto, StockMovementDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 
-export function toInvoiceDto(invoice: Invoice): InvoiceDto {
+/**
+ * `findById` additively includes `party`/`lineItems` (Task 13, invoice detail
+ * page); every other Invoice-returning repository method still returns a
+ * bare `Invoice`, so both relations are optional here and simply omitted
+ * from the DTO when absent.
+ */
+type InvoiceWithRelations = Invoice & {
+  party?: Party | null;
+  lineItems?: InvoiceLineItem[];
+};
+
+export function toInvoiceDto(invoice: InvoiceWithRelations): InvoiceDto {
   return {
     id: invoice.id,
     clientName: invoice.clientName,
     clientEmail: invoice.clientEmail,
     clientPhone: invoice.clientPhone,
     amount: decimalToNumber(invoice.amount),
+    currency: invoice.currency,
     dueDate: invoice.dueDate.toISOString(),
     invoiceNumber: invoice.invoiceNumber,
     notes: invoice.notes,
@@ -16,6 +35,26 @@ export function toInvoiceDto(invoice: Invoice): InvoiceDto {
     paidAt: invoice.paidAt?.toISOString() ?? null,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
+    partyId: invoice.partyId,
+    subtotal: invoice.subtotal === null ? null : decimalToNumber(invoice.subtotal),
+    taxAmount: invoice.taxAmount === null ? null : decimalToNumber(invoice.taxAmount),
+    totalAmount: invoice.totalAmount === null ? null : decimalToNumber(invoice.totalAmount),
+    amountPaid: decimalToNumber(invoice.amountPaid),
+    party: invoice.party && !invoice.party.deletedAt
+      ? { id: invoice.party.id, name: invoice.party.name, type: invoice.party.type }
+      : null,
+    lineItems: invoice.lineItems
+      ? invoice.lineItems.map((li) => ({
+          id: li.id,
+          itemId: li.itemId,
+          description: li.description,
+          quantity: decimalToNumber(li.quantity),
+          rate: decimalToNumber(li.rate),
+          amount: decimalToNumber(li.amount),
+          discountPct: decimalToNumber(li.discount),
+          taxRatePct: decimalToNumber(li.taxRate),
+        }))
+      : undefined,
   };
 }
 
@@ -39,7 +78,16 @@ export function toPartyDto(party: Party): PartyDto {
   };
 }
 
-export function toItemDto(item: Item): ItemDto {
+/**
+ * `stockOnHand` is computed on read (openingQty + net movements, via
+ * `stockService.getItemStock`/`getStockForItems`) rather than stored, so
+ * callers pass it in explicitly; it defaults to 0 for call sites (e.g. audit
+ * "before" snapshots) that don't need an accurate figure. `valuation` is
+ * derived from it here (`stockOnHand * salePrice`, 2dp) so every caller gets
+ * a consistent computation.
+ */
+export function toItemDto(item: Item, stockOnHand = 0): ItemDto {
+  const salePrice = item.salePrice === null ? null : decimalToNumber(item.salePrice);
   return {
     id: item.id,
     name: item.name,
@@ -50,9 +98,11 @@ export function toItemDto(item: Item): ItemDto {
     openingQty: decimalToNumber(item.openingQty),
     reorderLevel: item.reorderLevel === null ? null : decimalToNumber(item.reorderLevel),
     purchasePrice: item.purchasePrice === null ? null : decimalToNumber(item.purchasePrice),
-    salePrice: item.salePrice === null ? null : decimalToNumber(item.salePrice),
+    salePrice,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
+    stockOnHand,
+    valuation: Math.round(stockOnHand * (salePrice ?? 0) * 100) / 100,
   };
 }
 
@@ -65,12 +115,21 @@ export function toStockMovementDto(movement: StockMovement): StockMovementDto {
     sourceType: movement.sourceType,
     sourceId: movement.sourceId,
     godown: movement.godown,
+    notes: movement.notes,
     movementDate: movement.movementDate.toISOString(),
     createdAt: movement.createdAt.toISOString(),
   };
 }
 
-export function toBillDto(bill: Bill): BillDto {
+/**
+ * `findMany`/`findById` additively include `party` (Task 19, bills list/detail
+ * pages need the supplier name/link) — every other Bill-returning repository
+ * method still returns a bare `Bill`, so the relation is optional here and
+ * simply omitted from the DTO when absent.
+ */
+type BillWithRelations = Bill & { party?: Party | null };
+
+export function toBillDto(bill: BillWithRelations): BillDto {
   const amount = decimalToNumber(bill.amount);
   const amountPaid = decimalToNumber(bill.amountPaid);
   return {
@@ -88,6 +147,9 @@ export function toBillDto(bill: Bill): BillDto {
     paidAt: bill.paidAt?.toISOString() ?? null,
     createdAt: bill.createdAt.toISOString(),
     updatedAt: bill.updatedAt.toISOString(),
+    party: bill.party && !bill.party.deletedAt
+      ? { id: bill.party.id, name: bill.party.name, type: bill.party.type }
+      : null,
   };
 }
 
@@ -100,9 +162,11 @@ export function parseDueDate(value: string): Date {
 
 export function computeInvoiceStatus(
   dueDate: Date,
-  explicit?: "PENDING" | "OVERDUE" | "PAID",
-): "PENDING" | "OVERDUE" | "PAID" {
-  if (explicit === "PAID") return "PAID";
+  explicit?: "PENDING" | "OVERDUE" | "PAID" | "PARTIALLY_PAID" | "WRITTEN_OFF",
+): "PENDING" | "OVERDUE" | "PAID" | "PARTIALLY_PAID" | "WRITTEN_OFF" {
+  if (explicit === "PAID" || explicit === "PARTIALLY_PAID" || explicit === "WRITTEN_OFF") {
+    return explicit;
+  }
   if (explicit === "OVERDUE") return "OVERDUE";
   const now = new Date();
   return dueDate < now ? "OVERDUE" : "PENDING";

@@ -39,6 +39,8 @@ Legend: ✅ set · ⬜ not yet set · — not applicable to that environment.
 | `SENTRY_DSN` | Error tracking (Task 7) | ⬜ | ⬜ | ⬜ | sentry.io project settings |
 | `SENTRY_AUTH_TOKEN` | Sentry release/source-map upload (Task 7, CI) | — | ⬜ | ⬜ | sentry.io → Auth Tokens |
 | `ASSISTANT_KILL_SWITCH` | Assistant guardrail flag (Phase 6) | ⬜ | ⬜ | ⬜ | Set manually per environment; `true` disables all assistant tool execution |
+| `E2E_CLERK_USER_EMAIL` | Playwright e2e auth fixture (`e2e/auth.setup.ts`, Phase 3 Task 1) | ⬜ | — | — | Dedicated test user in the Clerk dev instance (`refined-collie-21`), email+password auth enabled; also set as a GitHub Actions secret for the `e2e` CI job |
+| `E2E_CLERK_USER_PASSWORD` | Playwright e2e auth fixture (`e2e/auth.setup.ts`, Phase 3 Task 1) | ⬜ | — | — | Password for the same dedicated Clerk test user; also set as a GitHub Actions secret for the `e2e` CI job |
 
 ## Notes
 
