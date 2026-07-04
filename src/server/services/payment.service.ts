@@ -164,6 +164,8 @@ export const paymentService = {
             paymentDate: input.paymentDate,
             reference: input.reference ?? null,
             notes: input.notes ?? null,
+            tallyGuid: input.tallyGuid ?? null,
+            tallyAlterId: input.tallyAlterId ?? null,
           },
           plan.allocations,
         );

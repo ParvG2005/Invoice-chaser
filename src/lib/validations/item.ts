@@ -10,6 +10,8 @@ export const createItemSchema = z.object({
   reorderLevel: z.coerce.number().nonnegative().optional(),
   purchasePrice: z.coerce.number().nonnegative().optional(),
   salePrice: z.coerce.number().nonnegative().optional(),
+  tallyGuid: z.string().optional(),
+  tallyAlterId: z.number().int().optional(),
 });
 
 export const updateItemSchema = createItemSchema.partial();

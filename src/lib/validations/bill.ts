@@ -9,6 +9,8 @@ export const createBillSchema = z.object({
   amount: z.coerce.number().positive(),
   notes: z.string().max(2000).optional(),
   status: invoiceStatusSchema.optional(),
+  tallyGuid: z.string().optional(),
+  tallyAlterId: z.number().int().optional(),
 });
 
 export const updateBillSchema = createBillSchema.partial();

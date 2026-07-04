@@ -84,6 +84,9 @@ enum CommunicationStatus {
 enum ImportSource {
   TALLY_XML
   CSV
+  TALLY_MASTERS_LEDGERS
+  TALLY_MASTERS_STOCKITEMS
+  TALLY_VOUCHERS
 }
 
 enum ImportBatchStatus {
@@ -205,6 +208,7 @@ model Invoice {
   amountPaid  Decimal     @default(0) @map("amount_paid") @db.Decimal(12, 2)
   currency    String      @default("INR")
   tallyGuid   String?     @map("tally_guid")
+  tallyAlterId Int?       @map("tally_alter_id")
 
   organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   reminders         Reminder[]
@@ -317,6 +321,7 @@ model Party {
   openingBalance Decimal?  @map("opening_balance") @db.Decimal(12, 2)
   notes          String?
   tallyGuid      String?   @map("tally_guid")
+  tallyAlterId   Int?      @map("tally_alter_id")
   agentId        String?   @map("agent_id")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -349,6 +354,7 @@ model Item {
   purchasePrice  Decimal?  @map("purchase_price") @db.Decimal(12, 2)
   salePrice      Decimal?  @map("sale_price") @db.Decimal(12, 2)
   tallyGuid      String?   @map("tally_guid")
+  tallyAlterId   Int?      @map("tally_alter_id")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
@@ -420,6 +426,7 @@ model Bill {
   status         InvoiceStatus @default(PENDING)
   notes          String?
   tallyGuid      String?       @map("tally_guid")
+  tallyAlterId   Int?          @map("tally_alter_id")
   paidAt         DateTime?     @map("paid_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
@@ -449,6 +456,7 @@ model Payment {
   notes          String?
   currency       String           @default("INR")
   tallyGuid      String?          @map("tally_guid")
+  tallyAlterId   Int?             @map("tally_alter_id")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
   deletedAt      DateTime?        @map("deleted_at")
@@ -527,6 +535,9 @@ model ImportBatch {
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
   deletedAt      DateTime?         @map("deleted_at")
+  totalCount     Int               @default(0) @map("total_count")
+  processedCount Int               @default(0) @map("processed_count")
+  rawContent     String?           @map("raw_content") @db.Text
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   records      ImportRecord[]
@@ -542,11 +553,12 @@ model ImportRecord {
   batchId        String             @map("batch_id")
   recordType     String             @map("record_type")
   tallyGuid      String?            @map("tally_guid")
-  alterId        String?            @map("alter_id")
+  alterId        Int?               @map("alter_id")
   entityId       String?            @map("entity_id")
   status         ImportRecordStatus
   message        String?
   createdAt      DateTime           @default(now()) @map("created_at")
+  beforeJson     Json?              @map("before_json")
 
   batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 

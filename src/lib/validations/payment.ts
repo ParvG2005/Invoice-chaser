@@ -17,6 +17,8 @@ export const createPaymentSchema = z.object({
   reference: z.string().max(100).optional(),
   notes: z.string().max(2000).optional(),
   allocations: z.array(explicitAllocationSchema).optional(), // omitted → auto FIFO
+  tallyGuid: z.string().optional(),
+  tallyAlterId: z.number().int().optional(),
 });
 
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;

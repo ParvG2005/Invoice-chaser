@@ -42,6 +42,8 @@ export const partyService = {
         creditDays: input.creditDays ?? null,
         openingBalance: input.openingBalance ?? null,
         notes: input.notes ?? null,
+        tallyGuid: input.tallyGuid ?? null,
+        tallyAlterId: input.tallyAlterId ?? null,
         ...(input.agentId ? { agent: { connect: { id: input.agentId } } } : {}),
       });
       return toPartyDto(party);
@@ -81,6 +83,8 @@ export const partyService = {
           openingBalance: input.openingBalance,
           notes: input.notes,
           agentId: input.agentId,
+          tallyGuid: input.tallyGuid,
+          tallyAlterId: input.tallyAlterId,
         });
         return this.get(organizationId, id);
       },

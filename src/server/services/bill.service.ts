@@ -34,6 +34,8 @@ export const billService = {
         amount: input.amount,
         notes: input.notes ?? null,
         status,
+        tallyGuid: input.tallyGuid ?? null,
+        tallyAlterId: input.tallyAlterId ?? null,
         ...(status === "PAID" ? { paidAt: new Date() } : {}),
       });
       return toBillDto(bill);
@@ -64,6 +66,8 @@ export const billService = {
           amount: input.amount,
           notes: input.notes,
           status,
+          tallyGuid: input.tallyGuid,
+          tallyAlterId: input.tallyAlterId,
         };
         if (status === "PAID" && existing.status !== "PAID") {
           updateData.paidAt = new Date();

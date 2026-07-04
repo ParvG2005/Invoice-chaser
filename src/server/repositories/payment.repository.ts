@@ -18,6 +18,8 @@ export interface CreatePaymentData {
   paymentDate?: Date;
   reference?: string | null;
   notes?: string | null;
+  tallyGuid?: string | null;
+  tallyAlterId?: number | null;
 }
 
 export interface AllocationWrite {
@@ -147,6 +149,8 @@ export const paymentRepository = {
           ...(data.paymentDate ? { paymentDate: data.paymentDate } : {}),
           reference: data.reference ?? null,
           notes: data.notes ?? null,
+          tallyGuid: data.tallyGuid ?? null,
+          tallyAlterId: data.tallyAlterId ?? null,
         },
       });
 
