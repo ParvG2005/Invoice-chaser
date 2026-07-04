@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { ArrowRight, Mail, Sparkles, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -9,21 +9,21 @@ export default function LandingPage() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="text-xl font-bold">InvoicePilot</div>
         <div className="flex items-center gap-3">
-          <SignedOut>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <Button variant="ghost">Sign in</Button>
             </SignInButton>
             <SignUpButton mode="modal">
               <Button>Get started</Button>
             </SignUpButton>
-          </SignedOut>
-          <SignedIn>
+          </Show>
+          <Show when="signed-in">
             <Link href="/dashboard">
               <Button>
                 Dashboard <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-          </SignedIn>
+          </Show>
         </div>
       </header>
 
@@ -39,16 +39,16 @@ export default function LandingPage() {
           follow-ups — powered by free-tier AI models.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <SignedOut>
+          <Show when="signed-out">
             <SignUpButton mode="modal">
               <Button size="lg">Start free</Button>
             </SignUpButton>
-          </SignedOut>
-          <SignedIn>
+          </Show>
+          <Show when="signed-in">
             <Link href="/dashboard">
               <Button size="lg">Open dashboard</Button>
             </Link>
-          </SignedIn>
+          </Show>
         </div>
 
         <div className="mt-20 grid gap-6 text-left sm:grid-cols-3">

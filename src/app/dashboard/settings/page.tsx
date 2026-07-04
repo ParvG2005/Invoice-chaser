@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const [autoSend, setAutoSend] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
 
+  // Sync local form state from fetched settings once loaded.
+  /* eslint-disable react-hooks/set-state-in-effect -- initializing form state from a query result, not a render loop */
   useEffect(() => {
     if (data) {
       setReminderDays(data.reminderDays.join(","));
@@ -40,6 +42,7 @@ export default function SettingsPage() {
       setWhatsappEnabled(data.whatsappEnabled);
     }
   }, [data]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const save = useMutation({
     mutationFn: () =>

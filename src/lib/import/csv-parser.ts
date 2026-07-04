@@ -60,7 +60,7 @@ export function parseCsv(file: File): Promise<CsvParseResult> {
             } as CreateInvoiceInput);
           } catch (err) {
             const rowId = resolveField(row, "invoiceNumber") ?? `Row ${index + 2}`;
-            const msg = err instanceof ZodError ? err.errors[0]?.message : String(err);
+            const msg = err instanceof ZodError ? err.issues[0]?.message : String(err);
             errors.push(`${rowId}: ${msg}`);
           }
         });

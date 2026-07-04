@@ -41,7 +41,7 @@ export function AppSidebar() {
       </nav>
       <div className="border-t border-zinc-200 p-4 dark:border-zinc-800 space-y-2">
         <div className="flex items-center gap-2 px-1">
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </div>
         <button
           onClick={() => signOut({ redirectUrl: "/" })}

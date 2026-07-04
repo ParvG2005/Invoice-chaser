@@ -10,8 +10,7 @@ const log = createLogger("inngest-workflows");
 const ORG_PAGE_SIZE = 500;
 
 export const reminderScanWorkflow = inngest.createFunction(
-  { id: "reminder-scan", name: "Daily Reminder Scan" },
-  { cron: "0 9 * * *" },
+  { id: "reminder-scan", name: "Daily Reminder Scan", triggers: { cron: "0 9 * * *" } },
   async ({ step }) => {
     // Fan out: page through organizations and emit one overdue-check event per org.
     // Each org is then processed in its own (parallel, retried) function run, so a
@@ -48,8 +47,7 @@ export const reminderScanWorkflow = inngest.createFunction(
 );
 
 export const sendReminderWorkflow = inngest.createFunction(
-  { id: "send-reminder", name: "Send Reminder Email" },
-  { event: JOB_EVENTS.SEND_REMINDER },
+  { id: "send-reminder", name: "Send Reminder Email", triggers: { event: JOB_EVENTS.SEND_REMINDER } },
   async ({ event, step }) => {
     const reminderId = event.data.reminderId as string;
     return step.run("send-email", () => reminderService.sendReminder(reminderId));
@@ -57,8 +55,7 @@ export const sendReminderWorkflow = inngest.createFunction(
 );
 
 export const overdueCheckWorkflow = inngest.createFunction(
-  { id: "overdue-check", name: "Overdue Invoice Check" },
-  { event: JOB_EVENTS.OVERDUE_CHECK },
+  { id: "overdue-check", name: "Overdue Invoice Check", triggers: { event: JOB_EVENTS.OVERDUE_CHECK } },
   async ({ event, step }) => {
     const organizationId = event.data.organizationId as string;
     await step.run("mark-overdue", () =>
