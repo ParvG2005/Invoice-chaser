@@ -1,4 +1,4 @@
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma, StockSourceType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 export const STOCK_MOVEMENT_PAGE_SIZE = 100;
@@ -29,5 +29,17 @@ export const stockRepository = {
       _sum: { qty: true },
     });
     return result._sum.qty ? Number(result._sum.qty) : 0;
+  },
+
+  /**
+   * Soft-deletes every movement recorded against a given source document
+   * (e.g. an Invoice or Bill being re-imported with a newer ALTERID). Used
+   * by stockService.replaceMovementsForSource ahead of re-recording.
+   */
+  softDeleteMovementsForSource(organizationId: string, sourceType: StockSourceType, sourceId: string) {
+    return prisma.stockMovement.updateMany({
+      where: { organizationId, sourceType, sourceId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
   },
 };

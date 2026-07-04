@@ -11,6 +11,31 @@ export interface InvoiceListOptions {
   cursor?: string;
 }
 
+export interface InvoiceLineItemInput {
+  itemId?: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
+function lineItemsCreateManyData(
+  organizationId: string,
+  invoiceId: string,
+  lineItems: InvoiceLineItemInput[],
+): Prisma.InvoiceLineItemCreateManyInput[] {
+  return lineItems.map((li, index) => ({
+    organizationId,
+    invoiceId,
+    itemId: li.itemId ?? null,
+    description: li.description,
+    quantity: li.quantity,
+    rate: li.rate,
+    amount: li.amount,
+    sortOrder: index,
+  }));
+}
+
 export const invoiceRepository = {
   findMany(organizationId: string, options: InvoiceListOptions = {}) {
     const take = Math.min(options.take ?? INVOICE_PAGE_SIZE, INVOICE_MAX_PAGE_SIZE);
@@ -49,6 +74,40 @@ export const invoiceRepository = {
 
   createMany(data: Prisma.InvoiceCreateManyInput[]) {
     return prisma.invoice.createMany({ data, skipDuplicates: true });
+  },
+
+  /**
+   * Creates an invoice and its line items atomically. Mirrors
+   * paymentRepository.createWithAllocations's transaction style.
+   */
+  createWithLineItems(data: Prisma.InvoiceCreateInput, lineItems: InvoiceLineItemInput[]) {
+    return prisma.$transaction(async (tx) => {
+      const invoice = await tx.invoice.create({ data });
+      if (lineItems.length > 0) {
+        await tx.invoiceLineItem.createMany({
+          data: lineItemsCreateManyData(invoice.organizationId, invoice.id, lineItems),
+        });
+      }
+      return invoice;
+    });
+  },
+
+  /**
+   * Soft-deletes an invoice's existing line items and writes the replacement
+   * set, atomically. Used when re-importing a voucher whose ALTERID advanced.
+   */
+  replaceLineItems(organizationId: string, invoiceId: string, lineItems: InvoiceLineItemInput[]) {
+    return prisma.$transaction(async (tx) => {
+      await tx.invoiceLineItem.updateMany({
+        where: { organizationId, invoiceId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      if (lineItems.length > 0) {
+        await tx.invoiceLineItem.createMany({
+          data: lineItemsCreateManyData(organizationId, invoiceId, lineItems),
+        });
+      }
+    });
   },
 
   update(organizationId: string, id: string, data: Prisma.InvoiceUpdateInput) {

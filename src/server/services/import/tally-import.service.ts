@@ -3,10 +3,18 @@ import { NotFoundError, AppError } from "@/lib/api/errors";
 import { parseTallyEnvelope } from "@/lib/import/tally/xml";
 import { parseLedgers, parseStockItems } from "@/lib/import/tally/parse-masters";
 import { parseVouchers } from "@/lib/import/tally/parse-vouchers";
-import type { TallyLedger, TallyStockItem, TallyVoucher } from "@/lib/import/tally/types";
+import type {
+  TallyInventoryEntry,
+  TallyLedger,
+  TallyStockItem,
+  TallyVoucher,
+} from "@/lib/import/tally/types";
 import { tallyImportRepository } from "@/server/repositories/tally-import.repository";
 import { partyService } from "@/server/services/party.service";
 import { itemService } from "@/server/services/item.service";
+import { invoiceService } from "@/server/services/invoice.service";
+import { billService } from "@/server/services/bill.service";
+import { stockService } from "@/server/services/stock.service";
 import { createLogger } from "@/lib/logger";
 import type { ImportBatch, ImportRecord } from "@/generated/prisma/client";
 
@@ -403,13 +411,320 @@ async function importStockItems(
   }
 }
 
-// importVouchers lands in Task 7; declared here so runBatch compiles.
+/**
+ * Finds (or stub-creates) the Party for a voucher's PARTYLEDGERNAME.
+ * Returns the party's id and creditDays (needed for dueDate) in one call —
+ * whether the party already existed or had to be created — plus an optional
+ * note for the ImportRecord message when a stub party was created.
+ */
+async function resolveParty(
+  organizationId: string,
+  name: string,
+  fallbackType: "CUSTOMER" | "SUPPLIER",
+): Promise<{ partyId: string; creditDays: number | null; note?: string }> {
+  const existing = await tallyImportRepository.findPartyByName(organizationId, name);
+  if (existing) return { partyId: existing.id, creditDays: existing.creditDays };
+
+  const created = await partyService.create(organizationId, { name, type: fallbackType });
+  return {
+    partyId: created.id,
+    creditDays: created.creditDays,
+    note: `Created stub ${fallbackType.toLowerCase()} party "${name}" — fill in email/phone before chasing`,
+  };
+}
+
+/** The party ledger entry carries the document total (Tally sign: debit negative). */
+function voucherTotal(voucher: TallyVoucher): number {
+  const party = voucher.ledgerEntries.find((e) => e.isPartyLedger);
+  if (party) return Math.abs(party.amount);
+  return voucher.inventoryEntries.reduce((sum, e) => sum + e.amount, 0);
+}
+
+function addDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Builds Invoice line items from a Sales voucher's inventory entries. An
+ * unmatched stock item name doesn't fail the import (warnings, not
+ * failures) — the line is kept without an itemId and a note is pushed for
+ * the ImportRecord message.
+ */
+async function buildLineItems(
+  organizationId: string,
+  entries: TallyInventoryEntry[],
+  notes: string[],
+) {
+  const lineItems = [];
+  for (const entry of entries) {
+    const item = await tallyImportRepository.findItemByName(organizationId, entry.stockItemName);
+    if (!item) notes.push(`Unknown stock item "${entry.stockItemName}" — line kept without item link`);
+    lineItems.push({
+      itemId: item?.id ?? undefined,
+      description: entry.stockItemName,
+      quantity: entry.quantity,
+      rate: entry.rate,
+      amount: entry.amount,
+    });
+  }
+  return lineItems;
+}
+
+/**
+ * Records one StockMovement per inventory entry whose stock item matched an
+ * existing Item (an unmatched item was already noted by buildLineItems, so
+ * it's silently skipped here — there's nothing to move stock against).
+ */
+async function recordVoucherStock(
+  organizationId: string,
+  entries: TallyInventoryEntry[],
+  direction: 1 | -1,
+  sourceType: "INVOICE" | "BILL",
+  sourceId: string,
+) {
+  for (const entry of entries) {
+    const item = await tallyImportRepository.findItemByName(organizationId, entry.stockItemName);
+    if (!item) continue;
+    await stockService.recordMovement(organizationId, {
+      itemId: item.id,
+      qty: direction * entry.quantity,
+      rate: entry.rate,
+      sourceType,
+      sourceId,
+    });
+  }
+}
+
 async function importVouchers(
+  organizationId: string,
+  batchId: string,
+  vouchers: TallyVoucher[],
+  counters: Counters,
+  flush: () => Promise<unknown>,
+): Promise<void> {
+  for (const voucher of vouchers) {
+    counters.processed += 1;
+    try {
+      switch (voucher.kind) {
+        case "SALES":
+          await importSalesVoucher(organizationId, batchId, voucher, counters);
+          break;
+        case "PURCHASE":
+          await importPurchaseVoucher(organizationId, batchId, voucher, counters);
+          break;
+        case "RECEIPT":
+        case "PAYMENT":
+        case "CREDIT_NOTE":
+        case "DEBIT_NOTE":
+          await importMoneyVoucher(organizationId, batchId, voucher, counters); // Task 8
+          break;
+        default: {
+          counters.skipped += 1;
+          await tallyImportRepository.createRecord({
+            organizationId,
+            batchId,
+            recordType: "Voucher",
+            entityId: null,
+            tallyGuid: voucher.guid,
+            alterId: voucher.alterId,
+            status: "SKIPPED",
+            message: `Unsupported voucher type "${voucher.voucherTypeName}"`,
+          });
+        }
+      }
+    } catch (error) {
+      counters.errored += 1;
+      await tallyImportRepository.createRecord({
+        organizationId,
+        batchId,
+        recordType: "Voucher",
+        entityId: null,
+        tallyGuid: voucher.guid,
+        alterId: voucher.alterId,
+        status: "ERRORED",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+    if (counters.processed % FLUSH_EVERY === 0) await flush();
+  }
+}
+
+async function importSalesVoucher(
+  organizationId: string,
+  batchId: string,
+  voucher: TallyVoucher,
+  counters: Counters,
+) {
+  const notes: string[] = [];
+  const existing = await tallyImportRepository.findInvoiceByGuid(organizationId, voucher.guid);
+  if (existing && (existing.tallyAlterId ?? 0) >= voucher.alterId) {
+    counters.skipped += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Invoice",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "SKIPPED",
+      message: "Unchanged (ALTERID not newer)",
+    });
+    return;
+  }
+
+  const { partyId, creditDays, note } = await resolveParty(
+    organizationId,
+    voucher.partyLedgerName,
+    "CUSTOMER",
+  );
+  if (note) notes.push(note);
+  const dueDate = addDays(voucher.date, creditDays ?? 0);
+  const lineItems = await buildLineItems(organizationId, voucher.inventoryEntries, notes);
+
+  const input = {
+    type: "RECEIVABLE" as const,
+    partyId,
+    clientName: voucher.partyLedgerName,
+    invoiceNumber: voucher.voucherNumber,
+    amount: voucherTotal(voucher),
+    dueDate,
+    notes: voucher.narration,
+    tallyGuid: voucher.guid,
+    tallyAlterId: voucher.alterId,
+    lineItems,
+  };
+
+  if (!existing) {
+    const created = await invoiceService.create(organizationId, input);
+    await recordVoucherStock(organizationId, voucher.inventoryEntries, -1, "INVOICE", created.id);
+    counters.created += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Invoice",
+      entityId: created.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "CREATED",
+      message: notes.length ? notes.join("; ") : undefined,
+    });
+  } else {
+    await invoiceService.update(organizationId, existing.id, input); // replaces lineItems
+    await stockService.replaceMovementsForSource(organizationId, "INVOICE", existing.id);
+    await recordVoucherStock(organizationId, voucher.inventoryEntries, -1, "INVOICE", existing.id);
+    counters.updated += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Invoice",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "UPDATED",
+      message: notes.length ? notes.join("; ") : undefined,
+      beforeJson: JSON.parse(JSON.stringify(existing)),
+    });
+  }
+}
+
+/**
+ * Mirror of importSalesVoucher for Purchase vouchers. Bill has no
+ * line-item relation in the schema (only Invoice does) — see the Task 0
+ * reconciliation note's "Bill — no line items exist on the model at all".
+ * Scope decision: a Purchase voucher creates/updates a Bill with only the
+ * aggregate amount/dueDate/notes/tallyGuid/tallyAlterId; the voucher's
+ * inventory detail is still fully captured via one StockMovement (IN) per
+ * entry, exactly as for Sales/stock-OUT. No BillLineItem model is added —
+ * nothing would consume it (YAGNI).
+ */
+async function importPurchaseVoucher(
+  organizationId: string,
+  batchId: string,
+  voucher: TallyVoucher,
+  counters: Counters,
+) {
+  const notes: string[] = [];
+  const existing = await tallyImportRepository.findBillByGuid(organizationId, voucher.guid);
+  if (existing && (existing.tallyAlterId ?? 0) >= voucher.alterId) {
+    counters.skipped += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Bill",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "SKIPPED",
+      message: "Unchanged (ALTERID not newer)",
+    });
+    return;
+  }
+
+  const { partyId, creditDays, note } = await resolveParty(
+    organizationId,
+    voucher.partyLedgerName,
+    "SUPPLIER",
+  );
+  if (note) notes.push(note);
+  const dueDate = addDays(voucher.date, creditDays ?? 0);
+  // Line items aren't persisted for Bill (no relation) — buildLineItems is
+  // still used to collect "unknown stock item" notes and validate matches
+  // the same way Sales does, but its result is discarded.
+  await buildLineItems(organizationId, voucher.inventoryEntries, notes);
+
+  const input = {
+    partyId,
+    billNumber: voucher.voucherNumber,
+    amount: voucherTotal(voucher),
+    dueDate,
+    notes: voucher.narration,
+    tallyGuid: voucher.guid,
+    tallyAlterId: voucher.alterId,
+  };
+
+  if (!existing) {
+    const created = await billService.create(organizationId, input);
+    await recordVoucherStock(organizationId, voucher.inventoryEntries, 1, "BILL", created.id);
+    counters.created += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Bill",
+      entityId: created.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "CREATED",
+      message: notes.length ? notes.join("; ") : undefined,
+    });
+  } else {
+    await billService.update(organizationId, existing.id, input);
+    await stockService.replaceMovementsForSource(organizationId, "BILL", existing.id);
+    await recordVoucherStock(organizationId, voucher.inventoryEntries, 1, "BILL", existing.id);
+    counters.updated += 1;
+    await tallyImportRepository.createRecord({
+      organizationId,
+      batchId,
+      recordType: "Bill",
+      entityId: existing.id,
+      tallyGuid: voucher.guid,
+      alterId: voucher.alterId,
+      status: "UPDATED",
+      message: notes.length ? notes.join("; ") : undefined,
+      beforeJson: JSON.parse(JSON.stringify(existing)),
+    });
+  }
+}
+
+// importMoneyVoucher (Receipt/Payment/Credit Note/Debit Note) lands in
+// Task 8; declared here so importVouchers compiles. The outer try/catch in
+// importVouchers turns this into an ERRORED record for now.
+async function importMoneyVoucher(
   _organizationId: string,
   _batchId: string,
-  _vouchers: TallyVoucher[],
+  _voucher: TallyVoucher,
   _counters: Counters,
-  _flush: () => Promise<unknown>,
 ): Promise<void> {
-  throw new AppError("NOT_IMPLEMENTED", "Voucher import lands in Task 7", 501);
+  throw new AppError("NOT_IMPLEMENTED", "Money voucher import lands in Task 8", 501);
 }
