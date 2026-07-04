@@ -25,6 +25,12 @@ export interface InvoiceLineItemInput {
   quantity: number;
   rate: number;
   amount: number;
+  /** Discount percentage (0-100). Optional for backward compatibility with
+   * existing callers (tally-import, `duplicate`) that don't track discount;
+   * defaults to 0, matching the column's DB default. */
+  discount?: number;
+  /** Tax rate percentage (0-100), same optionality/default rationale as `discount`. */
+  taxRate?: number;
 }
 
 function lineItemsCreateManyData(
@@ -40,6 +46,8 @@ function lineItemsCreateManyData(
     quantity: li.quantity,
     rate: li.rate,
     amount: li.amount,
+    discount: li.discount ?? 0,
+    taxRate: li.taxRate ?? 0,
     sortOrder: index,
   }));
 }

@@ -32,6 +32,22 @@ export const stockRepository = {
   },
 
   /**
+   * Batched movement-qty sum for a set of items (the item-picker search
+   * route, Task 14), avoiding the N+1 of calling `sumQty` per row. Returns a
+   * map keyed by itemId; an item with no movements is simply absent from the
+   * map (caller treats a missing key as 0).
+   */
+  async sumQtyByItemIds(organizationId: string, itemIds: string[]): Promise<Map<string, number>> {
+    if (itemIds.length === 0) return new Map();
+    const rows = await prisma.stockMovement.groupBy({
+      by: ["itemId"],
+      where: { organizationId, itemId: { in: itemIds }, deletedAt: null },
+      _sum: { qty: true },
+    });
+    return new Map(rows.map((row) => [row.itemId, row._sum.qty ? Number(row._sum.qty) : 0]));
+  },
+
+  /**
    * Soft-deletes every movement recorded against a given source document
    * (e.g. an Invoice or Bill being re-imported with a newer ALTERID). Used
    * by stockService.replaceMovementsForSource ahead of re-recording.

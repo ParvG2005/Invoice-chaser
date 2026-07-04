@@ -2,6 +2,23 @@ import { z } from "zod";
 
 export const invoiceStatusSchema = z.enum(["PENDING", "OVERDUE", "PAID"]);
 
+/**
+ * One row from the invoice editor's line-items table (Task 14). Structurally
+ * matches `LineItemInput` in `src/modules/invoices/line-items.ts` — the
+ * shared pure module that computes `amount`/totals from this exact shape, so
+ * `POST /api/invoices` / `PATCH /api/invoices/[id]` can hand parsed rows
+ * straight to `computeLineItemsForInvoice` (see invoice.service.ts) without
+ * remapping field names.
+ */
+export const lineItemInputSchema = z.object({
+  itemId: z.string().optional(),
+  description: z.string().min(1).max(500),
+  qty: z.coerce.number().positive(),
+  rate: z.coerce.number().nonnegative(),
+  discountPct: z.coerce.number().min(0).max(100).default(0),
+  taxRatePct: z.coerce.number().min(0).max(100).default(0),
+});
+
 export const createInvoiceSchema = z.object({
   clientName: z.string().min(1).max(200),
   clientEmail: z.string().email(),
@@ -11,6 +28,15 @@ export const createInvoiceSchema = z.object({
   invoiceNumber: z.string().min(1).max(100),
   notes: z.string().max(2000).optional(),
   status: invoiceStatusSchema.optional(),
+  partyId: z.string().optional(),
+  /**
+   * When present (and non-empty), the route recomputes `amount`/`subtotal`/
+   * `taxAmount`/`totalAmount` server-side from these rows via
+   * `computeLineItemsForInvoice` — the client-supplied `amount` above is
+   * ignored in that case so the persisted totals can never diverge from the
+   * shared line-item math.
+   */
+  lineItems: z.array(lineItemInputSchema).optional(),
 });
 
 export const updateInvoiceSchema = createInvoiceSchema.partial();
@@ -47,6 +73,7 @@ export const writeOffSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+export type LineItemInputSchema = z.infer<typeof lineItemInputSchema>;
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
 export type SnoozeInput = z.infer<typeof snoozeSchema>;

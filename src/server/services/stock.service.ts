@@ -42,6 +42,25 @@ export const stockService = {
     return { itemId, currentQty: decimalToNumber(item.openingQty) + movementSum };
   },
 
+  /**
+   * Batched stock-on-hand for a set of items (`openingQty + sum of
+   * movements` per item), used by the item-picker search route
+   * (`GET /api/items?query=`, Task 14) so the stock badge doesn't require an
+   * N+1 `getItemStock` call per search result.
+   */
+  async getStockForItems(
+    organizationId: string,
+    items: Array<{ id: string; openingQty: number }>,
+  ): Promise<Map<string, number>> {
+    const movementSums = await stockRepository.sumQtyByItemIds(
+      organizationId,
+      items.map((item) => item.id),
+    );
+    return new Map(
+      items.map((item) => [item.id, item.openingQty + (movementSums.get(item.id) ?? 0)]),
+    );
+  },
+
   async listMovements(
     organizationId: string,
     itemId: string,

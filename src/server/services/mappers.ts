@@ -46,10 +46,13 @@ export function toInvoiceDto(invoice: InvoiceWithRelations): InvoiceDto {
     lineItems: invoice.lineItems
       ? invoice.lineItems.map((li) => ({
           id: li.id,
+          itemId: li.itemId,
           description: li.description,
           quantity: decimalToNumber(li.quantity),
           rate: decimalToNumber(li.rate),
           amount: decimalToNumber(li.amount),
+          discountPct: decimalToNumber(li.discount),
+          taxRatePct: decimalToNumber(li.taxRate),
         }))
       : undefined,
   };

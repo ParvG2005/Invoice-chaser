@@ -5,7 +5,43 @@ import { invoiceRepository, type InvoiceLineItemInput } from "@/server/repositor
 import { computeInvoiceStatus, parseDueDate, toInvoiceDto } from "@/server/services/mappers";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { decimalToNumber } from "@/lib/utils/currency";
+import { lineAmount, totals, type LineItemInput } from "@/modules/invoices/line-items";
 import type { TimelineEntry } from "@/types";
+
+/**
+ * Converts the invoice editor's line-items input (Task 14 — `qty`/
+ * `discountPct`/`taxRatePct`, matching `LineItemInput`) into the
+ * repository's persisted shape (`quantity`/`discount`/`taxRate`/`amount`),
+ * computing `amount` per row and `subtotal`/`taxAmount`/`totalAmount`
+ * overall via the shared `lineAmount`/`totals` pure functions. Used by both
+ * `POST /api/invoices` and `PATCH /api/invoices/[id]` so persisted totals
+ * can never diverge from the client-side editor's math — the client-sent
+ * `amount`/`subtotal`/`taxAmount`/`totalAmount` are ignored whenever
+ * `lineItems` is supplied.
+ */
+export function computeLineItemsForInvoice(items: LineItemInput[]): {
+  lineItems: InvoiceLineItemInput[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+} {
+  const computedTotals = totals(items);
+  const lineItems: InvoiceLineItemInput[] = items.map((li) => ({
+    itemId: li.itemId,
+    description: li.description,
+    quantity: li.qty,
+    rate: li.rate,
+    discount: li.discountPct,
+    taxRate: li.taxRatePct,
+    amount: lineAmount(li),
+  }));
+  return {
+    lineItems,
+    subtotal: computedTotals.subtotal,
+    taxAmount: computedTotals.taxAmount,
+    totalAmount: computedTotals.total,
+  };
+}
 
 /**
  * Widened service-level input for Invoice create/update. `clientEmail` is
@@ -16,7 +52,7 @@ import type { TimelineEntry } from "@/types";
  * plain zod-inferred CreateInvoiceInput/UpdateInvoiceInput remain fully
  * assignable, so existing (non-import) callers are unaffected.
  */
-export interface InvoiceServiceCreateInput extends Omit<CreateInvoiceInput, "clientEmail"> {
+export interface InvoiceServiceCreateInput extends Omit<CreateInvoiceInput, "clientEmail" | "lineItems"> {
   clientEmail?: string;
   partyId?: string;
   type?: "RECEIVABLE" | "PAYABLE";

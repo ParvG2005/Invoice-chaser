@@ -59,10 +59,14 @@ export interface TimelineEntry {
 
 export interface InvoiceLineItemDto {
   id: string;
+  /** Present when the line was created from a catalog item (Task 14 editor). */
+  itemId?: string | null;
   description: string;
   quantity: number;
   rate: number;
   amount: number;
+  discountPct: number;
+  taxRatePct: number;
 }
 
 export interface InvoiceDto {
@@ -121,6 +125,22 @@ export interface ItemDto {
   salePrice: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Response shape of `GET /api/items?query=` (Task 14 item picker) — a thin,
+ * search-specific projection, not the full `ItemDto`. `taxRate` here maps
+ * from `Item.gstRate`; `stockOnHand` is computed on read
+ * (`stockService.getStockForItems`), not a persisted column.
+ */
+export interface ItemSearchResultDto {
+  id: string;
+  name: string;
+  sku: string | null;
+  unit: string;
+  salePrice: number | null;
+  taxRate: number | null;
+  stockOnHand: number;
 }
 
 export interface StockMovementDto {
