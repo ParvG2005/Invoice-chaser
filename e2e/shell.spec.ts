@@ -22,8 +22,11 @@ test.describe("app shell", () => {
     }
   });
 
-  test("active link is highlighted", async ({ page }) => {
+  test("active link is highlighted", async ({ page, isMobile }) => {
     await page.goto("/dashboard/invoices");
+    if (isMobile) {
+      await page.getByRole("button", { name: "Open menu" }).click();
+    }
     await expect(
       page.getByRole("navigation").getByRole("link", { name: "Invoices" }),
     ).toHaveAttribute("aria-current", "page");

@@ -60,7 +60,7 @@ test.describe("imports", () => {
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "Download report" }).click(),
+      page.getByRole("button", { name: "Download report" }).first().click(),
     ]);
     expect(download.url()).toMatch(/\/api\/import\/batches\/[^/]+\/report/);
   });

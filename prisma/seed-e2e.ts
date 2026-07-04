@@ -13,6 +13,7 @@
  * Run: npm run db:seed:e2e
  */
 import { prisma } from "../src/lib/db/prisma";
+import { Prisma } from "../src/generated/prisma/client";
 
 export const E2E_SEED = {
   partyName: "Acme Traders",
@@ -58,17 +59,53 @@ async function resolveOrganizationId(): Promise<string> {
 async function main() {
   const organizationId = await resolveOrganizationId();
 
+  // --- Cleanup: remove anything created by a test run (duplicate invoices,
+  // "Test Co" party, "Test Widget" item, etc.) so every run starts from the
+  // exact fixed seed set below. ---------------------------------------
+  await prisma.invoice.deleteMany({
+    where: { organizationId, invoiceNumber: { notIn: [...E2E_SEED.invoiceNumbers] } },
+  });
+  await prisma.item.deleteMany({
+    where: { organizationId, name: { not: E2E_SEED.itemName } },
+  });
+  const extraParties = await prisma.party.findMany({
+    where: {
+      organizationId,
+      name: { notIn: [E2E_SEED.partyName, E2E_SEED.agentName, E2E_SEED.supplierName] },
+    },
+    select: { id: true },
+  });
+  const extraPartyIds = extraParties.map((p) => p.id);
+  if (extraPartyIds.length > 0) {
+    await prisma.payment.deleteMany({ where: { organizationId, partyId: { in: extraPartyIds } } });
+    await prisma.bill.deleteMany({ where: { organizationId, partyId: { in: extraPartyIds } } });
+    await prisma.party.deleteMany({ where: { organizationId, id: { in: extraPartyIds } } });
+  }
+  await prisma.bill.deleteMany({
+    where: { organizationId, billNumber: { not: E2E_SEED.billNumber } },
+  });
+  await prisma.importBatch.deleteMany({ where: { organizationId } });
+  // Extra payments/allocations created by e2e mutation tests (e.g. the
+  // "record payment" flow) — reset to nothing here; the one seeded ₹5,000
+  // payment is recreated below.
+  await prisma.paymentAllocation.deleteMany({ where: { organizationId } });
+  await prisma.payment.deleteMany({ where: { organizationId } });
+  // Reminders created by prior scans (each run's "Trigger scan now" /
+  // "Send now" tests) — reset so the upcoming-queue tests see a clean slate.
+  await prisma.reminder.deleteMany({ where: { organizationId } });
+
   // --- Parties -------------------------------------------------------
   // NOTE: upsert matches on [organizationId, name] regardless of deletedAt; if
   // this seed's rows are ever soft-deleted by other test cleanup, rerunning
   // this script will resurrect them via upsert rather than creating fresh rows.
   const agent = await prisma.party.upsert({
     where: { organizationId_name: { organizationId, name: E2E_SEED.agentName } },
-    update: {},
+    update: { email: "parvgoyal58@gmail.com" },
     create: {
       organizationId,
       type: "AGENT",
       name: E2E_SEED.agentName,
+      email: "parvgoyal58@gmail.com",
     },
   });
 
@@ -76,14 +113,14 @@ async function main() {
     where: { organizationId_name: { organizationId, name: E2E_SEED.partyName } },
     update: {
       agentId: agent.id,
-      email: "billing@acmetraders.example",
+      email: "parvgoyal58@gmail.com",
       phone: "+91-9876543210",
     },
     create: {
       organizationId,
       type: "CUSTOMER",
       name: E2E_SEED.partyName,
-      email: "billing@acmetraders.example",
+      email: "parvgoyal58@gmail.com",
       phone: "+91-9876543210",
       agentId: agent.id,
     },
@@ -91,11 +128,12 @@ async function main() {
 
   const supplier = await prisma.party.upsert({
     where: { organizationId_name: { organizationId, name: E2E_SEED.supplierName } },
-    update: {},
+    update: { email: "parvgoyal58@gmail.com" },
     create: {
       organizationId,
       type: "SUPPLIER",
       name: E2E_SEED.supplierName,
+      email: "parvgoyal58@gmail.com",
     },
   });
 
@@ -118,6 +156,12 @@ async function main() {
       openingQty: 50,
       salePrice: 500,
     },
+  });
+
+  // Reset any non-opening movements left over from a previous run (e.g. an
+  // "Adjust stock" test) so stock-on-hand is deterministic every run.
+  await prisma.stockMovement.deleteMany({
+    where: { organizationId, itemId: item.id, sourceType: { not: "OPENING" } },
   });
 
   const existingOpeningMovement = await prisma.stockMovement.findFirst({
@@ -160,11 +204,12 @@ async function main() {
       totalAmount: 10000,
       amountPaid: 0,
       partyId: customer.id,
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
     },
     create: {
       organizationId,
       clientName: customer.name,
-      clientEmail: customer.email ?? "billing@acmetraders.example",
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
       invoiceNumber: E2E_SEED.invoiceNumbers[0],
       status: "PENDING",
       type: "RECEIVABLE",
@@ -215,11 +260,12 @@ async function main() {
       totalAmount: 18500.0,
       amountPaid: 0,
       partyId: customer.id,
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
     },
     create: {
       organizationId,
       clientName: customer.name,
-      clientEmail: customer.email ?? "billing@acmetraders.example",
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
       invoiceNumber: E2E_SEED.invoiceNumbers[1],
       status: "OVERDUE",
       type: "RECEIVABLE",
@@ -250,11 +296,12 @@ async function main() {
       totalAmount: 5000,
       amountPaid: 5000,
       partyId: customer.id,
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
     },
     create: {
       organizationId,
       clientName: customer.name,
-      clientEmail: customer.email ?? "billing@acmetraders.example",
+      clientEmail: customer.email ?? "parvgoyal58@gmail.com",
       invoiceNumber: E2E_SEED.invoiceNumbers[2],
       status: "PAID",
       type: "RECEIVABLE",
@@ -331,12 +378,27 @@ async function main() {
     },
   });
 
+  // --- Reminder settings ---------------------------------------------
+  // Explicit so specs don't depend on whatever autoSend value a previous
+  // manual toggle left in the DB, and `sequence` is reset each run since
+  // the "Add step" e2e test (and ad-hoc debugging) mutates/appends to it —
+  // left unchecked it grows past the 10-item schema cap over repeated runs.
+  await prisma.reminderSettings.upsert({
+    where: { organizationId },
+    update: { autoSend: true, sequence: Prisma.JsonNull },
+    create: { organizationId, autoSend: true },
+  });
+
   console.log(`E2E seed complete for organization ${organizationId}.`);
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Only reseed when this file is run directly (`npm run db:seed:e2e`), not when
+// specs import `E2E_SEED` from it for fixture constants.
+if (require.main === module) {
+  main()
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

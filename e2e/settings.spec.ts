@@ -45,13 +45,13 @@ test.describe("settings", () => {
   test("theme selector changes and persists via the org theme field", async ({ page }) => {
     await gotoScreen(page, "Settings", /settings/i);
 
-    await page.getByLabel("Theme").click();
+    await page.getByRole("combobox", { name: "Theme" }).click();
     await page.getByRole("option", { name: "Dark" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Settings saved")).toBeVisible();
 
     await page.reload();
-    await expect(page.getByLabel("Theme")).toContainText("Dark");
+    await expect(page.getByRole("combobox", { name: "Theme" })).toContainText("Dark");
   });
 
   test("Danger zone shows a Delete organization button behind a confirm dialog", async ({ page }) => {

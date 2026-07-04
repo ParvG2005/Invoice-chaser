@@ -1,7 +1,19 @@
 import { test, expect } from "@playwright/test";
 import { gotoScreen } from "./helpers/nav";
+import { E2E_SEED } from "../prisma/seed-e2e";
+import { prisma } from "../src/lib/db/prisma";
 
+// invoice-detail.spec.ts's "mark paid flow" test marks E2E-INV-001 as PAID
+// when the full suite runs before this file — reset it back to PENDING so
+// this file's "open invoices" assumptions don't depend on run order.
 test.describe("payments register", () => {
+  test.beforeEach(async () => {
+    await prisma.invoice.updateMany({
+      where: { invoiceNumber: E2E_SEED.invoiceNumbers[0] },
+      data: { status: "PENDING", amountPaid: 0 },
+    });
+  });
+
   test("shows the seeded ₹5,000 IN payment for Acme Traders, allocated", async ({ page }) => {
     await gotoScreen(page, "Payments", /payments/i);
     const row = page.getByRole("row", { name: /Acme Traders/ }).filter({ hasText: "₹5,000.00" });
@@ -26,8 +38,8 @@ test.describe("payments register", () => {
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 2: open docs listed.
-    await expect(page.getByText("E2E-INV-001")).toBeVisible();
-    await expect(page.getByText("E2E-INV-002")).toBeVisible();
+    await expect(page.getByText("E2E-INV-001", { exact: true })).toBeVisible();
+    await expect(page.getByText("E2E-INV-002", { exact: true })).toBeVisible();
     await expect(page.getByText(/Balance/).first()).toBeVisible();
 
     // Auto-allocate oldest first -> fills E2E-INV-002 (older due date) with 1000.00.
@@ -62,7 +74,7 @@ test.describe("payments register", () => {
     page,
   }) => {
     await gotoScreen(page, "Invoices", /invoices/i);
-    await page.getByRole("link", { name: "E2E-INV-001" }).click();
+    await page.getByRole("link", { name: "E2E-INV-001", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/invoices\/([a-z0-9-]+)/);
     const invoiceId = page.url().match(/\/dashboard\/invoices\/([a-z0-9-]+)/)?.[1];
     expect(invoiceId).toBeTruthy();

@@ -31,7 +31,7 @@ export function TopBar() {
       <div className="flex items-center gap-3">
         <MobileNav />
         <div className="flex flex-col">
-          <h1 className="text-base font-semibold leading-tight text-zinc-900 dark:text-zinc-50">{title}</h1>
+          <p className="text-base font-semibold leading-tight text-zinc-900 dark:text-zinc-50">{title}</p>
           <span className="hidden text-[11px] text-zinc-500 dark:text-zinc-400 sm:block">
             Organizations <span aria-hidden="true">›</span> My Organization
           </span>

@@ -24,8 +24,10 @@ export const stockRepository = {
   },
 
   async sumQty(organizationId: string, itemId: string): Promise<number> {
+    // OPENING movements mirror `item.openingQty`; excluded here so callers
+    // that add `openingQty + sumQty` don't double-count it.
     const result = await prisma.stockMovement.aggregate({
-      where: { organizationId, itemId, deletedAt: null },
+      where: { organizationId, itemId, deletedAt: null, sourceType: { not: "OPENING" } },
       _sum: { qty: true },
     });
     return result._sum.qty ? Number(result._sum.qty) : 0;
@@ -41,7 +43,12 @@ export const stockRepository = {
     if (itemIds.length === 0) return new Map();
     const rows = await prisma.stockMovement.groupBy({
       by: ["itemId"],
-      where: { organizationId, itemId: { in: itemIds }, deletedAt: null },
+      where: {
+        organizationId,
+        itemId: { in: itemIds },
+        deletedAt: null,
+        sourceType: { not: "OPENING" },
+      },
       _sum: { qty: true },
     });
     return new Map(rows.map((row) => [row.itemId, row._sum.qty ? Number(row._sum.qty) : 0]));

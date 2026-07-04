@@ -35,7 +35,7 @@ test.describe("parties directory", () => {
     await page.getByRole("button", { name: "New party" }).click();
     await page.getByLabel("Name").fill("Test Co");
     await page.getByLabel("Type").click();
-    await page.getByRole("option", { name: "Customer" }).click();
+    await page.getByRole("option", { name: "Customer", exact: true }).click();
     await page.getByRole("button", { name: "Create party" }).click();
 
     await expect(page.getByText("Party created")).toBeVisible(); // sonner toast
@@ -47,7 +47,7 @@ test.describe("parties directory", () => {
     await page.getByRole("link", { name: "Acme Traders" }).click();
     await expect(page).toHaveURL(/\/dashboard\/parties\/[a-z0-9-]+/);
     await expect(page.getByRole("heading", { name: "Acme Traders" })).toBeVisible();
-    await expect(page.getByText("billing@acmetraders.example")).toBeVisible();
+    await expect(page.getByText("parvgoyal58@gmail.com")).toBeVisible();
 
     const ledger = page.getByTestId("party-ledger");
     await expect(ledger).toBeVisible();

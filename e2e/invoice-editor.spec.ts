@@ -69,7 +69,7 @@ test.describe("invoice editor", () => {
 
   test("edit flow: seeded invoice loads with its existing line item", async ({ page }) => {
     await gotoScreen(page, "Invoices", /invoices/i);
-    await page.getByRole("link", { name: "E2E-INV-001" }).click();
+    await page.getByRole("link", { name: "E2E-INV-001", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard\/invoices\/[a-z0-9-]+$/);
 
     const url = page.url();
