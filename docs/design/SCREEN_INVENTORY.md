@@ -83,3 +83,14 @@ Candidate screens in `projects/7229335890257417243` against `assets/505295280152
 **Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Parties directory `d2fdd0ce166f4f1f9b6fe504e61223eb`, Party detail `fb1edebf84fc41ed9c2adec5a152c693`, Bills list `4370a7e568054801b77a8bd981d43953`.
 
 **Fix pass (pre-review):** Bills screens had a stray sidebar "New Invoice" quick-action button — removed via `edit_screens`, in place, same IDs. Payments screens had a non-canonical sidebar footer (standalone "Ask Assistant" button + enabled "Analytics" link instead of the disabled "Coming Soon" section) — replaced via `edit_screens`, in place, same IDs. A follow-up edit restored the "Coming Soon" caption + "SOON" pills on Bills after the first fix over-removed them.
+
+## Task 20 — Stock (Batch D, partial — Imports wizard pending)
+
+Candidate screens in `projects/7229335890257417243` against `assets/5052952801528952529`, reusing the canonical app shell nav. Not yet design-reviewed.
+
+- **Stock / Items list** — light `861f491132e648ba9343e05ed4e5ea6a` / dark `c08dd3379824497e8fbb9acc975715f3`. Search + "Low stock only" toggle, items table (name/SKU/unit/stock on hand/reorder level/low-stock badge/valuation), "New item".
+- **Item detail** — light `836b7fc7581c4382b0d85a24b9b90ca7` / dark `3d6678f9f2ad49cd84647230844197e5`. Info card (SKU/unit/sale price/reorder level/stock/valuation), stock movements table (date/type badge/qty/rate/source doc link), "Adjust stock" dialog (qty +/-, reason).
+
+**Duplicates generated and discarded** (Stitch tool calls timed out client-side but completed server-side, producing extra copies before the timeout was diagnosed) — do not use: Stock/Items `3ee8a8d2608c4774a61b7dbf1f4f7a9f`, `b1dd90cf972a481d93e9cce6255e969b`.
+
+**Imports wizard — not yet generated.** Five `generate_screen_from_text` attempts (one detailed prompt x2, two shortened prompts, one retry) all timed out client-side; unlike the Stock and Item-detail screens, none landed server-side after repeated polling. Deferred pending a decision on how to proceed (retry further / build directly to the Task 23 spec / revisit later). Stock and Item detail can proceed through the Task 21 review gate independently; Imports wizard design + Task 23 implementation will follow once resolved.
