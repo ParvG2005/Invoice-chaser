@@ -45,6 +45,13 @@ export class InngestJobScheduler implements JobScheduler {
       })),
     );
   }
+
+  async enqueueTallyImport(organizationId: string, batchId: string): Promise<void> {
+    await inngest.send({
+      name: JOB_EVENTS.TALLY_IMPORT_RUN,
+      data: { organizationId, batchId },
+    });
+  }
 }
 
 let scheduler: JobScheduler | null = null;

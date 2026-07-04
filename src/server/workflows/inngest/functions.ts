@@ -1,6 +1,7 @@
 import { inngest } from "@/lib/jobs/inngest/client";
 import { JOB_EVENTS } from "@/lib/jobs/types";
 import { reminderService } from "@/server/services/reminder.service";
+import { tallyImportService } from "@/server/services/import/tally-import.service";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { prisma } from "@/lib/db/prisma";
 import { createLogger } from "@/lib/logger";
@@ -65,4 +66,19 @@ export const overdueCheckWorkflow = inngest.createFunction(
   },
 );
 
-export const inngestFunctions = [reminderScanWorkflow, sendReminderWorkflow, overdueCheckWorkflow];
+export const tallyImportWorkflow = inngest.createFunction(
+  // Idempotent by GUID+ALTERID, so a retry after a mid-batch crash safely
+  // re-skips already-imported records. Progress is visible via batch counters.
+  { id: "tally-import-run", name: "Tally Import Batch", retries: 2, triggers: { event: JOB_EVENTS.TALLY_IMPORT_RUN } },
+  async ({ event, step }) => {
+    const { organizationId, batchId } = event.data as { organizationId: string; batchId: string };
+    return step.run("run-batch", () => tallyImportService.runBatch(organizationId, batchId));
+  },
+);
+
+export const inngestFunctions = [
+  reminderScanWorkflow,
+  sendReminderWorkflow,
+  overdueCheckWorkflow,
+  tallyImportWorkflow,
+];
