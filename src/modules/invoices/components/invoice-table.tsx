@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { DataTable } from "@/components/shared/data-table";
@@ -47,7 +48,12 @@ export function InvoiceTable({ invoices, isLoading, selection }: InvoiceTablePro
         accessorKey: "invoiceNumber",
         header: "Invoice #",
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.invoiceNumber}</span>
+          <Link
+            href={`/dashboard/invoices/${row.original.id}`}
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            {row.original.invoiceNumber}
+          </Link>
         ),
       },
       {

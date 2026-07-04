@@ -87,6 +87,10 @@ export const invoiceRepository = {
   findById(organizationId: string, id: string) {
     return prisma.invoice.findFirst({
       where: { id, organizationId, deletedAt: null },
+      include: {
+        party: true,
+        lineItems: { where: { deletedAt: null }, orderBy: { sortOrder: "asc" } },
+      },
     });
   },
 

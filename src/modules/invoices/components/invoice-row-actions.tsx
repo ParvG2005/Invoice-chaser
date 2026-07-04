@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { MoreHorizontal } from "lucide-react";
-import { apiFetch } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +23,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  useDuplicateInvoice,
+  useMarkPaid,
+  useSendReminder,
+  useSnoozeInvoice,
+  useWriteOffInvoice,
+} from "@/modules/invoices/hooks";
 import type { InvoiceDto } from "@/types";
 
 const SNOOZE_OPTIONS = [3, 7, 14];
@@ -34,72 +38,15 @@ const WHATSAPP_ENABLED = process.env.NEXT_PUBLIC_WHATSAPP_ENABLED === "true";
 
 export function InvoiceRowActions({ invoice }: { invoice: InvoiceDto }) {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [writeOffOpen, setWriteOffOpen] = useState(false);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
 
-  function invalidateInvoices() {
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
-  }
-
-  const markPaid = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/invoices/${invoice.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "PAID" }),
-      }),
-    onSuccess: () => {
-      toast.success("Invoice marked as paid");
-      invalidateInvoices();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const sendReminder = useMutation({
-    mutationFn: () =>
-      apiFetch("/api/reminders/trigger", {
-        method: "POST",
-        body: JSON.stringify({ invoiceId: invoice.id }),
-      }),
-    onSuccess: () => {
-      toast.success("Reminder queued");
-      invalidateInvoices();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const snooze = useMutation({
-    mutationFn: (days: number) =>
-      apiFetch(`/api/invoices/${invoice.id}/snooze`, {
-        method: "POST",
-        body: JSON.stringify({ days }),
-      }),
-    onSuccess: () => {
-      toast.success("Reminders snoozed");
-      invalidateInvoices();
-      setSnoozeOpen(false);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const duplicate = useMutation({
-    mutationFn: () => apiFetch(`/api/invoices/${invoice.id}/duplicate`, { method: "POST" }),
-    onSuccess: () => {
-      toast.success("Invoice duplicated");
-      invalidateInvoices();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const writeOff = useMutation({
-    mutationFn: () => apiFetch(`/api/invoices/${invoice.id}/write-off`, { method: "POST" }),
-    onSuccess: () => {
-      toast.success("Invoice written off");
-      invalidateInvoices();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const markPaid = useMarkPaid(invoice.id);
+  const sendReminder = useSendReminder(invoice.id);
+  const snooze = useSnoozeInvoice(invoice.id);
+  const duplicate = useDuplicateInvoice(invoice.id);
+  const writeOff = useWriteOffInvoice(invoice.id);
 
   return (
     <>
@@ -179,7 +126,7 @@ export function InvoiceRowActions({ invoice }: { invoice: InvoiceDto }) {
                 type="button"
                 variant="outline"
                 disabled={snooze.isPending}
-                onClick={() => snooze.mutate(days)}
+                onClick={() => snooze.mutate(days, { onSuccess: () => setSnoozeOpen(false) })}
               >
                 {days} days
               </Button>

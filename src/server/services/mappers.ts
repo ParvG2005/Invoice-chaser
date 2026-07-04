@@ -1,8 +1,26 @@
-import type { Bill, Invoice, Item, Party, StockMovement } from "@/generated/prisma/client";
+import type {
+  Bill,
+  Invoice,
+  InvoiceLineItem,
+  Item,
+  Party,
+  StockMovement,
+} from "@/generated/prisma/client";
 import type { BillDto, InvoiceDto, ItemDto, PartyDto, StockMovementDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
 
-export function toInvoiceDto(invoice: Invoice): InvoiceDto {
+/**
+ * `findById` additively includes `party`/`lineItems` (Task 13, invoice detail
+ * page); every other Invoice-returning repository method still returns a
+ * bare `Invoice`, so both relations are optional here and simply omitted
+ * from the DTO when absent.
+ */
+type InvoiceWithRelations = Invoice & {
+  party?: Party | null;
+  lineItems?: InvoiceLineItem[];
+};
+
+export function toInvoiceDto(invoice: InvoiceWithRelations): InvoiceDto {
   return {
     id: invoice.id,
     clientName: invoice.clientName,
@@ -17,6 +35,23 @@ export function toInvoiceDto(invoice: Invoice): InvoiceDto {
     paidAt: invoice.paidAt?.toISOString() ?? null,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
+    partyId: invoice.partyId,
+    subtotal: invoice.subtotal === null ? null : decimalToNumber(invoice.subtotal),
+    taxAmount: invoice.taxAmount === null ? null : decimalToNumber(invoice.taxAmount),
+    totalAmount: invoice.totalAmount === null ? null : decimalToNumber(invoice.totalAmount),
+    amountPaid: decimalToNumber(invoice.amountPaid),
+    party: invoice.party
+      ? { id: invoice.party.id, name: invoice.party.name, type: invoice.party.type }
+      : null,
+    lineItems: invoice.lineItems
+      ? invoice.lineItems.map((li) => ({
+          id: li.id,
+          description: li.description,
+          quantity: decimalToNumber(li.quantity),
+          rate: decimalToNumber(li.rate),
+          amount: decimalToNumber(li.amount),
+        }))
+      : undefined,
   };
 }
 

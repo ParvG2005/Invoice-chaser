@@ -57,6 +57,14 @@ export interface TimelineEntry {
   summary: string;
 }
 
+export interface InvoiceLineItemDto {
+  id: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
+
 export interface InvoiceDto {
   id: string;
   clientName: string;
@@ -71,6 +79,15 @@ export interface InvoiceDto {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Additive detail-view fields (Task 13) — populated by `GET /api/invoices/[id]`. */
+  partyId: string | null;
+  subtotal: number | null;
+  taxAmount: number | null;
+  totalAmount: number | null;
+  amountPaid: number;
+  party: { id: string; name: string; type: PartyType } | null;
+  /** Only present when the source query included line items (invoice detail). */
+  lineItems?: InvoiceLineItemDto[];
 }
 
 export interface PartyDto {
