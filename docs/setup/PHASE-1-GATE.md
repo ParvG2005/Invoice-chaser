@@ -17,7 +17,7 @@ Branch: `worktree-phase-1-foundation-data-model` (worktree at `.claude/worktrees
 | 7 | Party repository + service | Done | `b9cba98`. Review clean. Note: `partyRepository.update` uses `Prisma.PartyUncheckedUpdateInput` (not `PartyUpdateInput`) to allow the `agentId` scalar — verified safe (org scoping enforced via `where`, not the data type). |
 | 8 | Item + Stock repositories/services | Done | `ff0f3f8`. Review clean. |
 | 9 | Bill repository + service | Done | `9473c22` + fix `81d7467`. One review round: `paidAt` was being overwritten on every update to an already-PAID bill, not just the transition into PAID — fixed and covered by a regression test. |
-| 10 | Payment service with FIFO/bill-wise allocation | Done | `eec0819`. Review clean (opus-level review given financial logic). The `paidAt` re-stomp risk (same class as Task 9's bug) was traced and confirmed structurally impossible: `applyAllocation` guards `status !== "PAID"` before setting `paidAt`, and only open (non-PAID) documents ever reach an allocation write path. |
+| 10 | Payment service with FIFO/bill-wise allocation | Done | `eec0819`. Review clean (opus-level review given financial logic). The `paidAt` re-stomp risk (same class as Task 9's bug) was traced and confirmed structurally impossible: `applyAllocation` guards `status !== "PAID"` before setting `paidAt`, and only open (non-PAID) documents ever reach an allocation write path. Two findings surfaced during the *final whole-branch review* (below) and were fixed in `6717844`. |
 | 11 | RBAC — role enforcement in `lib/api/handler` | Done | `2a45b40` + fix `1ff42cd`. One review round: `parseRole` used `value in ROLE_RANK`, which matched `Object.prototype` property names (`"constructor"`, `"toString"`, etc.) instead of failing closed to `"viewer"` — fixed with `hasOwnProperty.call` and a regression test. |
 | 12 | CI — test/migrate-check gates, `pages-build` script | Done (Steps 1–3 only) | `b51536e`. Steps 4–5 (push branch, open draft PR, confirm CI green against a live Postgres service, and the Cloudflare Pages dashboard build-command configuration) are **deferred** — pushing branches/opening PRs is a shared-visibility action left for explicit user action, not delegated to a subagent. |
 
@@ -76,14 +76,26 @@ No live Clerk session is available in this sandbox. **TODO — user to verify ag
 - **Task 7 (Party)**: no guard against `agentId === id` (self-referencing agent); `update`'s success path, `list` pagination, and the audit "before" payload snapshot are untested beyond the brief's 5 mandated cases.
 - **Task 8 (Item/Stock)**: duplicate-name check is TOCTOU-racy (relies on the DB unique constraint, would surface as an unhandled P2002 rather than a clean `ValidationError`); `itemService.update`/`remove` and `stockService.listMovements` untested beyond the brief's 6 mandated cases.
 - **Task 9 (Bill)**: `computeInvoiceStatus`'s full return signature wasn't visible in the Task 9 diff context (typecheck confirms it's fine); `list`/`remove` untested beyond the brief's mandated cases.
-- **Task 10 (Payment)**: `tx.invoice.update`/`tx.bill.update` inside the allocation transaction key on the global id only (not an org-scoped `updateMany`, unlike the rest of the codebase) — not exploitable today since every `documentId` originates from an org-scoped read, but a latent hazard for future callers; duplicate `documentId` entries in explicit allocations aren't aggregated (could push `amountPaid` over the document total); `Payment.amount` isn't rounded to 2dp before persistence; the `applyAllocation`/`paidAt` guard has no direct test coverage (all payment.service tests mock the repository layer).
+- **Task 10 (Payment)**: two findings from the task-level review were promoted to Important during the final whole-branch review and fixed in `6717844` (see below): non-org-scoped allocation writes, and duplicate-`documentId` overpay in explicit allocations. Remaining non-blocking items: `Payment.amount` isn't rounded to 2dp before persistence (DB truncates safely); `applyAllocation` now silently no-ops if a pre-update read finds nothing instead of throwing (unreachable today — all ids come from org-scoped reads); `round2` is defined three times across payment.service/payment-allocation/mappers (worth hoisting to `lib/utils/currency`); the `applyAllocation`/`paidAt` guard has no direct test coverage (all payment.service tests mock the repository layer).
 - **Task 11 (RBAC)**: manual live-Clerk owner-login smoke test not run (see top-level risk above); `requiredRole` check lives inside the `if (requireAuth)` block in `handler.ts` — a future route combining `{ requireAuth: false, requiredRole: "member" }` would silently skip the role check (not triggered by any of the current 7 routes, all default `requireAuth: true`).
 - **Task 12 (CI)**: workflow has not yet been run on real GitHub Actions infrastructure (Steps 4–5 deferred); Cloudflare Pages dashboard build-command has not been configured; **production must be baselined** (`prisma migrate resolve --applied 0_init` against prod) before the first deploy using `pages-build`, or `migrate deploy` will refuse the non-empty schema.
 - **WhatsApp template approval status** — carried from Phase 0, still open as of this gate.
 
+## Final Whole-Branch Review
+
+A cross-cutting review (opus, full 16-commit diff, base `65bdfe4` → head `5e81925`) ran after all 13 tasks were individually reviewed and merged into this branch. It checked consistency across tasks and integration points no single-task review could see.
+
+**Verdict: ready to merge, with fixes.** No Critical issues — no reachable cross-org leak, audit gap, or broken integration seam across the whole phase. Two items carried forward from Task 10's task-level review (there rated Minor) were re-rated **Important** during the cross-cutting pass:
+1. `applyAllocation`'s invoice/bill writes keyed on global PK only, not org-scoped like every other mutation in the codebase.
+2. `validateExplicitAllocations` didn't aggregate duplicate `documentId` entries, allowing an overpay past a document's outstanding balance.
+
+Both were fixed in `6717844` and re-reviewed clean (org-scoped `updateMany` + pre-update read for the PAID-flip decision; additive per-`documentId` aggregation with a regression test). Remaining Minor findings (rounding hoisting, `round2` duplication, item/party duplicate-name TOCTOU race with the DB unique constraint, silently-swallowed not-found in `applyAllocation`) are non-blocking polish, listed above and in the review agent's full output.
+
+Strengths noted: the repository layer is remarkably consistent (every read/write org-scoped and soft-delete-aware the same way across Party/Item/Bill/Payment/Invoice); every mutating service method routes through `withAudit`; the payment allocation code (pure FIFO planner separated from the transactional writer, single `$transaction`, `paidAt` re-stomp guard) was called out as the strongest-engineered piece of the phase.
+
 ## Go/No-Go Recommendation
 
-**Conditional go.** All automatable work is complete: 12 tasks implemented, each reviewed (2 required one fix round for a real bug — both fixed and regression-tested), full suite green (66/66), typecheck/lint/build clean. The two review-caught bugs (Bill.paidAt overwrite, parseRole prototype-chain bypass) are exactly the kind of defect this review process exists to catch, and both were fixed before merge.
+**Conditional go.** All coding work is complete: 13 tasks implemented, each individually reviewed, plus a final whole-branch review — 3 real bugs caught across the whole process (`Bill.paidAt` overwrite, `parseRole` prototype-chain bypass, payment allocation org-scoping + duplicate-overpay), all fixed and regression-tested. Full suite green (67/67), typecheck/lint/build clean.
 
 What remains before this phase can be called fully verified and merged:
 1. Run the prod-copy migration rehearsal (Step 1) and record real counts.
@@ -91,7 +103,7 @@ What remains before this phase can be called fully verified and merged:
 3. Push the CI workflow branch, open a PR, and confirm all gates (`lint`, `typecheck`, `test`, `migrate-check`, `build`) go green against real GitHub Actions infrastructure — the workflow has only been validated by reading its YAML, not by running it.
 4. User sign-off below.
 
-Given the size and financial sensitivity of this phase (payment allocation, RBAC), recommend completing all four before starting Phase 2 work, even though the automatable 90% is solid.
+Given the size and financial sensitivity of this phase (payment allocation, RBAC), recommend completing all four before starting Phase 2 work, even though the automatable coding work is solid and has been reviewed at both the task and whole-branch level.
 
 ## Sign-off
 
