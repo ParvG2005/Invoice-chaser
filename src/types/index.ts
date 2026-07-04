@@ -109,6 +109,29 @@ export interface BillDto {
   updatedAt: string;
 }
 
+export interface PaymentAllocationDto {
+  id: string;
+  invoiceId: string | null;
+  billId: string | null;
+  amount: number;
+}
+
+export interface PaymentDto {
+  id: string;
+  partyId: string;
+  direction: "IN" | "OUT";
+  amount: number;
+  unallocated: number;
+  mode: "CASH" | "BANK_TRANSFER" | "UPI" | "CHEQUE" | "CARD" | "OTHER";
+  paymentDate: string;
+  reference: string | null;
+  notes: string | null;
+  currency: string;
+  allocations: PaymentAllocationDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ReminderSettingsDto {
   reminderDays: number[];
   emailTone: EmailTone;
