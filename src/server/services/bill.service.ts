@@ -1,5 +1,7 @@
 import { NotFoundError } from "@/lib/api/errors";
 import type { CreateBillInput, UpdateBillInput } from "@/lib/validations/bill";
+import type { BillPaymentDto } from "@/types";
+import { decimalToNumber } from "@/lib/utils/currency";
 import { billRepository, type BillListOptions } from "@/server/repositories/bill.repository";
 import { partyRepository } from "@/server/repositories/party.repository";
 import { computeInvoiceStatus, parseDueDate, toBillDto } from "@/server/services/mappers";
@@ -78,6 +80,67 @@ export const billService = {
         return this.get(organizationId, id);
       },
     );
+  },
+
+  /** Marks a bill PAID, stamping `paidAt` — mirrors invoiceService's PATCH-status-to-PAID path. */
+  async markPaid(organizationId: string, id: string, actor: AuditActor = SYSTEM_ACTOR) {
+    const existing = await billRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Bill not found");
+
+    return withAudit(
+      actor,
+      "bill.markPaid",
+      { organizationId, entityType: "Bill", entityId: id, before: toBillDto(existing) },
+      async () => {
+        await billRepository.update(organizationId, id, { status: "PAID", paidAt: new Date() });
+        return this.get(organizationId, id);
+      },
+    );
+  },
+
+  /**
+   * Marks a bill WRITTEN_OFF. There's no dedicated column for the write-off
+   * reason on Bill, so it's appended to the existing free-text `notes` field
+   * rather than discarded — mirrors invoiceService.writeOff.
+   */
+  async writeOff(
+    organizationId: string,
+    id: string,
+    reason?: string,
+    actor: AuditActor = SYSTEM_ACTOR,
+  ) {
+    const existing = await billRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Bill not found");
+
+    const notes = reason
+      ? existing.notes
+        ? `${existing.notes}\n\nWritten off: ${reason}`
+        : `Written off: ${reason}`
+      : existing.notes;
+
+    return withAudit(
+      actor,
+      "bill.writeOff",
+      { organizationId, entityType: "Bill", entityId: id, before: toBillDto(existing) },
+      async () => {
+        await billRepository.update(organizationId, id, { status: "WRITTEN_OFF", notes });
+        return this.get(organizationId, id);
+      },
+    );
+  },
+
+  /** Payments applied to this bill, newest first — feeds the detail page's "Payments applied" section. */
+  async paymentsApplied(organizationId: string, id: string): Promise<BillPaymentDto[]> {
+    const existing = await billRepository.findById(organizationId, id);
+    if (!existing) throw new NotFoundError("Bill not found");
+
+    const allocations = await billRepository.findPaymentAllocations(organizationId, id);
+    return allocations.map((allocation) => ({
+      id: allocation.id,
+      amount: decimalToNumber(allocation.amount),
+      mode: allocation.payment.mode,
+      paymentDate: allocation.payment.paymentDate.toISOString(),
+    }));
   },
 
   async remove(organizationId: string, id: string, actor: AuditActor = SYSTEM_ACTOR) {

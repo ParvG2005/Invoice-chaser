@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api/client";
-import type { InvoiceDto, PaymentDto } from "@/types";
+import type { BillDto, InvoiceDto, PaymentDto } from "@/types";
 import type { OpenDoc } from "@/modules/payments/allocation";
 
 export interface RecordPaymentInput {
@@ -28,12 +28,20 @@ function toOpenDocs(invoices: InvoiceDto[]): (OpenDoc & { label: string })[] {
     .filter((doc) => doc.balanceDue > 0);
 }
 
-/**
- * Open invoices for a party (direction IN). Bills-list equivalent (direction
- * OUT) doesn't exist yet (Task 19) — `enabled` guards against calling it, and
- * callers should treat OUT as "no open documents yet" until Task 19 ships
- * `GET /api/bills`.
- */
+/** Open (not fully paid, not written off) bills for a party, shaped for the allocation editor. */
+function toOpenBillDocs(bills: BillDto[]): (OpenDoc & { label: string })[] {
+  return bills
+    .filter((bill) => bill.status !== "PAID" && bill.status !== "WRITTEN_OFF")
+    .map((bill) => ({
+      id: bill.id,
+      label: bill.billNumber,
+      dueDate: bill.dueDate,
+      balanceDue: bill.outstanding,
+    }))
+    .filter((doc) => doc.balanceDue > 0);
+}
+
+/** Open invoices for a party (direction IN). */
 export function useOpenInvoicesForParty(partyId: string | null, direction: "IN" | "OUT") {
   return useQuery({
     queryKey: ["invoices", "open", partyId],
@@ -43,11 +51,29 @@ export function useOpenInvoicesForParty(partyId: string | null, direction: "IN" 
   });
 }
 
+/** Open bills for a party (direction OUT) — the `GET /api/bills` equivalent of the above (Task 19). */
+export function useOpenBillsForParty(partyId: string | null, direction: "IN" | "OUT") {
+  return useQuery({
+    queryKey: ["bills", "open", partyId],
+    queryFn: () => apiFetch<BillDto[]>(`/api/bills?partyId=${partyId}&limit=200`),
+    enabled: !!partyId && direction === "OUT",
+    select: toOpenBillDocs,
+  });
+}
+
 export function useInvoice(invoiceId: string | null) {
   return useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => apiFetch<InvoiceDto>(`/api/invoices/${invoiceId}`),
     enabled: !!invoiceId,
+  });
+}
+
+export function useBill(billId: string | null) {
+  return useQuery({
+    queryKey: ["bill", billId],
+    queryFn: () => apiFetch<BillDto>(`/api/bills/${billId}`),
+    enabled: !!billId,
   });
 }
 
@@ -64,6 +90,8 @@ export function useRecordPayment() {
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      queryClient.invalidateQueries({ queryKey: ["bill"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

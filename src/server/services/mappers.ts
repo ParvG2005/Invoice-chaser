@@ -109,7 +109,15 @@ export function toStockMovementDto(movement: StockMovement): StockMovementDto {
   };
 }
 
-export function toBillDto(bill: Bill): BillDto {
+/**
+ * `findMany`/`findById` additively include `party` (Task 19, bills list/detail
+ * pages need the supplier name/link) — every other Bill-returning repository
+ * method still returns a bare `Bill`, so the relation is optional here and
+ * simply omitted from the DTO when absent.
+ */
+type BillWithRelations = Bill & { party?: Party | null };
+
+export function toBillDto(bill: BillWithRelations): BillDto {
   const amount = decimalToNumber(bill.amount);
   const amountPaid = decimalToNumber(bill.amountPaid);
   return {
@@ -127,6 +135,9 @@ export function toBillDto(bill: Bill): BillDto {
     paidAt: bill.paidAt?.toISOString() ?? null,
     createdAt: bill.createdAt.toISOString(),
     updatedAt: bill.updatedAt.toISOString(),
+    party: bill.party && !bill.party.deletedAt
+      ? { id: bill.party.id, name: bill.party.name, type: bill.party.type }
+      : null,
   };
 }
 

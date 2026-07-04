@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { PartyDto } from "@/types";
+import type { PartyDto, PartyType } from "@/types";
 
 export interface PartyPickerValue {
   id: string;
@@ -39,10 +39,17 @@ export interface PartyPickerValue {
 interface PartyPickerProps {
   value: PartyPickerValue | null;
   onChange: (party: PartyPickerValue) => void;
+  /**
+   * Restricts the search (and the "Create ..." shortcut) to a single
+   * `Party.type` (Task 19 — bills need suppliers, invoices keep browsing
+   * everyone). Optional and defaults to no filtering so every existing
+   * invoices-module call site is unaffected.
+   */
+  type?: PartyType;
 }
 
-/** Command-in-Popover combobox for selecting (or creating) the invoice's party. */
-export function PartyPicker({ value, onChange }: PartyPickerProps) {
+/** Command-in-Popover combobox for selecting (or creating) a party, optionally filtered by type. */
+export function PartyPicker({ value, onChange, type }: PartyPickerProps) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -51,9 +58,13 @@ export function PartyPicker({ value, onChange }: PartyPickerProps) {
   const [createForm, setCreateForm] = useState({ name: "", email: "", phone: "" });
 
   const { data: parties, isFetching } = useQuery({
-    queryKey: ["parties", debouncedQuery],
+    queryKey: ["parties", debouncedQuery, type],
     queryFn: () =>
-      apiFetch<PartyDto[]>(`/api/parties?query=${encodeURIComponent(debouncedQuery)}&limit=20`),
+      apiFetch<PartyDto[]>(
+        `/api/parties?query=${encodeURIComponent(debouncedQuery)}&limit=20${
+          type ? `&type=${type}` : ""
+        }`,
+      ),
     enabled: open,
   });
 
@@ -65,6 +76,7 @@ export function PartyPicker({ value, onChange }: PartyPickerProps) {
           name: createForm.name,
           email: createForm.email || undefined,
           phone: createForm.phone || undefined,
+          type,
         }),
       }),
     onSuccess: (party) => {

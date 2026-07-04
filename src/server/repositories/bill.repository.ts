@@ -17,6 +17,7 @@ export const billRepository = {
         ...(options.status ? { status: options.status } : {}),
         ...(options.partyId ? { partyId: options.partyId } : {}),
       },
+      include: { party: true },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
       take: Math.min(options.take ?? 100, 500),
       ...(options.cursor ? { skip: 1, cursor: { id: options.cursor } } : {}),
@@ -24,7 +25,10 @@ export const billRepository = {
   },
 
   findById(organizationId: string, id: string) {
-    return prisma.bill.findFirst({ where: { id, organizationId, deletedAt: null } });
+    return prisma.bill.findFirst({
+      where: { id, organizationId, deletedAt: null },
+      include: { party: true },
+    });
   },
 
   /** Open (not fully paid) bills for a party, oldest due date first — allocation order. */
@@ -47,6 +51,15 @@ export const billRepository = {
     return prisma.bill.updateMany({
       where: { id, organizationId, deletedAt: null },
       data: { deletedAt: new Date() },
+    });
+  },
+
+  /** Payments applied to a bill, newest first — mirrors invoiceRepository.findPaymentAllocations. */
+  findPaymentAllocations(organizationId: string, billId: string) {
+    return prisma.paymentAllocation.findMany({
+      where: { organizationId, billId, deletedAt: null },
+      include: { payment: true },
+      orderBy: { createdAt: "desc" },
     });
   },
 };

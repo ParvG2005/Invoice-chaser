@@ -22,7 +22,13 @@ import {
 import { PartyPicker, type PartyPickerValue } from "@/modules/invoices/components/party-picker";
 import { Money } from "@/components/shared/money";
 import { AllocationEditor } from "@/modules/payments/components/allocation-editor";
-import { useInvoice, useOpenInvoicesForParty, useRecordPayment } from "@/modules/payments/hooks";
+import {
+  useBill,
+  useInvoice,
+  useOpenBillsForParty,
+  useOpenInvoicesForParty,
+  useRecordPayment,
+} from "@/modules/payments/hooks";
 
 type PaymentMode = "CASH" | "BANK_TRANSFER" | "UPI" | "CHEQUE" | "CARD" | "OTHER";
 type Direction = "IN" | "OUT";
@@ -59,13 +65,15 @@ const EMPTY_FORM: FormState = {
  *
  * Reads `?record=1&invoiceId=` (Tasks 8/12 deep links) to auto-open pre-filled
  * for a specific invoice, jumping straight to step 2 with that invoice's row
- * focused.
+ * focused. `?record=1&direction=OUT&billId=` (Task 19) does the same for a
+ * bill, pre-filling the supplier and focusing that bill's allocation row.
  */
 export function RecordPaymentSheet() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recordParam = searchParams.get("record");
   const invoiceIdParam = searchParams.get("invoiceId");
+  const billIdParam = searchParams.get("billId");
 
   // Initialize from the URL so a direct/full-page navigation to
   // `?record=1` (the Task 8/12 deep links, which route to this as a
@@ -77,6 +85,7 @@ export function RecordPaymentSheet() {
   const [allocations, setAllocations] = useState<Record<string, string>>({});
   const [focusTargetId, setFocusTargetId] = useState<string | null>(null);
   const [appliedInvoiceId, setAppliedInvoiceId] = useState<string | null>(null);
+  const [appliedBillId, setAppliedBillId] = useState<string | null>(null);
 
   // Open the sheet in response to the `?record=1` deep link. Adjusting state
   // during render (rather than a useEffect) per
@@ -106,10 +115,34 @@ export function RecordPaymentSheet() {
     setFocusTargetId(deepLinkInvoice.id);
   }
 
-  const { data: openDocs = [], isLoading: openDocsLoading } = useOpenInvoicesForParty(
+  const { data: deepLinkBill } = useBill(
+    billIdParam && billIdParam !== appliedBillId ? billIdParam : null,
+  );
+  if (deepLinkBill && deepLinkBill.id !== appliedBillId && deepLinkBill.party) {
+    setAppliedBillId(deepLinkBill.id);
+    setForm((f) => ({
+      ...f,
+      party: {
+        id: deepLinkBill.party!.id,
+        name: deepLinkBill.party!.name,
+        email: null,
+      },
+      direction: "OUT",
+    }));
+    setStep(2);
+    setFocusTargetId(deepLinkBill.id);
+  }
+
+  const { data: openInvoiceDocs = [], isLoading: openInvoiceDocsLoading } = useOpenInvoicesForParty(
     form.party?.id ?? null,
     form.direction,
   );
+  const { data: openBillDocs = [], isLoading: openBillDocsLoading } = useOpenBillsForParty(
+    form.party?.id ?? null,
+    form.direction,
+  );
+  const openDocs = form.direction === "IN" ? openInvoiceDocs : openBillDocs;
+  const openDocsLoading = form.direction === "IN" ? openInvoiceDocsLoading : openBillDocsLoading;
 
   const recordPayment = useRecordPayment();
 
@@ -120,6 +153,7 @@ export function RecordPaymentSheet() {
     setAllocations({});
     setFocusTargetId(null);
     setAppliedInvoiceId(null);
+    setAppliedBillId(null);
     router.replace("/dashboard/payments");
   }
 

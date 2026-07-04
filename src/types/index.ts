@@ -170,6 +170,16 @@ export interface BillDto {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Additive detail-view field (Task 19) — populated by `GET /api/bills/[id]` and list. */
+  party: { id: string; name: string; type: PartyType } | null;
+}
+
+/** A payment applied to a single bill — used by the bill detail page's "Payments applied" section. */
+export interface BillPaymentDto {
+  id: string;
+  amount: number;
+  mode: string;
+  paymentDate: string;
 }
 
 export interface PaymentAllocationDto {
