@@ -5,6 +5,20 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,12 +26,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm test
+      # Prove all migrations apply cleanly to an empty database.
+      - name: migrate-check
+        run: npx prisma migrate deploy
       - run: npm run build
         env:
-          # Dummy values: `next build` needs a syntactically valid DATABASE_URL/DIRECT_URL
-          # for Prisma client generation, not a reachable database.
-          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
-          DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
-          # Real dev-instance Clerk keys, stored as GitHub Actions repo secrets (Settings → Secrets → Actions).
+          # Dummy values — build only needs syntactically valid envs.
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.CI_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CI_CLERK_SECRET_KEY }}
