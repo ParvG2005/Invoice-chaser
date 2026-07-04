@@ -29,16 +29,25 @@ _Refreshed 2026-07-04 — most of the original list below is resolved; only genu
 ~~3. Stitch design direction not yet user-approved.~~ **Resolved 2026-07-04** — Dashboard and Analytics screens both approved. Phase 3 can proceed generating the remaining ~10 screens. Known caveat carried forward: Date/Stock chart visuals on the Analytics screen are prototype-only and need a real chart library in Phase 3 implementation (not a design-approval blocker).
 ~~4. CI has never run against a real Clerk key or via a PR.~~ **Resolved 2026-07-04** — `CI_CLERK_*` GitHub secrets set from real dev-instance keys, exercised via [PR #1](https://github.com/ParvG2005/Invoice-chaser/pull/1): lint/typecheck/build all passed with real keys.
 5. **Tally fixtures are synthetic, not real.** User has no Tally Prime access. Synthetic fixture files (2026-07-04) unblock Phase 2 parser development but can't surface real-data idiosyncrasies — swap for a real export if/when access becomes available.
-6. **Upstash Redis instance provenance unconfirmed** — the key pushed to production (2026-07-04) reuses whatever was already in local dev; worth confirming it's a production-grade instance before relying on it at real load.
+6. **Upstash Redis is on the free tier.** Confirmed 2026-07-04: instance is named `invoicepilot` (intentionally provisioned, not a stray reused dev key — that part of the original concern is resolved), region `us-west-1`. But plan is **Free tier** (10,000 commands/day cap, no paid-tier SLA), which is a real scale ceiling for rate-limiting at production traffic. Not blocking now (rate limiter falls back to in-memory if Upstash is unreachable/exhausted), but upgrade before relying on it at real load. Region is also cross-continent from the Supabase DB (`ap-northeast-1`, Japan) — added latency on every rate-limit check, not urgent.
 
 **Resolved since last update (no longer risks):** Cloudflare hosting link (now live, native Worker deployed and smoke-tested), Supabase preview/branch decision (resolved — reuse main DB), local env/Cloudflare env wiring (done — Worker secrets verified end-to-end including a real Prisma+Clerk smoke test under the Workers runtime, resolving the ADR-001 runtime risk).
 
 ## Go/no-go recommendation
 
-**Conditional go — materially further along than the last review.** Tasks 1-4 are fully done. Task 5 (Clerk) and Task 6 (email) have real, working fallbacks in place (dev-instance auth, Gmail SMTP) so neither blocks anything. Task 7 is 3-of-4 done (Sentry deliberately last). Remaining USER ACTION items — a custom domain (for Clerk prod), Stitch design sign-off, Tally exports, Sentry — are genuinely independent of each other and don't block Phase 1 execution, which can now proceed: the two conditions from the previous review (Cloudflare linked + DB working end-to-end; Clerk keys in place or a documented deferral) are both satisfied.
+**GO.** Every task is either done or deliberately, non-blockingly deferred:
 
-WhatsApp is no longer tracked as a lead-time risk — it's an explicit, undated future decision, not a pending task with a clock running.
+- Tasks 1-4, 8: ✅ fully done (architecture, env/secrets, CI verified with real keys, DB/hosting, Stitch design sign-off).
+- Task 9 (Tally): ✅ unblocked with documented synthetic fixtures.
+- Task 5 (Clerk prod) & part of Task 6 (WhatsApp): deliberately deferred to an undated "scale-up" bucket — real, working fallbacks in place (dev-instance auth, Gmail SMTP), not on any clock.
+- Task 7 (Sentry): explicitly deprioritized to last, by user decision.
+
+**Two non-blocking items to track into Phase 1/3, not gate conditions:**
+1. Upstash is on the free tier — fine now (in-memory fallback covers it), upgrade before real production load.
+2. Tally fixtures are synthetic — swap for a real export if/when Tally Prime access exists.
+
+Nothing here blocks Phase 1 execution.
 
 ## Sign-off
 
-**Status:** ⬜ pending user sign-off (name + date).
+**Status:** ✅ Phase 0 complete — signed off by Parv, 2026-07-04.
