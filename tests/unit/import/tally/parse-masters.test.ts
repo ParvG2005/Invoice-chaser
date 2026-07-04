@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseLedgers } from "@/lib/import/tally/parse-masters";
+import { parseLedgers, parseStockItems } from "@/lib/import/tally/parse-masters";
 
 const FIXTURES = join(__dirname, "../../../fixtures/tally");
 
@@ -88,6 +88,67 @@ describe("parseLedgers (real fixture)", () => {
     // in `warnings`). Assert both so fixture drift is caught.
     const { records, warnings } = parseLedgers(xml);
     const EXPECTED_TOTAL = (xml.match(/<LEDGER[ >]/g) ?? []).length;
+    expect(records.length + warnings.length).toBe(EXPECTED_TOTAL);
+  });
+});
+
+const STOCK_XML = `<?xml version="1.0"?>
+<ENVELOPE><BODY><IMPORTDATA><REQUESTDATA>
+ <TALLYMESSAGE>
+  <STOCKITEM NAME="Widget A" ACTION="Create">
+   <GUID>guid-stk-0001</GUID>
+   <ALTERID>7</ALTERID>
+   <BASEUNITS>nos</BASEUNITS>
+   <HSNCODE>84advance71</HSNCODE>
+   <GSTDETAILS.LIST>
+    <HSNCODE>847130</HSNCODE>
+    <STATEWISEDETAILS.LIST>
+     <RATEDETAILS.LIST>
+      <GSTRATEDUTYHEAD>IGST</GSTRATEDUTYHEAD>
+      <GSTRATE>18</GSTRATE>
+     </RATEDETAILS.LIST>
+    </STATEWISEDETAILS.LIST>
+   </GSTDETAILS.LIST>
+   <OPENINGBALANCE>10 nos</OPENINGBALANCE>
+   <OPENINGRATE>1,200.00/nos</OPENINGRATE>
+  </STOCKITEM>
+ </TALLYMESSAGE>
+ <TALLYMESSAGE>
+  <STOCKITEM NAME="No Guid Item"><BASEUNITS>kg</BASEUNITS></STOCKITEM>
+ </TALLYMESSAGE>
+</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+
+describe("parseStockItems (synthetic)", () => {
+  it("maps STOCKITEM fields including nested GST rate", () => {
+    const { records, warnings } = parseStockItems(STOCK_XML);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      guid: "guid-stk-0001",
+      alterId: 7,
+      name: "Widget A",
+      unit: "nos",
+      hsnCode: "847130",
+      gstRate: 18,
+      openingQty: 10,
+      openingRate: 1200,
+    });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toMatch(/GUID/i);
+  });
+});
+
+describe("parseStockItems (real fixture)", () => {
+  const stockXml = readFileSync(join(FIXTURES, "masters-stockitems.xml"), "utf8");
+
+  it("parses every STOCKITEM with unique GUIDs and a unit", () => {
+    const { records, warnings } = parseStockItems(stockXml);
+    expect(records.length).toBeGreaterThan(0);
+    expect(new Set(records.map((r) => r.guid)).size).toBe(records.length);
+    for (const r of records) {
+      expect(r.name).not.toBe("");
+      expect(r.unit).not.toBe("");
+    }
+    const EXPECTED_TOTAL = (stockXml.match(/<STOCKITEM[ >]/g) ?? []).length;
     expect(records.length + warnings.length).toBe(EXPECTED_TOTAL);
   });
 });
