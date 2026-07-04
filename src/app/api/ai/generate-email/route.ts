@@ -15,5 +15,5 @@ export const POST = withApiHandler(
     );
     return successResponse(result);
   },
-  { rateLimit: { limit: 20, windowMs: 60_000 } },
+  { rateLimit: { limit: 20, windowMs: 60_000 }, requiredRole: "member" },
 );

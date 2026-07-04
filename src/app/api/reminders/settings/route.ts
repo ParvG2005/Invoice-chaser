@@ -8,9 +8,12 @@ export const GET = withApiHandler(async (_request, ctx) => {
   return successResponse(settings);
 });
 
-export const PUT = withApiHandler(async (request, ctx) => {
-  const body = await request.json();
-  const input = reminderSettingsSchema.parse(body);
-  const settings = await reminderService.updateSettings(ctx.organizationId, input);
-  return successResponse(settings);
-});
+export const PUT = withApiHandler(
+  async (request, ctx) => {
+    const body = await request.json();
+    const input = reminderSettingsSchema.parse(body);
+    const settings = await reminderService.updateSettings(ctx.organizationId, input);
+    return successResponse(settings);
+  },
+  { requiredRole: "member" },
+);

@@ -25,5 +25,5 @@ export const POST = withApiHandler(
     const invoice = await invoiceService.create(ctx.organizationId, input);
     return successResponse(invoice, 201);
   },
-  { rateLimit: { limit: 60, windowMs: 60_000 } },
+  { rateLimit: { limit: 60, windowMs: 60_000 }, requiredRole: "member" },
 );

@@ -8,14 +8,20 @@ export const GET = withApiHandler(async (_request, ctx, params) => {
   return successResponse(invoice);
 });
 
-export const PATCH = withApiHandler(async (request, ctx, params) => {
-  const body = await request.json();
-  const input = updateInvoiceSchema.parse(body);
-  const invoice = await invoiceService.update(ctx.organizationId, params.id, input);
-  return successResponse(invoice);
-});
+export const PATCH = withApiHandler(
+  async (request, ctx, params) => {
+    const body = await request.json();
+    const input = updateInvoiceSchema.parse(body);
+    const invoice = await invoiceService.update(ctx.organizationId, params.id, input);
+    return successResponse(invoice);
+  },
+  { requiredRole: "member" },
+);
 
-export const DELETE = withApiHandler(async (_request, ctx, params) => {
-  const result = await invoiceService.remove(ctx.organizationId, params.id);
-  return successResponse(result);
-});
+export const DELETE = withApiHandler(
+  async (_request, ctx, params) => {
+    const result = await invoiceService.remove(ctx.organizationId, params.id);
+    return successResponse(result);
+  },
+  { requiredRole: "member" },
+);

@@ -10,5 +10,5 @@ export const POST = withApiHandler(
     const created = await invoiceService.bulkCreate(ctx.organizationId, invoices);
     return successResponse(created, 201);
   },
-  { rateLimit: { limit: 10, windowMs: 60_000 } },
+  { rateLimit: { limit: 10, windowMs: 60_000 }, requiredRole: "member" },
 );

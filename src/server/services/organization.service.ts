@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { organizationRepository } from "@/server/repositories/organization.repository";
 import { userRepository } from "@/server/repositories/user.repository";
 import { createLogger } from "@/lib/logger";
+import { parseRole, type Role } from "@/lib/auth/roles";
 
 const log = createLogger("organization-service");
 
@@ -44,6 +45,7 @@ async function resolveUserOrganization(clerkId: string) {
       userId: user.id,
       organizationId: existing.organizationId,
       organization: existing.organization,
+      role: parseRole(existing.role),
     };
   }
 
@@ -56,7 +58,7 @@ async function resolveUserOrganization(clerkId: string) {
       slug,
       userId: user.id,
     });
-    return { userId: user.id, organizationId: org.id, organization: org };
+    return { userId: user.id, organizationId: org.id, organization: org, role: "owner" as Role };
   } catch (error) {
     // Lost a race with a concurrent first request (duplicate slug or membership):
     // the other request already provisioned the org, so just read it back.
@@ -67,6 +69,7 @@ async function resolveUserOrganization(clerkId: string) {
           userId: user.id,
           organizationId: membership.organizationId,
           organization: membership.organization,
+          role: parseRole(membership.role),
         };
       }
     }

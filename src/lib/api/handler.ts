@@ -1,10 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { ZodError } from "zod";
 import { errorResponse } from "@/lib/api/response";
-import { AppError, RateLimitError, UnauthorizedError } from "@/lib/api/errors";
+import { AppError, ForbiddenError, RateLimitError, UnauthorizedError } from "@/lib/api/errors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createLogger } from "@/lib/logger";
 import { organizationService } from "@/server/services/organization.service";
+import { hasRole, type Role } from "@/lib/auth/roles";
 
 const log = createLogger("api-handler");
 
@@ -12,6 +13,7 @@ export interface ApiContext {
   userId: string;
   clerkId: string;
   organizationId: string;
+  role: Role;
 }
 
 type RouteHandler = (
@@ -23,6 +25,8 @@ type RouteHandler = (
 interface HandlerOptions {
   requireAuth?: boolean;
   rateLimit?: { limit: number; windowMs: number };
+  /** Minimum org role for this route. Defaults to "viewer" (any member). */
+  requiredRole?: Role;
 }
 
 type RouteContext = { params: Promise<Record<string, string>> };
@@ -57,7 +61,14 @@ export function withApiHandler(handler: RouteHandler, options: HandlerOptions = 
           clerkId,
           userId: org.userId,
           organizationId: org.organizationId,
+          role: org.role,
         };
+
+        if (options.requiredRole && !hasRole(org.role, options.requiredRole)) {
+          throw new ForbiddenError(
+            `This action requires the ${options.requiredRole} role or higher`,
+          );
+        }
       }
 
       const params = await routeContext.params;
