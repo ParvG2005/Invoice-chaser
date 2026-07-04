@@ -30,6 +30,21 @@ export interface DashboardStats {
     label: string;
     createdAt: string;
   }[];
+  /** Receivables owed to the org across open invoices. */
+  moneyToCome: string;
+  /** Payables owed by the org across open bills. TODO(phase-1): wired to 0 until bill.service.ts exposes outstandingTotal. */
+  moneyToPay: string;
+  pendingCount: number;
+  pendingValue: string;
+  overdueValue: string;
+  invoicesDueSoon: {
+    id: string;
+    invoiceNumber: string;
+    clientName: string;
+    amount: number;
+    dueDate: string;
+    status: InvoiceStatus;
+  }[];
 }
 
 export interface InvoiceDto {
