@@ -86,17 +86,37 @@ export const reminderService = {
       emailTone: settings?.emailTone ?? "PROFESSIONAL",
       autoSend: settings?.autoSend ?? true,
       whatsappEnabled: settings?.whatsappEnabled ?? false,
+      sequence: (settings?.sequence as unknown as ReminderSettingsDto["sequence"]) ?? undefined,
+      quietHours: (settings?.quietHours as unknown as ReminderSettingsDto["quietHours"]) ?? undefined,
     };
   },
 
-  async updateSettings(organizationId: string, input: ReminderSettingsInput) {
+  async updateSettings(organizationId: string, input: ReminderSettingsInput): Promise<ReminderSettingsDto> {
     const settings = await reminderRepository.upsertSettings(organizationId, input);
     return {
       reminderDays: settings.reminderDays,
       emailTone: settings.emailTone,
       autoSend: settings.autoSend,
       whatsappEnabled: settings.whatsappEnabled,
+      sequence: (settings.sequence as unknown as ReminderSettingsDto["sequence"]) ?? undefined,
+      quietHours: (settings.quietHours as unknown as ReminderSettingsDto["quietHours"]) ?? undefined,
     };
+  },
+
+  async getUpcoming(organizationId: string) {
+    const reminders = await reminderRepository.findUpcoming(organizationId);
+    return reminders
+      .filter((r) => r.invoice)
+      .map((r) => ({
+        id: r.id,
+        invoiceId: r.invoiceId,
+        invoiceNumber: r.invoice!.invoiceNumber,
+        partyName: r.invoice!.party?.name ?? r.invoice!.clientName,
+        channel: "EMAIL" as const,
+        scheduledFor: r.scheduledFor.toISOString(),
+        amount: Number(r.invoice!.totalAmount ?? r.invoice!.amount),
+        currency: r.invoice!.currency,
+      }));
   },
 
   async scheduleRemindersForOrganization(organizationId: string) {
@@ -240,6 +260,25 @@ export const reminderService = {
       await reminderRepository.updateStatus(reminder.id, "FAILED");
       throw error;
     }
+  },
+
+  async listForInvoice(organizationId: string, invoiceId: string) {
+    const reminders = await reminderRepository.findForInvoice(organizationId, invoiceId);
+    return reminders.map((r) => ({
+      id: r.id,
+      dayOffset: r.dayOffset,
+      tone: r.tone,
+      status: r.status,
+      scheduledFor: r.scheduledFor.toISOString(),
+      sentAt: r.sentAt?.toISOString() ?? null,
+    }));
+  },
+
+  /** "Skip"/"unskip" a not-yet-sent reminder from the per-invoice schedule tab. */
+  async setSkipped(organizationId: string, reminderId: string, skipped: boolean) {
+    const ok = await reminderRepository.setSkipped(organizationId, reminderId, skipped);
+    if (!ok) throw new NotFoundError("Reminder not found or already sent");
+    return { skipped };
   },
 
   async previewNextReminderDate(invoiceDueDate: Date, reminderDays: number[]) {

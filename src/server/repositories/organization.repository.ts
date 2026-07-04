@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import type { OrganizationSettingsInput } from "@/lib/validations/organization";
 
 export const organizationRepository = {
   findById(id: string) {
@@ -49,6 +50,27 @@ export const organizationRepository = {
       });
 
       return org;
+    });
+  },
+
+  /** Org-scoped profile/sender-identity/appearance fields (Task 26). */
+  findSettings(id: string) {
+    return prisma.organization.findFirst({
+      where: { id, deletedAt: null },
+    });
+  },
+
+  updateSettings(id: string, data: OrganizationSettingsInput) {
+    return prisma.organization.update({
+      where: { id },
+      data,
+    });
+  },
+
+  softDelete(id: string) {
+    return prisma.organization.update({
+      where: { id },
+      data: { deletedAt: new Date() },
     });
   },
 };

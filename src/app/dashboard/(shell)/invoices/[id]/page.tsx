@@ -8,9 +8,11 @@ import { apiFetch } from "@/lib/api/client";
 import { DataTable } from "@/components/shared/data-table";
 import { Money } from "@/components/shared/money";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InvoiceSummaryCard } from "@/modules/invoices/components/invoice-summary-card";
 import { InvoiceActions } from "@/modules/invoices/components/invoice-actions";
 import { InvoiceTimeline } from "@/modules/invoices/components/invoice-timeline";
+import { InvoiceScheduleEditor } from "@/modules/reminders/components/invoice-schedule-editor";
 import type { InvoiceDto, InvoiceLineItemDto } from "@/types";
 
 export default function InvoiceDetailPage() {
@@ -54,12 +56,25 @@ export default function InvoiceDetailPage() {
       <InvoiceSummaryCard invoice={invoice} />
       <InvoiceActions invoice={invoice} />
 
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Line items</h2>
-        <DataTable columns={columns} data={invoice.lineItems ?? []} />
-      </div>
+      <Tabs defaultValue="details">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="reminders">Reminders</TabsTrigger>
+        </TabsList>
 
-      <InvoiceTimeline invoiceId={invoice.id} currency={invoice.currency} />
+        <TabsContent value="details" className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Line items</h2>
+            <DataTable columns={columns} data={invoice.lineItems ?? []} />
+          </div>
+
+          <InvoiceTimeline invoiceId={invoice.id} currency={invoice.currency} />
+        </TabsContent>
+
+        <TabsContent value="reminders">
+          <InvoiceScheduleEditor invoiceId={invoice.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

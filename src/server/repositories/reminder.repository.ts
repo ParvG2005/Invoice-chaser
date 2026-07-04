@@ -8,6 +8,12 @@ export const reminderRepository = {
   },
 
   upsertSettings(organizationId: string, data: ReminderSettingsInput) {
+    // `sequence`/`quietHours` are additive Json columns (Task 26): pass through
+    // when present, otherwise leave untouched (upsert.create defaults to
+    // Prisma's column default of NULL; update omits the key entirely).
+    const sequence = data.sequence as Prisma.InputJsonValue | undefined;
+    const quietHours = data.quietHours as Prisma.InputJsonValue | undefined;
+
     return prisma.reminderSettings.upsert({
       where: { organizationId },
       create: {
@@ -16,12 +22,16 @@ export const reminderRepository = {
         emailTone: data.emailTone as EmailTone,
         autoSend: data.autoSend,
         whatsappEnabled: data.whatsappEnabled,
+        ...(sequence !== undefined ? { sequence } : {}),
+        ...(quietHours !== undefined ? { quietHours } : {}),
       },
       update: {
         reminderDays: data.reminderDays,
         emailTone: data.emailTone as EmailTone,
         autoSend: data.autoSend,
         whatsappEnabled: data.whatsappEnabled,
+        ...(sequence !== undefined ? { sequence } : {}),
+        ...(quietHours !== undefined ? { quietHours } : {}),
       },
     });
   },
@@ -83,6 +93,46 @@ export const reminderRepository = {
     return prisma.reminder.findFirst({
       where: { invoiceId, dayOffset, status: { in: ["SCHEDULED", "SENDING", "SENT"] } },
     });
+  },
+
+  /**
+   * Read view over SCHEDULED reminders for the "Upcoming Reminders" queue
+   * (Task 26) — org-scoped, joined to invoice + party. Not a new scheduling
+   * concept, just a projection of existing `Reminder` rows.
+   */
+  findUpcoming(organizationId: string, limit = 50) {
+    return prisma.reminder.findMany({
+      where: { organizationId, status: "SCHEDULED" },
+      include: { invoice: { include: { party: true } } },
+      orderBy: { scheduledFor: "asc" },
+      take: limit,
+    });
+  },
+
+  /** Per-invoice schedule, for the invoice-detail "Reminders" tab (Task 26). */
+  findForInvoice(organizationId: string, invoiceId: string) {
+    return prisma.reminder.findMany({
+      where: { organizationId, invoiceId },
+      orderBy: { dayOffset: "asc" },
+    });
+  },
+
+  /**
+   * Toggle a reminder between SCHEDULED and CANCELLED ("skip" / "unskip" in the
+   * per-invoice schedule tab). Scoped by organizationId so a tampered id from
+   * another org is silently excluded. Refuses to touch a reminder that's
+   * already SENDING/SENT/FAILED — only pending (SCHEDULED/CANCELLED) rows.
+   */
+  async setSkipped(organizationId: string, reminderId: string, skipped: boolean): Promise<boolean> {
+    const { count } = await prisma.reminder.updateMany({
+      where: {
+        id: reminderId,
+        organizationId,
+        status: { in: ["SCHEDULED", "CANCELLED"] },
+      },
+      data: { status: skipped ? "CANCELLED" : "SCHEDULED" },
+    });
+    return count === 1;
   },
 
   /**

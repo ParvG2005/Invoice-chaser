@@ -210,11 +210,60 @@ export interface PaymentDto {
   updatedAt: string;
 }
 
+export interface ReminderSequenceStepDto {
+  offsetDays: number;
+  tone: "FRIENDLY" | "PROFESSIONAL" | "FIRM" | "FINAL";
+  channels: { email: boolean; whatsapp: boolean };
+}
+
+export interface QuietHoursDto {
+  start: string;
+  end: string;
+}
+
 export interface ReminderSettingsDto {
   reminderDays: number[];
   emailTone: EmailTone;
   autoSend: boolean;
   whatsappEnabled: boolean;
+  /** Additive (Task 26): sequence editor + quiet hours. Not yet consumed by the scheduler. */
+  sequence?: ReminderSequenceStepDto[];
+  quietHours?: QuietHoursDto | null;
+}
+
+export interface InvoiceReminderDto {
+  id: string;
+  dayOffset: number;
+  tone: EmailTone;
+  status: "SCHEDULED" | "SENDING" | "SENT" | "FAILED" | "CANCELLED";
+  scheduledFor: string;
+  sentAt: string | null;
+}
+
+export interface UpcomingReminderDto {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  partyName: string | null;
+  channel: "EMAIL" | "WHATSAPP";
+  scheduledFor: string;
+  amount: number;
+  currency: string;
+}
+
+export interface OrganizationSettingsDto {
+  name: string;
+  gstin: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  logoUrl: string | null;
+  senderName: string | null;
+  senderReplyTo: string | null;
+  emailSignature: string | null;
+  theme: "light" | "dark" | "system";
 }
 
 export interface GenerateEmailResult {

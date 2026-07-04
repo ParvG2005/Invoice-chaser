@@ -152,6 +152,20 @@ model Organization {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
+  // Profile / sender-identity / appearance (Phase 3, Task 26) — all additive
+  // and nullable so the migration is safe on existing rows.
+  gstin          String?
+  addressLine1   String?  @map("address_line1")
+  addressLine2   String?  @map("address_line2")
+  city           String?
+  state          String?
+  postalCode     String?  @map("postal_code")
+  logoUrl        String?  @map("logo_url")
+  senderName     String?  @map("sender_name")
+  senderReplyTo  String?  @map("sender_reply_to")
+  emailSignature String?  @map("email_signature") @db.Text
+  theme          String?  @default("system")
+
   members          OrganizationMember[]
   invoices         Invoice[]
   reminderSettings ReminderSettings?
@@ -236,6 +250,12 @@ model ReminderSettings {
   emailTone      EmailTone @default(PROFESSIONAL) @map("email_tone")
   autoSend       Boolean   @default(true) @map("auto_send")
   whatsappEnabled Boolean   @default(false) @map("whatsapp_enabled")
+  // Additive (Phase 3, Task 26): per-step sequence editor + quiet hours config.
+  // Not yet consumed by the scheduler (scheduleForOverdueInvoices still reads
+  // reminderDays/emailTone/autoSend/whatsappEnabled above) — settings storage
+  // + UI only in this task, full sequence-driven scheduling is a future phase.
+  sequence       Json?
+  quietHours     Json?     @map("quiet_hours")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 

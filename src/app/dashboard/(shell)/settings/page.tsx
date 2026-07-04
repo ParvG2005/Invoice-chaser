@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,197 +18,248 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Clock, Mail, Settings2 } from "lucide-react";
-import type { ReminderSettingsDto } from "@/types";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Building2, Mail, MessageCircle, Palette, ShieldAlert } from "lucide-react";
+import type { OrganizationSettingsDto } from "@/types";
+
+// Same env-flag pattern as the Reminders page / invoice-row-actions.tsx: unset
+// means WhatsApp isn't live yet, so the status card just reflects that.
+const WHATSAPP_ENABLED = process.env.NEXT_PUBLIC_WHATSAPP_ENABLED === "true";
+
+type FormState = Omit<OrganizationSettingsDto, "name"> & { name: string };
+
+const EMPTY: FormState = {
+  name: "",
+  gstin: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  logoUrl: "",
+  senderName: "",
+  senderReplyTo: "",
+  emailSignature: "",
+  theme: "system",
+};
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
+  const { setTheme } = useTheme();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["reminder-settings"],
-    queryFn: () => apiFetch<ReminderSettingsDto>("/api/reminders/settings"),
+    queryKey: ["organization-settings"],
+    queryFn: () => apiFetch<OrganizationSettingsDto>("/api/organizations/settings"),
   });
 
-  const [reminderDays, setReminderDays] = useState("3,7,14");
-  const [emailTone, setEmailTone] = useState<ReminderSettingsDto["emailTone"]>("PROFESSIONAL");
-  const [autoSend, setAutoSend] = useState(true);
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY);
 
-  // Sync local form state from fetched settings once loaded.
   /* eslint-disable react-hooks/set-state-in-effect -- initializing form state from a query result, not a render loop */
   useEffect(() => {
     if (data) {
-      setReminderDays(data.reminderDays.join(","));
-      setEmailTone(data.emailTone);
-      setAutoSend(data.autoSend);
-      setWhatsappEnabled(data.whatsappEnabled);
+      setForm({
+        name: data.name,
+        gstin: data.gstin ?? "",
+        addressLine1: data.addressLine1 ?? "",
+        addressLine2: data.addressLine2 ?? "",
+        city: data.city ?? "",
+        state: data.state ?? "",
+        postalCode: data.postalCode ?? "",
+        logoUrl: data.logoUrl ?? "",
+        senderName: data.senderName ?? "",
+        senderReplyTo: data.senderReplyTo ?? "",
+        emailSignature: data.emailSignature ?? "",
+        theme: data.theme,
+      });
     }
   }, [data]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const save = useMutation({
     mutationFn: () =>
-      apiFetch<ReminderSettingsDto>("/api/reminders/settings", {
+      apiFetch<OrganizationSettingsDto>("/api/organizations/settings", {
         method: "PUT",
-        body: JSON.stringify({
-          reminderDays: reminderDays.split(",").map((d) => parseInt(d.trim(), 10)).filter(Boolean),
-          emailTone,
-          autoSend,
-          whatsappEnabled,
-        }),
+        body: JSON.stringify(form),
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Settings saved");
-      queryClient.invalidateQueries({ queryKey: ["reminder-settings"] });
+      setTheme(result.theme);
+      queryClient.invalidateQueries({ queryKey: ["organization-settings"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const triggerScan = useMutation({
-    mutationFn: () =>
-      apiFetch<{ triggered: boolean; scheduled: number }>("/api/reminders/trigger", {
-        method: "POST",
-      }),
-    onSuccess: (data) => {
-      if (data.scheduled === 0) {
-        toast.info("Scan complete — no new reminders to schedule");
-      } else {
-        toast.success(`Scan complete — ${data.scheduled} reminder${data.scheduled !== 1 ? "s" : ""} scheduled and sending`);
-      }
-      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+  const deleteOrg = useMutation({
+    mutationFn: () => apiFetch("/api/organizations/settings", { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Organization deleted");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const parsedDays = reminderDays
-    .split(",")
-    .map((d) => parseInt(d.trim(), 10))
-    .filter((d) => !isNaN(d) && d > 0)
-    .sort((a, b) => a - b);
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
 
-  if (isLoading) return <Skeleton className="h-64 w-full max-w-xl" />;
+  if (isLoading) return <Skeleton className="h-64 w-full max-w-2xl" />;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-zinc-500">Configure automated follow-up sequences and reminder behaviour.</p>
+    <div className="mx-auto max-w-2xl space-y-6 pb-20">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-zinc-500">Organization profile, sender identity, and appearance.</p>
+        </div>
+        <Button disabled={save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? "Saving..." : "Save changes"}
+        </Button>
       </div>
 
-      {/* Auto-send card */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-zinc-500" />
-            <CardTitle>Automation</CardTitle>
+            <Building2 className="h-5 w-5 text-zinc-500" />
+            <CardTitle>Organization</CardTitle>
           </div>
-          <CardDescription>
-            When enabled, InvoicePilot automatically scans for overdue invoices every day at 9 AM and sends AI-written reminder emails.
-          </CardDescription>
+          <CardDescription>Your business profile as it appears on invoices and emails.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="autoSend" className="text-sm font-medium">Auto-send reminders</Label>
-              <p className="text-xs text-zinc-500 mt-0.5">Emails are sent automatically without manual intervention</p>
-            </div>
-            <Switch id="autoSend" checked={autoSend} onCheckedChange={setAutoSend} />
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-100 pt-4 dark:border-zinc-800">
-            <div>
-              <Label htmlFor="whatsappEnabled" className="text-sm font-medium">WhatsApp reminders</Label>
-              <p className="text-xs text-zinc-500 mt-0.5">Send a short WhatsApp notification alongside the email</p>
-            </div>
-            <Switch id="whatsappEnabled" checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
-          </div>
-
+        <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="reminderDays">
-              Reminder schedule (days overdue)
-            </Label>
-            <Input
-              id="reminderDays"
-              value={reminderDays}
-              onChange={(e) => setReminderDays(e.target.value)}
-              placeholder="3,7,14"
+            <Label htmlFor="org-name">Organization name</Label>
+            <Input id="org-name" value={form.name} onChange={(e) => set("name", e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="org-gstin">GSTIN / Tax ID</Label>
+            <Input id="org-gstin" value={form.gstin ?? ""} onChange={(e) => set("gstin", e.target.value)} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="org-address1">Address line 1</Label>
+              <Input id="org-address1" value={form.addressLine1 ?? ""} onChange={(e) => set("addressLine1", e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-address2">Address line 2</Label>
+              <Input id="org-address2" value={form.addressLine2 ?? ""} onChange={(e) => set("addressLine2", e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-city">City</Label>
+              <Input id="org-city" value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-state">State</Label>
+              <Input id="org-state" value={form.state ?? ""} onChange={(e) => set("state", e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-postal">Postal code</Label>
+              <Input id="org-postal" value={form.postalCode ?? ""} onChange={(e) => set("postalCode", e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-logo">Logo URL</Label>
+              <Input id="org-logo" value={form.logoUrl ?? ""} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-zinc-500" />
+            <CardTitle>Sender identity</CardTitle>
+          </div>
+          <CardDescription>How reminder emails identify who they&apos;re from.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="sender-name">Sender name</Label>
+            <Input id="sender-name" value={form.senderName ?? ""} onChange={(e) => set("senderName", e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="sender-reply-to">Reply-to email</Label>
+            <Input id="sender-reply-to" value={form.senderReplyTo ?? ""} onChange={(e) => set("senderReplyTo", e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="sender-signature">Email signature</Label>
+            <Textarea
+              id="sender-signature"
+              rows={3}
+              value={form.emailSignature ?? ""}
+              onChange={(e) => set("emailSignature", e.target.value)}
             />
-            {parsedDays.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {parsedDays.map((d) => (
-                  <span
-                    key={d}
-                    className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                  >
-                    <Clock className="h-3 w-3" />
-                    {d} day{d !== 1 ? "s" : ""} overdue
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-zinc-400">
-              A reminder will be sent once per milestone per invoice.
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-zinc-500" />
+            <CardTitle>WhatsApp</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {WHATSAPP_ENABLED ? "Connected" : "Connects in Phase 4"}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Automated direct messaging and payment links via WhatsApp Business.
             </p>
           </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-zinc-500" />
+            <CardTitle>Appearance</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
           <div className="grid gap-2">
-            <Label>Email tone</Label>
-            <Select value={emailTone} onValueChange={(v) => setEmailTone(v as typeof emailTone)}>
-              <SelectTrigger>
+            <Label htmlFor="org-theme">Theme</Label>
+            <Select value={form.theme} onValueChange={(v) => set("theme", v as FormState["theme"])}>
+              <SelectTrigger id="org-theme" aria-label="Theme" className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="FRIENDLY">😊 Friendly — warm and understanding</SelectItem>
-                <SelectItem value="PROFESSIONAL">💼 Professional — polished and clear</SelectItem>
-                <SelectItem value="FIRM">⚡ Firm — urgent and direct</SelectItem>
+                <SelectItem value="light">Light</SelectItem>
+                <SelectItem value="dark">Dark</SelectItem>
+                <SelectItem value="system">System</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <Button disabled={save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? "Saving..." : "Save settings"}
-          </Button>
         </CardContent>
       </Card>
 
-      {/* Manual trigger card */}
-      <Card>
+      <Card className="border-red-200 dark:border-red-900">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
-            <CardTitle>Manual Reminder Scan</CardTitle>
+            <ShieldAlert className="h-5 w-5 text-red-500" />
+            <CardTitle className="text-red-600 dark:text-red-400">Danger zone</CardTitle>
           </div>
           <CardDescription>
-            Run the overdue invoice scan immediately instead of waiting for the daily cron job. This will find all overdue invoices and schedule/send reminders according to your settings above.
+            Deleting your organization removes access for all members. This can be undone by contacting support.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="flex items-start gap-3">
-              <Mail className="mt-0.5 h-5 w-5 text-zinc-400 shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-zinc-700 dark:text-zinc-300">How auto-reminders work</p>
-                <ul className="mt-1.5 space-y-1 text-zinc-500 text-xs list-disc list-inside">
-                  <li>Daily cron job runs at 9 AM and scans all invoices</li>
-                  <li>Overdue invoices are matched against your reminder schedule</li>
-                  <li>Groq AI writes a unique, personalised email for each invoice</li>
-                  <li>Emails are sent via your configured SMTP (Gmail)</li>
-                  <li>Each invoice only receives one reminder per milestone (e.g. 3-day, 7-day)</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            className="gap-2"
-            disabled={triggerScan.isPending}
-            onClick={() => triggerScan.mutate()}
-          >
-            <Zap className={`h-4 w-4 ${triggerScan.isPending ? "animate-pulse text-amber-500" : ""}`} />
-            {triggerScan.isPending ? "Scanning..." : "Trigger scan now"}
+        <CardContent>
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+            Delete organization
           </Button>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this organization?"
+        description={`"${form.name}" and all members will lose access. This action is not easily reversible.`}
+        confirmLabel="Delete organization"
+        destructive
+        onConfirm={() => deleteOrg.mutate()}
+      />
     </div>
   );
 }

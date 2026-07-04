@@ -5,6 +5,9 @@ import { organizationRepository } from "@/server/repositories/organization.repos
 import { userRepository } from "@/server/repositories/user.repository";
 import { createLogger } from "@/lib/logger";
 import { parseRole, type Role } from "@/lib/auth/roles";
+import { NotFoundError } from "@/lib/api/errors";
+import type { OrganizationSettingsInput } from "@/lib/validations/organization";
+import type { OrganizationSettingsDto } from "@/types";
 
 const log = createLogger("organization-service");
 
@@ -81,8 +84,62 @@ async function resolveUserOrganization(clerkId: string) {
   }
 }
 
+function toSettingsDto(org: {
+  name: string;
+  gstin: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  logoUrl: string | null;
+  senderName: string | null;
+  senderReplyTo: string | null;
+  emailSignature: string | null;
+  theme: string | null;
+}): OrganizationSettingsDto {
+  return {
+    name: org.name,
+    gstin: org.gstin,
+    addressLine1: org.addressLine1,
+    addressLine2: org.addressLine2,
+    city: org.city,
+    state: org.state,
+    postalCode: org.postalCode,
+    logoUrl: org.logoUrl,
+    senderName: org.senderName,
+    senderReplyTo: org.senderReplyTo,
+    emailSignature: org.emailSignature,
+    theme: (org.theme as OrganizationSettingsDto["theme"]) ?? "system",
+  };
+}
+
 export const organizationService = {
   // cache() dedupes this within a single request so multiple service calls in one
   // route handler don't each re-run the lookup queries.
   ensureUserOrganization: cache(resolveUserOrganization),
+
+  async getSettings(organizationId: string): Promise<OrganizationSettingsDto> {
+    const org = await organizationRepository.findSettings(organizationId);
+    if (!org) throw new NotFoundError("Organization not found");
+    return toSettingsDto(org);
+  },
+
+  async updateSettings(
+    organizationId: string,
+    input: OrganizationSettingsInput,
+  ): Promise<OrganizationSettingsDto> {
+    const org = await organizationRepository.updateSettings(organizationId, input);
+    return toSettingsDto(org);
+  },
+
+  /**
+   * Danger-zone "Delete organization". Soft-delete only (sets `deletedAt`),
+   * matching every other entity's delete convention in this codebase
+   * (Party/Item/Invoice etc.) — not a hard/destructive delete.
+   */
+  async deleteOrganization(organizationId: string) {
+    await organizationRepository.softDelete(organizationId);
+    return { deleted: true };
+  },
 };
