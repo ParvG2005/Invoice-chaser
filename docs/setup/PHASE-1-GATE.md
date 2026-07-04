@@ -115,5 +115,5 @@ Remaining before an actual production **deploy**: pick a hosting path (Cloudflar
 
 ## Sign-off
 
-**Signed by:** _TODO — user name_
-**Date:** _TODO_
+**Signed by:** ParvG2005
+**Date:** 2026-07-04
