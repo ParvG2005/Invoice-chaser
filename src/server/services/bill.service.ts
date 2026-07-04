@@ -65,9 +65,9 @@ export const billService = {
           notes: input.notes,
           status,
         };
-        if (status === "PAID") {
+        if (status === "PAID" && existing.status !== "PAID") {
           updateData.paidAt = new Date();
-        } else if (input.status === "PENDING" || input.status === "OVERDUE") {
+        } else if (existing.status === "PAID" && status !== "PAID") {
           updateData.paidAt = null;
         }
         await billRepository.update(organizationId, id, updateData);

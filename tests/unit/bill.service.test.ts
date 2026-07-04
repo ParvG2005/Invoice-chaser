@@ -98,4 +98,22 @@ describe("billService", () => {
       expect.objectContaining({ status: "PAID", paidAt: expect.any(Date) }),
     );
   });
+
+  it("update on an already-PAID bill without a status change does not overwrite paidAt", async () => {
+    const originalPaidAt = new Date("2026-06-15T00:00:00.000Z");
+    vi.mocked(billRepository.findById).mockResolvedValue(
+      fakeBill({ status: "PAID", paidAt: originalPaidAt }) as never,
+    );
+    vi.mocked(billRepository.update).mockResolvedValue({ count: 1 } as never);
+
+    await billService.update(ORG, "bill-1", { notes: "updated notes" });
+
+    expect(billRepository.update).toHaveBeenCalledWith(
+      ORG,
+      "bill-1",
+      expect.objectContaining({ status: "PAID", notes: "updated notes" }),
+    );
+    const updateData = vi.mocked(billRepository.update).mock.calls[0][2];
+    expect(updateData).not.toHaveProperty("paidAt");
+  });
 });
