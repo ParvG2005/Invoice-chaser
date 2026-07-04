@@ -69,7 +69,13 @@ Post-merge, the Cloudflare Workers Build check-run (`Workers Builds: invoicechas
 
 Fixed in `4367cd0` (message-only, file-rename landed) + `3b8c9bf` (actual content, first commit's `git add` silently dropped everything but the rename). Verified locally: `npm run lint && npm run typecheck && npm test && npx opennextjs-cloudflare build` all exit 0.
 
-Three consecutive build attempts against `3b8c9bf`/`745f4b5` (including a cache-cleared retry) kept showing the pre-fix `compatibility_date` and middleware error despite GitHub confirming correct content on `main` at every commit — a stale Git-integration mirror on Cloudflare's side, not a code issue. Fixed by disconnecting and reconnecting the GitHub integration in the Cloudflare dashboard. Re-run pending confirmation on the next build.
+Three consecutive build attempts against `3b8c9bf`/`745f4b5` (including a cache-cleared retry) kept showing the pre-fix `compatibility_date` and middleware error despite GitHub confirming correct content on `main` at every commit — a stale Git-integration mirror on Cloudflare's side, not a code issue. Fixed by disconnecting and reconnecting the GitHub integration in the Cloudflare dashboard.
+
+After the reconnect, the **build** step succeeds completely (correct `compatibility_date`, `OpenNext build complete`) — confirming the Git-integration mirror was the whole build-side story. A separate, unrelated problem then surfaced at the **deploy** step: `wrangler deploy` fails because the Worker bundle (4.14 MiB gzip) exceeds the Cloudflare Workers **free-plan size limit (3 MiB)** — driven mainly by `.open-next/server-functions/default/handler.mjs` (full Next SSR app + Prisma client bundled into one function). This is an account-plan/hosting-fit limit, not a bug.
+
+Explored trimming the bundle: setting the Prisma generator's `runtime = "workerd"` swaps the query-compiler WASM from a base64-inlined blob to a genuine module import, cutting the upload to 3.64 MiB gzip — real progress, but (a) still over the 3 MiB cap, (b) breaks Vitest for any test that touches a real (non-mocked) Prisma client (Vite can't natively instantiate the `.wasm?module` import the way Workerd does — would need a custom Vite plugin), and (c) closing the remaining gap needs deeper work (route-splitting the monolithic OpenNext server function, deduping ~480 KB of apparently-duplicated chunks found in the bundle analysis). Reverted this experiment (schema.prisma and vitest.config.ts back to their pre-experiment state) rather than carry unresolved risk.
+
+**Decision: deferred.** Cloudflare Workers Paid plan ($5/mo, 10 MiB cap) would resolve this immediately, as would moving hosting to Vercel (built for Next.js — no edge-runtime middleware restriction, no Worker-class bundle-size limit, native `pg` support, would also let Task 12's `middleware.ts`/`serverExternalPackages` workarounds be reverted). Per user instruction, the hosting/deploy decision is deferred until the full app (backend, frontend, DB) is further built out — this does not block Phase 1 sign-off or starting Phase 2, since local dev, CI, and the manual regression all verify the app works correctly; it only blocks an actual production *deploy*.
 
 ## Open Risks / Carried-Forward Items
 
@@ -105,7 +111,7 @@ Status of prior open items:
 3. CI on real GitHub Actions infra — **done**, confirmed green (`lint`, `typecheck`, `test`, `migrate-check`, `build`). Cloudflare Workers Build found broken separately and fixed (Step 4) — live re-run confirmation still pending.
 4. User sign-off — below.
 
-Remaining before *fully* closed: confirm the Cloudflare Workers Build check-run goes green on `3b8c9bf`, and baseline production (`prisma migrate resolve --applied 0_init`) before the first `pages-build` deploy.
+Remaining before an actual production **deploy**: pick a hosting path (Cloudflare Paid plan, Vercel, or other — deferred by user decision, see Step 4) and, if staying on Cloudflare, baseline production (`prisma migrate resolve --applied 0_init`) before the first deploy. Neither blocks Phase 1 sign-off or Phase 2 start — all coding, review, CI, and manual-regression gates are green; only the production deploy step is open.
 
 ## Sign-off
 
