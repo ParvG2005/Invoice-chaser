@@ -13,5 +13,7 @@ export function hasRole(actual: Role, required: Role): boolean {
 
 /** OrganizationMember.role is a free string column; unknown values fail closed. */
 export function parseRole(value: string): Role {
-  return value in ROLE_RANK ? (value as Role) : "viewer";
+  return Object.prototype.hasOwnProperty.call(ROLE_RANK, value)
+    ? (value as Role)
+    : "viewer";
 }

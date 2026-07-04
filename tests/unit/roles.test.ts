@@ -23,4 +23,13 @@ describe("parseRole", () => {
     expect(parseRole("superuser")).toBe("viewer");
     expect(parseRole("")).toBe("viewer");
   });
+  it("fails closed to viewer on Object.prototype property names", () => {
+    expect(parseRole("constructor")).toBe("viewer");
+    expect(parseRole("toString")).toBe("viewer");
+    expect(parseRole("valueOf")).toBe("viewer");
+    expect(parseRole("hasOwnProperty")).toBe("viewer");
+    expect(parseRole("isPrototypeOf")).toBe("viewer");
+    expect(parseRole("toLocaleString")).toBe("viewer");
+    expect(parseRole("propertyIsEnumerable")).toBe("viewer");
+  });
 });
