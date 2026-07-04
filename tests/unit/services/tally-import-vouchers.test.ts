@@ -283,6 +283,112 @@ describe("tallyImportService.runBatch — Sales idempotency", () => {
   });
 });
 
+describe("tallyImportService.runBatch — stock-recording failure leaves tallyAlterId unstamped", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(salesVoucherXml()) }));
+    repo.findBillByGuid.mockResolvedValue(null);
+    repo.findItemByName.mockResolvedValue({ id: "item-1", name: "Widget A" });
+    repo.findPartyByName.mockResolvedValue({ id: "party-1", name: "Acme Traders", creditDays: 0 });
+  });
+
+  it("create path: a transient recordMovement failure leaves the new Invoice without tallyAlterId stamped", async () => {
+    repo.findInvoiceByGuid.mockResolvedValue(null);
+    stockService.recordMovement.mockRejectedValueOnce(new Error("transient DB error"));
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    // The invoice row is created with tallyGuid (so a retry can find it) but
+    // the failure in recordVoucherStock must prevent the follow-up call that
+    // would stamp tallyAlterId — otherwise a retry after the transient issue
+    // is fixed would be permanently SKIPPED by the ALTERID check.
+    expect(invoiceService.create).toHaveBeenCalledTimes(1);
+    expect(invoiceService.create).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ tallyGuid: "guid-vch-0001" }),
+    );
+    const stampCalls = (invoiceService.update.mock.calls as unknown as unknown[][]).filter(
+      (c) => c[2] && Object.prototype.hasOwnProperty.call(c[2] as object, "tallyAlterId"),
+    );
+    expect(stampCalls).toHaveLength(0);
+
+    const record = repo.createRecord.mock.calls.find((c) => c[0].status === "ERRORED");
+    expect(record?.[0].message).toMatch(/transient DB error/);
+  });
+
+  it("update path: a transient recordMovement failure leaves the existing Invoice's tallyAlterId unchanged", async () => {
+    repo.findInvoiceByGuid.mockResolvedValue({
+      id: "invoice-1",
+      tallyGuid: "guid-vch-0001",
+      tallyAlterId: 50, // lower than the voucher's ALTERID (101) -> update path
+    });
+    stockService.recordMovement.mockRejectedValueOnce(new Error("transient DB error"));
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    // Content update runs, but the final call that would bump tallyAlterId
+    // to 101 must never happen because recordVoucherStock threw first.
+    expect(invoiceService.update).toHaveBeenCalledWith(
+      "org-1",
+      "invoice-1",
+      expect.objectContaining({ tallyGuid: "guid-vch-0001" }),
+    );
+    const stampCalls = (invoiceService.update.mock.calls as unknown as unknown[][]).filter(
+      (c) => c[2] && (c[2] as Record<string, unknown>).tallyAlterId === 101,
+    );
+    expect(stampCalls).toHaveLength(0);
+  });
+
+  it("retry after the transient failure is fixed treats the voucher as an update, not a permanent skip", async () => {
+    // First run: existing invoice has no prior tallyAlterId (first-ever import
+    // attempt), and recordMovement fails partway through.
+    repo.findInvoiceByGuid.mockResolvedValueOnce(null);
+    stockService.recordMovement.mockRejectedValueOnce(new Error("transient DB error"));
+    await tallyImportService.runBatch("org-1", "batch-1");
+    expect(
+      (invoiceService.update.mock.calls as unknown as unknown[][]).some(
+        (c) => (c[2] as Record<string, unknown> | undefined)?.tallyAlterId === 101,
+      ),
+    ).toBe(false);
+
+    vi.clearAllMocks();
+    // Second run (retry): the invoice now exists with tallyGuid stamped but
+    // tallyAlterId still unset from the failed first attempt, and the
+    // transient issue is gone.
+    repo.findInvoiceByGuid.mockResolvedValue({
+      id: "invoice-1",
+      tallyGuid: "guid-vch-0001",
+      tallyAlterId: null,
+    });
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    // Must be re-processed as an UPDATE (stock re-recorded, tallyAlterId
+    // finally stamped) rather than SKIPPED forever.
+    expect(invoiceService.create).not.toHaveBeenCalled();
+    expect(invoiceService.update).toHaveBeenCalledWith(
+      "org-1",
+      "invoice-1",
+      expect.objectContaining({ tallyAlterId: 101 }),
+    );
+    const record = repo.createRecord.mock.calls.find((c) => c[0].recordType === "Invoice");
+    expect(record?.[0].status).toBe("UPDATED");
+  });
+
+  it("Purchase create path: a transient recordMovement failure leaves the new Bill without tallyAlterId stamped", async () => {
+    repo.findBatchById.mockResolvedValue(batchRow({ rawContent: envelope(purchaseVoucherXml()) }));
+    repo.findBillByGuid.mockResolvedValue(null);
+    stockService.recordMovement.mockRejectedValueOnce(new Error("transient DB error"));
+
+    await tallyImportService.runBatch("org-1", "batch-1");
+
+    expect(billService.create).toHaveBeenCalledTimes(1);
+    const stampCalls = (billService.update.mock.calls as unknown as unknown[][]).filter(
+      (c) => c[2] && Object.prototype.hasOwnProperty.call(c[2] as object, "tallyAlterId"),
+    );
+    expect(stampCalls).toHaveLength(0);
+  });
+});
+
 describe("tallyImportService.runBatch — unsupported voucher kind", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -583,6 +583,9 @@ async function importSalesVoucher(
   const dueDate = addDays(voucher.date, creditDays ?? 0);
   const lineItems = await buildLineItems(organizationId, voucher.inventoryEntries, notes);
 
+  // `tallyAlterId` is deliberately withheld from this input and only
+  // stamped in a final update once stock recording has succeeded below —
+  // see the comment on each branch for why.
   const input = {
     type: "RECEIVABLE" as const,
     partyId,
@@ -592,13 +595,19 @@ async function importSalesVoucher(
     dueDate,
     notes: voucher.narration,
     tallyGuid: voucher.guid,
-    tallyAlterId: voucher.alterId,
     lineItems,
   };
 
   if (!existing) {
+    // Stamp tallyGuid immediately (so a retry after a mid-sequence failure
+    // finds this row instead of creating a duplicate) but withhold
+    // tallyAlterId until recordVoucherStock succeeds. If recordVoucherStock
+    // throws, tallyAlterId stays unset, so a retry falls into the `existing`
+    // branch below (treated as an update) instead of being permanently
+    // skipped by the tallyAlterId >= check.
     const created = await invoiceService.create(organizationId, input);
     await recordVoucherStock(organizationId, voucher.inventoryEntries, -1, "INVOICE", created.id);
+    await invoiceService.update(organizationId, created.id, { tallyAlterId: voucher.alterId });
     counters.created += 1;
     await tallyImportRepository.createRecord({
       organizationId,
@@ -611,9 +620,15 @@ async function importSalesVoucher(
       message: notes.length ? notes.join("; ") : undefined,
     });
   } else {
+    // Same idea as the create branch: update content/lineItems first, run
+    // stock replace+record, and only bump tallyAlterId to the new value
+    // once those side effects have succeeded. A mid-sequence failure leaves
+    // existing.tallyAlterId at its old (lower) value, so the voucher stays
+    // re-importable on retry instead of being skipped forever.
     await invoiceService.update(organizationId, existing.id, input); // replaces lineItems
     await stockService.replaceMovementsForSource(organizationId, "INVOICE", existing.id);
     await recordVoucherStock(organizationId, voucher.inventoryEntries, -1, "INVOICE", existing.id);
+    await invoiceService.update(organizationId, existing.id, { tallyAlterId: voucher.alterId });
     counters.updated += 1;
     await tallyImportRepository.createRecord({
       organizationId,
@@ -674,6 +689,9 @@ async function importPurchaseVoucher(
   // the same way Sales does, but its result is discarded.
   await buildLineItems(organizationId, voucher.inventoryEntries, notes);
 
+  // `tallyAlterId` is deliberately withheld from this input and only
+  // stamped in a final update once stock recording has succeeded below —
+  // see the comment on each branch for why (mirrors importSalesVoucher).
   const input = {
     partyId,
     billNumber: voucher.voucherNumber,
@@ -681,12 +699,18 @@ async function importPurchaseVoucher(
     dueDate,
     notes: voucher.narration,
     tallyGuid: voucher.guid,
-    tallyAlterId: voucher.alterId,
   };
 
   if (!existing) {
+    // Stamp tallyGuid immediately (so a retry after a mid-sequence failure
+    // finds this row instead of creating a duplicate) but withhold
+    // tallyAlterId until recordVoucherStock succeeds. If recordVoucherStock
+    // throws, tallyAlterId stays unset, so a retry falls into the `existing`
+    // branch below (treated as an update) instead of being permanently
+    // skipped by the tallyAlterId >= check.
     const created = await billService.create(organizationId, input);
     await recordVoucherStock(organizationId, voucher.inventoryEntries, 1, "BILL", created.id);
+    await billService.update(organizationId, created.id, { tallyAlterId: voucher.alterId });
     counters.created += 1;
     await tallyImportRepository.createRecord({
       organizationId,
@@ -699,9 +723,15 @@ async function importPurchaseVoucher(
       message: notes.length ? notes.join("; ") : undefined,
     });
   } else {
+    // Same idea as the create branch: update content first, run stock
+    // replace+record, and only bump tallyAlterId to the new value once
+    // those side effects have succeeded. A mid-sequence failure leaves
+    // existing.tallyAlterId at its old (lower) value, so the voucher stays
+    // re-importable on retry instead of being skipped forever.
     await billService.update(organizationId, existing.id, input);
     await stockService.replaceMovementsForSource(organizationId, "BILL", existing.id);
     await recordVoucherStock(organizationId, voucher.inventoryEntries, 1, "BILL", existing.id);
+    await billService.update(organizationId, existing.id, { tallyAlterId: voucher.alterId });
     counters.updated += 1;
     await tallyImportRepository.createRecord({
       organizationId,
