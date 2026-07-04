@@ -128,6 +128,22 @@ describe("invoiceService (characterization)", () => {
     });
   });
 
+  it("get nulls out a soft-deleted party instead of surfacing it", async () => {
+    // Regression: findById's `party: true` include has no soft-delete filter
+    // (Prisma can't filter a to-one include without relation-filter preview
+    // features), so a soft-deleted Party must be stripped in the mapper —
+    // otherwise its name/link would leak onto the invoice detail/print pages.
+    vi.mocked(invoiceRepository.findById).mockResolvedValue(
+      fakeInvoice({
+        party: { id: "party-1", name: "Deleted Co", type: "CUSTOMER", deletedAt: new Date() },
+      }) as never,
+    );
+
+    const dto = await invoiceService.get(ORG, "inv-1");
+
+    expect(dto.party).toBeNull();
+  });
+
   it("update to PAID sets paidAt", async () => {
     vi.mocked(invoiceRepository.findById).mockResolvedValue(fakeInvoice() as never);
     vi.mocked(invoiceRepository.update).mockResolvedValue({ count: 1 } as never);

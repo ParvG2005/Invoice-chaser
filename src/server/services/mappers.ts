@@ -40,7 +40,7 @@ export function toInvoiceDto(invoice: InvoiceWithRelations): InvoiceDto {
     taxAmount: invoice.taxAmount === null ? null : decimalToNumber(invoice.taxAmount),
     totalAmount: invoice.totalAmount === null ? null : decimalToNumber(invoice.totalAmount),
     amountPaid: decimalToNumber(invoice.amountPaid),
-    party: invoice.party
+    party: invoice.party && !invoice.party.deletedAt
       ? { id: invoice.party.id, name: invoice.party.name, type: invoice.party.type }
       : null,
     lineItems: invoice.lineItems
