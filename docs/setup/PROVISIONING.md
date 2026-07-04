@@ -69,7 +69,9 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 
 **Status:** ✅ done (Gmail SMTP path, shared sender for all orgs) — real domain + Resend explicitly deferred, not blocking.
 
-## Messaging — WhatsApp Cloud API (Task 6) — USER ACTION, start early (longest lead time)
+## Messaging — WhatsApp Cloud API (Task 6)
+
+**Decision (2026-07-04):** deferred, grouped with automated per-user email sending (see `docs/superpowers/plans/2026-07-04-manual-email-compose-link.md`'s "Explicitly out of scope" section) as a "scale-up" item — both revisited together once the app needs to handle real message volume/paid tiers rather than one person manually managing reminders. Not urgent for Phase 0; not blocking anything else.
 
 1. Create a Meta Business Manager account (business.facebook.com) if one doesn't already exist for this business.
 2. Under Meta for Developers, create a WhatsApp Business app, register a phone number for it.
@@ -82,7 +84,7 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 5. **Fallback decision:** if template approval has not completed within 2 weeks of submission, switch to Twilio WhatsApp as the provider behind the same `ChannelProvider` interface (ADR-004) — record that switch as an ADR-004 addendum here if it happens.
 6. Once approved, copy `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` into Cloudflare Pages envs; generate and record a `WHATSAPP_WEBHOOK_VERIFY_TOKEN` for the webhook subscription.
 
-**Status:** ⬜ pending user action (templates not yet submitted).
+**Status:** ⬜ deferred (scale-up item, grouped with automated email sending) — templates not yet submitted, not currently planned to be until then.
 
 ---
 

@@ -1,30 +1,21 @@
 # Tally Fixture Files
 
-Real Tally Prime export files used as the parser test oracle for Phase 2. See `docs/TALLY.md` for the exact export steps.
+Test oracle for the Phase 2 Tally parser. See `docs/TALLY.md` for the real export steps this is standing in for.
 
-## Status: ⬜ pending — USER ACTION
+## Status: 🟡 synthetic fixtures in place (2026-07-04) — not a substitute for real data
 
-No fixture files have been delivered yet. Once the user runs the exports in `docs/TALLY.md` and hands over `masters-ledgers.xml`, `masters-stockitems.xml`, and `vouchers-daybook.xml`:
+**User has no Tally Prime access**, so real exports per `docs/TALLY.md` aren't obtainable right now. Instead, `masters-ledgers.xml`, `masters-stockitems.xml`, and `vouchers-daybook.xml` were hand-authored to match TallyPrime's real documented XML export schema (`ENVELOPE > BODY > EXPORTDATA > REQUESTDATA > TALLYMESSAGE > LEDGER/STOCKITEM/VOUCHER`, verified against Tally's own sample-XML docs and community API references), using fake but structurally realistic Indian business data.
 
-1. **Sanitize together with the user** — confirm party names, phone numbers, emails, and amounts in the files are OK to commit to this repo as-is, or anonymize via a consistent find-replace (same fake name/phone/email substituted everywhere a real one appears, so relationships between records stay intact) while keeping XML structure, voucher counts, and amounts unchanged. Record exactly what was changed below.
-2. **If the user does not want any version of the data committed to git**, store the sanitized files outside the repo (e.g. a local-only path) and note that path + how a future contributor obtains them here instead of committing XML.
-3. Place the resulting files directly in this directory (`tests/fixtures/tally/*.xml`).
-4. Fill in the inventory table below — this directly scopes which voucher types, fields, and edge cases the Phase 2 parser must handle.
+**Known limitation:** synthetic data can validate that the parser handles the tag shapes it's supposed to, but it can't surface the idiosyncrasies a real company's export would have (unexpected voucher types, missing fields, encoding quirks, GST edge cases, real bill-wise reconciliation chains). Treat parser tests against these fixtures as necessary but not sufficient — swap in real exports the moment Tally Prime access exists, per `docs/TALLY.md`.
 
 ## Sanitization log
 
-_None yet — fill in once fixtures are delivered and sanitized. Example format:_
-
-| File | Change made |
-|---|---|
-| `masters-ledgers.xml` | Replaced real party names with `Party 1`, `Party 2`, ... (consistent per GUID); phone/email replaced with fake but structurally valid values. |
+N/A — no real data was ever used; all party names, GSTINs, amounts, and voucher numbers are synthetic.
 
 ## Fixture inventory
 
-_None yet — fill in per file once delivered._
-
 | File | Voucher types present | Voucher count | Has `GUID` | Has `ALTERID` | Has `BILLALLOCATIONS.LIST` | Has `ALLINVENTORYENTRIES.LIST` | GST fields present |
 |---|---|---|---|---|---|---|---|
-| `masters-ledgers.xml` | n/a (masters) | — party count: TBD | TBD | TBD | n/a | n/a | TBD (GSTIN on ledgers) |
-| `masters-stockitems.xml` | n/a (masters) | — item count: TBD | TBD | TBD | n/a | TBD (HSN/GST rate) | TBD |
-| `vouchers-daybook.xml` | TBD (Sales/Purchase/Receipt/Payment/...) | TBD | TBD | TBD | TBD | TBD | TBD |
+| `masters-ledgers.xml` | n/a (masters) | 5 parties (4 debtors, 1 creditor) | Yes | Yes | n/a | n/a | Yes — `PARTYGSTIN` + `GSTREGISTRATIONTYPE` on every ledger |
+| `masters-stockitems.xml` | n/a (masters) | 3 stock items | Yes | Yes | n/a | n/a | Yes — `GSTHSNCODE` + `GSTRATE` on every item |
+| `vouchers-daybook.xml` | Sales (3), Purchase (1), Receipt (1), Payment (1) | 6 | Yes | Yes | Yes — on party ledger entries of every voucher (New Ref on sales/purchase, Agst Ref on receipt/payment) | Yes — on all 3 Sales + the 1 Purchase voucher | Yes — CGST/SGST/IGST ledger entries on Sales/Purchase vouchers |
