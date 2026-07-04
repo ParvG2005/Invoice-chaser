@@ -94,6 +94,14 @@ export default function SettingsPage() {
     mutationFn: () => apiFetch("/api/organizations/settings", { method: "DELETE" }),
     onSuccess: () => {
       toast.success("Organization deleted");
+      // The soft-deleted org no longer resolves via `ensureUserOrganization`
+      // (organization.repository.ts's `findFirstForUser` now filters
+      // `deletedAt: null`), so the next request on `/dashboard` auto-provisions
+      // a fresh workspace for this user — same recovery path a brand-new user
+      // gets. Clear all cached org-scoped queries and hard-navigate so nothing
+      // stale (from the deleted org) is served from the query cache.
+      queryClient.clear();
+      window.location.assign("/dashboard");
     },
     onError: (e: Error) => toast.error(e.message),
   });

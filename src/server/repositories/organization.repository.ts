@@ -24,8 +24,11 @@ export const organizationRepository = {
   },
 
   findFirstForUser(userId: string) {
+    // Filter on the joined organization's `deletedAt` (mirrors `findSettings`),
+    // so a soft-deleted org never keeps resolving as the user's active org —
+    // `ensureUserOrganization` falls through to provisioning a fresh one instead.
     return prisma.organizationMember.findFirst({
-      where: { userId },
+      where: { userId, organization: { deletedAt: null } },
       include: { organization: { include: { reminderSettings: true } } },
       orderBy: { createdAt: "asc" },
     });

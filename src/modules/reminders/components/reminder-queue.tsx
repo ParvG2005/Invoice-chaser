@@ -14,9 +14,12 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { UpcomingReminderDto } from "@/types";
 
 /**
- * Upcoming Reminders queue (Task 26). Reuses the existing "Send reminder now"
- * (`POST /api/reminders/trigger`) and "Snooze" (`POST /api/invoices/[id]/snooze`)
- * endpoints from the invoice detail actions — no new mutation logic invented.
+ * Upcoming Reminders queue (Task 26). "Send now" calls
+ * `POST /api/reminders/[id]/send`, which immediately sends this specific
+ * already-SCHEDULED row (fix: the generic `/api/reminders/trigger` scan only
+ * schedules *new* reminders and is a no-op here). "Snooze" reuses the
+ * existing `POST /api/invoices/[id]/snooze` endpoint from the invoice detail
+ * actions.
  */
 export function ReminderQueue() {
   const queryClient = useQueryClient();
@@ -28,13 +31,16 @@ export function ReminderQueue() {
   });
 
   const sendNow = useMutation({
-    mutationFn: (invoiceId: string) =>
-      apiFetch("/api/reminders/trigger", {
+    mutationFn: (reminderId: string) =>
+      apiFetch<{ sent?: boolean; skipped?: boolean }>(`/api/reminders/${reminderId}/send`, {
         method: "POST",
-        body: JSON.stringify({ invoiceId }),
       }),
-    onSuccess: () => {
-      toast.success("Reminder sent");
+    onSuccess: (result) => {
+      if (result.sent) {
+        toast.success("Reminder sent");
+      } else {
+        toast.info("Reminder was already sent or the invoice is paid — nothing to send");
+      }
       queryClient.invalidateQueries({ queryKey: ["reminders-upcoming"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -124,7 +130,7 @@ export function ReminderQueue() {
         }
         confirmLabel="Send now"
         onConfirm={() => {
-          if (sendTarget) sendNow.mutate(sendTarget.invoiceId);
+          if (sendTarget) sendNow.mutate(sendTarget.id);
           setSendTarget(null);
         }}
       />

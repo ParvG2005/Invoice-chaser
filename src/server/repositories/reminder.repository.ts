@@ -43,6 +43,17 @@ export const reminderRepository = {
     });
   },
 
+  /**
+   * Org-scoped lookup for the "Send now" queue action (Task 26 fix) — a
+   * tampered/foreign-org id resolves to null rather than another org's row.
+   */
+  findByIdForOrg(organizationId: string, id: string) {
+    return prisma.reminder.findFirst({
+      where: { id, organizationId },
+      include: { invoice: true },
+    });
+  },
+
   findDueReminders(asOf = new Date()) {
     return prisma.reminder.findMany({
       where: {

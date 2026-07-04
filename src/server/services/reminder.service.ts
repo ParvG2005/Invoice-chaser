@@ -262,6 +262,18 @@ export const reminderService = {
     }
   },
 
+  /**
+   * "Send now" queue action (Task 26 fix): immediately sends a specific
+   * already-SCHEDULED reminder row, rather than re-running the scan that
+   * schedules *new* reminders (which is a no-op for a row that's already
+   * scheduled). Org-scoped so a foreign-org id 404s instead of being sent.
+   */
+  async sendReminderNow(organizationId: string, reminderId: string) {
+    const reminder = await reminderRepository.findByIdForOrg(organizationId, reminderId);
+    if (!reminder) throw new NotFoundError("Reminder not found");
+    return this.sendReminder(reminderId);
+  },
+
   async listForInvoice(organizationId: string, invoiceId: string) {
     const reminders = await reminderRepository.findForInvoice(organizationId, invoiceId);
     return reminders.map((r) => ({

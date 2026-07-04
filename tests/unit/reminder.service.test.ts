@@ -18,6 +18,10 @@ vi.mock("@/server/repositories/reminder.repository", () => ({
     getSettings: vi.fn(),
     findExistingOffsets: vi.fn(),
     createManyScheduled: vi.fn(),
+    findUpcoming: vi.fn(),
+    findForInvoice: vi.fn(),
+    setSkipped: vi.fn(),
+    findByIdForOrg: vi.fn(),
   },
 }));
 
@@ -117,5 +121,124 @@ describe("reminderService.scheduleRemindersForInvoices", () => {
     }>;
     expect(created.every((r) => r.invoiceId === "inv-1")).toBe(true);
     expect(created.length).toBeGreaterThan(0);
+  });
+});
+
+describe("reminderService.getUpcoming", () => {
+  it("is org-scoped: only queries the given org, and maps rows to the queue DTO shape", async () => {
+    vi.mocked(reminderRepository.findUpcoming).mockResolvedValue([
+      {
+        id: "rem-1",
+        invoiceId: "inv-1",
+        scheduledFor: new Date("2026-07-10T00:00:00.000Z"),
+        invoice: {
+          invoiceNumber: "INV-001",
+          clientName: "Acme",
+          party: { name: "Acme Co" },
+          totalAmount: 1000,
+          amount: 1000,
+          currency: "INR",
+        },
+      },
+    ] as never);
+
+    const result = await reminderService.getUpcoming(ORG);
+
+    expect(reminderRepository.findUpcoming).toHaveBeenCalledWith(ORG);
+    expect(result).toEqual([
+      {
+        id: "rem-1",
+        invoiceId: "inv-1",
+        invoiceNumber: "INV-001",
+        partyName: "Acme Co",
+        channel: "EMAIL",
+        scheduledFor: "2026-07-10T00:00:00.000Z",
+        amount: 1000,
+        currency: "INR",
+      },
+    ]);
+  });
+
+  it("filters out rows whose invoice relation is missing (e.g. deleted invoice)", async () => {
+    vi.mocked(reminderRepository.findUpcoming).mockResolvedValue([
+      { id: "rem-1", invoiceId: "inv-1", invoice: null },
+    ] as never);
+
+    const result = await reminderService.getUpcoming(ORG);
+    expect(result).toEqual([]);
+  });
+});
+
+describe("reminderService.listForInvoice", () => {
+  it("passes organizationId and invoiceId through to the repository (org-scoped)", async () => {
+    vi.mocked(reminderRepository.findForInvoice).mockResolvedValue([
+      {
+        id: "rem-1",
+        dayOffset: 3,
+        tone: "PROFESSIONAL",
+        status: "SCHEDULED",
+        scheduledFor: new Date("2026-07-10T00:00:00.000Z"),
+        sentAt: null,
+      },
+    ] as never);
+
+    const result = await reminderService.listForInvoice(ORG, "inv-1");
+
+    expect(reminderRepository.findForInvoice).toHaveBeenCalledWith(ORG, "inv-1");
+    expect(result).toEqual([
+      {
+        id: "rem-1",
+        dayOffset: 3,
+        tone: "PROFESSIONAL",
+        status: "SCHEDULED",
+        scheduledFor: "2026-07-10T00:00:00.000Z",
+        sentAt: null,
+      },
+    ]);
+  });
+});
+
+describe("reminderService.setSkipped", () => {
+  it("refuses to touch a reminder that isn't SCHEDULED/CANCELLED (repository returns false)", async () => {
+    vi.mocked(reminderRepository.setSkipped).mockResolvedValue(false);
+
+    await expect(reminderService.setSkipped(ORG, "rem-1", true)).rejects.toThrow(
+      "Reminder not found or already sent",
+    );
+    expect(reminderRepository.setSkipped).toHaveBeenCalledWith(ORG, "rem-1", true);
+  });
+
+  it("returns the new skipped state when the repository confirms the update", async () => {
+    vi.mocked(reminderRepository.setSkipped).mockResolvedValue(true);
+
+    const result = await reminderService.setSkipped(ORG, "rem-1", true);
+    expect(result).toEqual({ skipped: true });
+  });
+});
+
+describe("reminderService.sendReminderNow", () => {
+  it("404s for a reminder id that doesn't belong to the org (org-scoped lookup)", async () => {
+    vi.mocked(reminderRepository.findByIdForOrg).mockResolvedValue(null);
+
+    await expect(reminderService.sendReminderNow(ORG, "rem-1")).rejects.toThrow(
+      "Reminder not found",
+    );
+    expect(reminderRepository.findByIdForOrg).toHaveBeenCalledWith(ORG, "rem-1");
+  });
+
+  it("delegates to sendReminder once the reminder is verified to belong to the org", async () => {
+    vi.mocked(reminderRepository.findByIdForOrg).mockResolvedValue({
+      id: "rem-1",
+      organizationId: ORG,
+      invoice: { id: "inv-1" },
+    } as never);
+    const sendReminderSpy = vi
+      .spyOn(reminderService, "sendReminder")
+      .mockResolvedValue({ sent: true });
+
+    const result = await reminderService.sendReminderNow(ORG, "rem-1");
+
+    expect(sendReminderSpy).toHaveBeenCalledWith("rem-1");
+    expect(result).toEqual({ sent: true });
   });
 });
