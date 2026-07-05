@@ -65,3 +65,23 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CI_CLERK_SECRET_KEY }}
           E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
           E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+
+  # Applies pending migrations to the real production database. Cloudflare's
+  # own Git integration builds and deploys the Worker independently of this
+  # workflow, so this job's run and the Worker's build/deploy are NOT strictly
+  # ordered relative to each other — every migration must stay backward
+  # compatible with the previous app version (expand/contract) until
+  # docs/RUNBOOK.md says otherwise.
+  migrate:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm }
+      - run: npm ci
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}

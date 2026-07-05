@@ -43,6 +43,12 @@ Running log of external services provisioned for InvoicePilot, who did it, and w
 
 Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev workflow). Starting Phase 1, this switches to `prisma migrate dev`/`prisma migrate deploy` once the Phase-1 blueprint models land, so schema changes are versioned and repeatable against the Supabase database above.
 
+**2026-07-05 (Phase 7 Task 4):** Cloudflare's Git integration builds the Worker with `npx opennextjs-cloudflare build` only — it does **not** run `prisma migrate deploy` (the `pages-build` npm script that does is not actually wired to the Cloudflare project's build command). Until now nothing applied migrations to the production database automatically. Added a `migrate` job to `.github/workflows/ci.yml`, gated to `push` on `main` after `checks` passes, that runs `npx prisma migrate deploy` against `PROD_DIRECT_URL`.
+
+- ⬜ **USER ACTION required:** add repo secret `PROD_DIRECT_URL` (GitHub → Settings → Secrets and variables → Actions) — the same direct (port 5432, non-pooled) Supabase connection string as `DIRECT_URL` above. Migrations must not go through the pooler.
+- Because the GitHub Actions `migrate` job and Cloudflare's own Worker build/deploy are two independent systems triggered by the same push, they are **not strictly ordered** — every migration must stay backward-compatible with the previously-deployed app version (expand/contract) until this is tightened. Documented in `docs/RUNBOOK.md`.
+- Not yet verified against a real `main` push (needs the secret above first) — next push to `main` after the secret is added should show `migrate` run `No pending migrations to apply.` or the actual pending migrations.
+
 ---
 
 ## Auth — Clerk production instance (Task 5) — USER ACTION
