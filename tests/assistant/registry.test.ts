@@ -13,8 +13,7 @@ describe("tool registry", () => {
     }
   });
 
-  // unskip after Task 4
-  it.skip("tool registry has tools", () => {
+  it("tool registry has tools", () => {
     const reg = buildRegistry({ organizationId: "o", userId: "u", role: "owner" });
     expect(reg.size).toBeGreaterThan(0);
   });

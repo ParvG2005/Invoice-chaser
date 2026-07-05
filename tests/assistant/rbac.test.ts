@@ -12,8 +12,7 @@ describe("buildRegistry RBAC filtering", () => {
     }
   });
 
-  // unskip after Task 4
-  it.skip("viewer role has read tools", () => {
+  it("viewer role has read tools", () => {
     const reg = buildRegistry({ ...base, role: "viewer" });
     expect(reg.size).toBeGreaterThan(0);
   });
@@ -24,8 +23,7 @@ describe("buildRegistry RBAC filtering", () => {
     expect(reg).toBeInstanceOf(Map);
   });
 
-  // unskip after Task 4
-  it.skip("member role gets both read and write tools", () => {
+  it("member role gets both read and write tools", () => {
     const reg = buildRegistry({ ...base, role: "member" });
     const kinds = new Set([...reg.values()].map((t) => t.kind));
     expect(kinds.has("read")).toBe(true);
