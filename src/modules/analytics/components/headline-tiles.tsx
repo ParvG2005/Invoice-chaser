@@ -15,19 +15,21 @@ export function HeadlineTiles() {
       value: data ? `${data.pendingInvoices.count}` : "—",
       sub: data ? formatCurrency(data.pendingInvoices.value, "INR") : undefined,
     },
-    { label: "Overdue value", value: data ? formatCurrency(data.overdueValue, "INR") : "—" },
+    { label: "Overdue value", value: data ? formatCurrency(data.overdueValue, "INR") : "—", danger: true },
     { label: "Collected this month", value: data ? formatCurrency(data.collectedThisMonth, "INR") : "—" },
   ];
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5" aria-busy={isLoading}>
       {tiles.map((t) => (
-        <Card key={t.label}>
+        // Red border reserved for the danger tile, matching the low-stock
+        // card treatment on the Stitch "Analytics - Stock" screen.
+        <Card key={t.label} className={t.danger ? "border-destructive/50" : undefined}>
           <CardHeader className="pb-1">
             <CardTitle className="text-sm font-medium text-muted-foreground">{t.label}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-nums">{t.value}</div>
+            <div className={`text-2xl font-semibold tabular-nums ${t.danger ? "text-destructive" : ""}`}>{t.value}</div>
             {t.sub && <div className="text-sm text-muted-foreground tabular-nums">{t.sub}</div>}
           </CardContent>
         </Card>

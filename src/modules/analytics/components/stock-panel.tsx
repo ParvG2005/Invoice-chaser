@@ -31,8 +31,10 @@ export function StockPanel() {
           </ResponsiveContainer>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <h3 className="mb-1 text-sm font-medium">Low stock</h3>
+          <div className={data.lowStockItems.length > 0 ? "rounded-md border border-destructive/50 p-3" : undefined}>
+            <h3 className={`mb-1 text-sm font-medium ${data.lowStockItems.length > 0 ? "text-destructive" : ""}`}>
+              Low stock{data.lowStockItems.length > 0 ? ` — action required` : ""}
+            </h3>
             {data.lowStockItems.length === 0 && <p className="text-sm text-muted-foreground">None</p>}
             <ul className="text-sm">
               {data.lowStockItems.map((i) => (
