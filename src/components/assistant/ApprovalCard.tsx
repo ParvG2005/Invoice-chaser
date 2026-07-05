@@ -8,9 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils/cn";
 import type { AssistantProposedAction } from "@/components/assistant/useAssistantStream";
 
-const STATUS_BADGE: Record<AssistantProposedAction["status"], { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" }> = {
+// Note: the server briefly persists an "APPROVED" status while executing a
+// tool, but `approveAction` always resolves to either EXECUTED or FAILED
+// before responding to the client — so the client-visible status never
+// includes "APPROVED". This map is intentionally partial with a fallback
+// below rather than carrying a dead, unreachable entry.
+const STATUS_BADGE: Partial<
+  Record<AssistantProposedAction["status"], { label: string; variant: "default" | "secondary" | "success" | "warning" | "danger" }>
+> = {
   PROPOSED: { label: "Awaiting approval", variant: "warning" },
-  APPROVED: { label: "Approving…", variant: "secondary" },
   EXECUTED: { label: "Executed", variant: "success" },
   REJECTED: { label: "Rejected", variant: "secondary" },
   FAILED: { label: "Failed", variant: "danger" },
@@ -27,7 +33,7 @@ export function ApprovalCard({ action, onApprove, onReject, busy }: ApprovalCard
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState("");
   const resolved = action.status !== "PROPOSED";
-  const badge = STATUS_BADGE[action.status];
+  const badge = STATUS_BADGE[action.status] ?? { label: action.status, variant: "secondary" as const };
 
   return (
     <div

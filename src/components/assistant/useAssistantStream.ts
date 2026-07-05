@@ -110,6 +110,22 @@ export function useAssistantStream(sessionId: string | null): UseAssistantStream
               );
             } else if (event.type === "proposed_action") {
               setActions((prev) => [...prev, event.action]);
+            } else if (event.type === "tool_result") {
+              const statusLine = event.ok
+                ? `Looked up: ${event.toolName}`
+                : `Lookup failed: ${event.toolName}`;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, text: `${m.text}${m.text ? "\n" : ""}${statusLine}\n` }
+                    : m,
+                ),
+              );
+            } else if (event.type === "done") {
+              // Explicit terminal marker: nothing to render, but acknowledging it
+              // here (rather than relying solely on the reader loop's `done`
+              // flag) keeps intent clear and gives us a hook for `event.usage`
+              // if we want to surface token counts later.
             } else if (event.type === "error") {
               setError(event.message);
             }
