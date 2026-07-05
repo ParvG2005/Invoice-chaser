@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopBar } from "@/components/layout/top-bar";
+import { AssistantDrawer } from "@/components/assistant/AssistantDrawer";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <TopBar />
         <main className="mx-auto w-full min-w-0 max-w-7xl flex-1 overflow-auto p-6">{children}</main>
       </div>
+      <AssistantDrawer />
     </div>
   );
 }
