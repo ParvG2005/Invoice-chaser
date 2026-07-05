@@ -6,8 +6,8 @@ describe("resolveModel", () => {
   it("maps default tier to claude-sonnet-5", () => {
     expect(resolveModel("default")).toBe("claude-sonnet-5");
   });
-  it("maps tier tier to claude-fable-5", () => {
-    expect(resolveModel("tier")).toBe("claude-fable-5");
+  it("maps tier tier to claude-sonnet-5 too — fable-5 is not wired to any tier", () => {
+    expect(resolveModel("tier")).toBe("claude-sonnet-5");
   });
   it("falls back to sonnet for unknown values", () => {
     expect(resolveModel("nonsense" as never)).toBe("claude-sonnet-5");
