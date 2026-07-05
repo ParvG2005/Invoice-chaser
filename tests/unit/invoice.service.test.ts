@@ -67,6 +67,7 @@ describe("invoiceService (characterization)", () => {
       enqueueOverdueCheck,
       enqueueOverdueChecks: vi.fn(),
       enqueueReminder: vi.fn(),
+      enqueueInvoicePaid: vi.fn(),
     } as never);
   });
   afterEach(() => vi.useRealTimers());

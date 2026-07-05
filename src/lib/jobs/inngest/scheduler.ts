@@ -52,6 +52,13 @@ export class InngestJobScheduler implements JobScheduler {
       data: { organizationId, batchId },
     });
   }
+
+  async enqueueInvoicePaid(organizationId: string, invoiceId: string): Promise<void> {
+    await inngest.send({
+      name: JOB_EVENTS.INVOICE_PAID,
+      data: { organizationId, invoiceId },
+    });
+  }
 }
 
 let scheduler: JobScheduler | null = null;

@@ -3,6 +3,7 @@ import { getAiProvider } from "@/lib/ai";
 import { buildReminderEmailPrompts } from "@/lib/ai/prompts/reminder-email";
 import type { EmailTone } from "@/generated/prisma/client";
 import { renderBaseEmailTemplate, textToHtmlParagraphs } from "@/lib/email/templates/base";
+import { buildPaymentBlock } from "@/lib/channels/payment-block";
 import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { organizationRepository } from "@/server/repositories/organization.repository";
 import { aiGenerationRepository } from "@/server/repositories/ai-generation.repository";
@@ -80,9 +81,13 @@ export const aiEmailService = {
     });
 
     const parsed = parseAiEmailJson(completion.content);
+    const paymentBlock = buildPaymentBlock({
+      upiId: org.reminderSettings?.upiId ?? null,
+      paymentLink: org.reminderSettings?.paymentLink ?? null,
+    });
     const bodyHtml = renderBaseEmailTemplate({
       title: parsed.subject,
-      bodyHtml: textToHtmlParagraphs(parsed.bodyText),
+      bodyHtml: textToHtmlParagraphs(parsed.bodyText) + paymentBlock.html,
     });
 
     if (options?.persist !== false) {
@@ -102,7 +107,7 @@ export const aiEmailService = {
     return {
       subject: parsed.subject,
       bodyHtml,
-      bodyText: parsed.bodyText,
+      bodyText: parsed.bodyText + paymentBlock.text,
       whatsappText: parsed.whatsappText,
     };
   },

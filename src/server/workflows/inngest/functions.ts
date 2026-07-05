@@ -2,6 +2,7 @@ import { inngest } from "@/lib/jobs/inngest/client";
 import { JOB_EVENTS } from "@/lib/jobs/types";
 import { reminderService } from "@/server/services/reminder.service";
 import { tallyImportService } from "@/server/services/import/tally-import.service";
+import { communicationService } from "@/server/services/communication.service";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { prisma } from "@/lib/db/prisma";
 import { createLogger } from "@/lib/logger";
@@ -84,9 +85,21 @@ export const tallyImportWorkflow = inngest.createFunction(
   },
 );
 
+export const invoicePaidWorkflow = inngest.createFunction(
+  { id: "invoice-paid-thank-you", name: "Send Thank-You on Payment", triggers: { event: JOB_EVENTS.INVOICE_PAID } },
+  async ({ event, step }) => {
+    const organizationId = event.data.organizationId as string;
+    const invoiceId = event.data.invoiceId as string;
+    return step.run("send-thank-you", () =>
+      communicationService.sendPaidThankYou(organizationId, invoiceId),
+    );
+  },
+);
+
 export const inngestFunctions = [
   reminderScanWorkflow,
   sendReminderWorkflow,
   overdueCheckWorkflow,
   tallyImportWorkflow,
+  invoicePaidWorkflow,
 ];

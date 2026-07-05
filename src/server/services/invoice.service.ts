@@ -258,6 +258,10 @@ export const invoiceService = {
     }
     await invoiceRepository.update(organizationId, id, updateData);
 
+    if (status === "PAID" && existing.status !== "PAID") {
+      await getJobScheduler().enqueueInvoicePaid(organizationId, id);
+    }
+
     return this.get(organizationId, id);
   },
 
