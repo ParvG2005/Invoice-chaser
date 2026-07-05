@@ -142,3 +142,22 @@ Once keys are in place, check the Cloudflare dashboard → Settings → Environm
 **Restore drill** — ⬜ **not yet performed.** Per the parent plan, an unrestored backup is not a backup — this requires a live drill (create a scratch DB/project, restore the latest backup into it, verify row counts and `_prisma_migrations` count match, then destroy the scratch DB) and is a USER ACTION the agent can prepare instructions for but not execute (no Supabase dashboard access). Do this once the backup schedule above is confirmed; re-drill quarterly per `docs/RUNBOOK.md`.
 
 ---
+
+## Load sanity — volume seed + EXPLAIN checks (Phase 7 Task 8)
+
+`scripts/seed-volume.ts` (1,000 parties, 10,000 invoices, throwaway `volume-test-org`) + `scripts/explain-checks.ts` (EXPLAIN ANALYZE on the app's real hot-path queries: `invoice.repository.ts#findMany`, `dashboard.service.ts#getStats`, `analytics.service.ts#getAgingReport`, party ledger). Run: `SEED_ALLOW=staging npm run seed:volume && npm run explain:check`.
+
+Run against the local dev DB 2026-07-05 (no separate staging DB provisioned yet — same caveat as the seed-staging drill above):
+
+```
+PASS invoice-list:     4.3ms, seqScanOnInvoices=false
+FAIL dashboard-tiles:  5.3ms, seqScanOnInvoices=true
+FAIL aging-buckets:    9.9ms, seqScanOnInvoices=true
+PASS party-invoices:   0.1ms, seqScanOnInvoices=false
+```
+
+All four are well under budget in absolute time. The two "FAIL"s are a seq scan, but not a missing-index problem: this test DB has only the one volume org, so 10,000 of the table's 10,021 rows (99.8%) belong to it — any organization-scoped query is a near-full-table scan by definition here, and Postgres correctly picks a seq scan over an index it knows won't be selective. The existing `@@index([organizationId, status])` (`prisma/schema.prisma`) is real and will matter once the table holds many orgs' data with much lower per-org selectivity; no new index was added because there was nothing here for EXPLAIN to actually prove missing. Re-run this check against the real Supabase database (which has other orgs' rows mixed in) before trusting the seq-scan verdict, and add `@@index([organizationId, status, dueDate])`/`@@index([organizationId, deletedAt])` only if that run still shows a seq scan.
+
+Browser-level timing not measured (would need a signed-in session against the volume org on a running dev server — can be done on request).
+
+---
