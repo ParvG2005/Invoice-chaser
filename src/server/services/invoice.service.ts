@@ -93,6 +93,14 @@ async function enqueueOverdueCheckBestEffort(organizationId: string): Promise<vo
   }
 }
 
+async function enqueueInvoicePaidBestEffort(organizationId: string, id: string): Promise<void> {
+  try {
+    await getJobScheduler().enqueueInvoicePaid(organizationId, id);
+  } catch (error) {
+    console.error("invoiceService: enqueueInvoicePaid failed (non-fatal)", error);
+  }
+}
+
 /**
  * Picks a collision-free invoice number for a duplicate: `<original>-COPY`,
  * falling back to `<original>-COPY-2`, `-COPY-3`, ... The
@@ -259,7 +267,7 @@ export const invoiceService = {
     await invoiceRepository.update(organizationId, id, updateData);
 
     if (status === "PAID" && existing.status !== "PAID") {
-      await getJobScheduler().enqueueInvoicePaid(organizationId, id);
+      await enqueueInvoicePaidBestEffort(organizationId, id);
     }
 
     return this.get(organizationId, id);
