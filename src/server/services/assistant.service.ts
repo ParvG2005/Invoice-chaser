@@ -27,6 +27,13 @@ export const assistantService = {
     });
   },
 
+  async listSessions(ctx: ToolContext) {
+    return prisma.assistantSession.findMany({
+      where: { organizationId: ctx.organizationId, userId: ctx.userId, deletedAt: null },
+      orderBy: { updatedAt: "desc" },
+    });
+  },
+
   async appendMessage(
     ctx: ToolContext,
     sessionId: string,
