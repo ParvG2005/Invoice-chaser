@@ -26,6 +26,7 @@
     "db:seed:e2e": "tsx --env-file-if-exists=.env prisma/seed-e2e.ts",
     "db:seed:analytics": "tsx --env-file-if-exists=.env scripts/seed-analytics-fixture.ts",
     "db:seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo-data.ts",
+    "seed:staging": "tsx --env-file-if-exists=.env scripts/seed-staging.ts",
     "postinstall": "prisma generate",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"

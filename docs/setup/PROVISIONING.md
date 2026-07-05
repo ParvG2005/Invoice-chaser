@@ -132,3 +132,13 @@ Per ADR-002 and parent plan §0.2: Phase 0/1 uses `prisma db push` (current dev 
 Once keys are in place, check the Cloudflare dashboard → Settings → Environment Variables for Production and Preview and tick each variable's cell in `docs/ENVIRONMENT.md`'s Legend column.
 
 ---
+
+## Backups & staging seed (Phase 7 Task 5)
+
+**`scripts/seed-staging.ts`** — done. Deterministic, idempotent demo org (`demo-staging-org`: 5 parties, 20 invoices spanning PENDING/OVERDUE/PAID). Guarded by `SEED_ALLOW=staging` (refuses without it). Run: `SEED_ALLOW=staging npm run seed:staging`. Verified locally (2026-07-05): seeds once, no-ops on re-run, refuses without the guard.
+
+**Backup schedule** — ⬜ **USER ACTION, not yet confirmed.** The production database is the Supabase project "Invoice Chaser" (`sikdvtqrdqynknlvpsls`). Supabase automated daily backups are enabled by default on paid plans; on the Free plan there is **no automated backup** (only manual `pg_dump`). Confirm which plan this project is on (Supabase dashboard → Project Settings → Billing) and, if Free, either upgrade or set up a scheduled `pg_dump` (e.g. a cron'd GitHub Action) as a substitute. Record here once decided: plan, retention, PITR yes/no.
+
+**Restore drill** — ⬜ **not yet performed.** Per the parent plan, an unrestored backup is not a backup — this requires a live drill (create a scratch DB/project, restore the latest backup into it, verify row counts and `_prisma_migrations` count match, then destroy the scratch DB) and is a USER ACTION the agent can prepare instructions for but not execute (no Supabase dashboard access). Do this once the backup schedule above is confirmed; re-drill quarterly per `docs/RUNBOOK.md`.
+
+---
