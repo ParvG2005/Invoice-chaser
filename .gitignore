@@ -58,3 +58,10 @@ src/generated/
 # playwright
 /test-results/
 /playwright-report/
+
+# local agent/tool state — never pushed, kept locally only
+/.agents/
+/.claude/
+/.goose/
+/.neon
+/skills-lock.json

@@ -161,3 +161,15 @@ All four are well under budget in absolute time. The two "FAIL"s are a seq scan,
 Browser-level timing not measured (would need a signed-in session against the volume org on a running dev server — can be done on request).
 
 ---
+
+## Phase 7 — still open (2026-07-05)
+
+Done this pass: env-audit-adjacent security headers/CSP, CI migrate gate, staging seed script, volume seed + EXPLAIN checks, RUNBOOK/ONBOARDING/README/TALLY docs, `@smoke` Playwright tags. Remaining, all blocked on live actions this session can't take:
+
+- **Custom domain + Clerk production keys** — need a real owned domain; Clerk prod instance is stuck `domain_pending` until then (see "Auth — Clerk production instance" above).
+- **Sentry (errors + traces)** — explicitly deprioritized/deferred; no `SENTRY_DSN` exists. No error tracking in prod today beyond `wrangler tail` logs.
+- **Uptime monitor + Inngest failure alerts + `/api/health`** — endpoint doesn't exist yet; uptime monitor needs a signup (Better Stack/UptimeRobot/Cloudflare Health Checks).
+- **Launch checklist + hypercare plan** — most rows would read "not applicable yet" until the above land; not written to avoid a checklist that's mostly false.
+- **Phase gate (final sign-off)** — parent-plan gate requires a real reminder sent on *both* channels; WhatsApp isn't built (deferred, grouped with per-user email sending as a scale-up item). Can't be met as written until WhatsApp ships or the gate criterion is revised.
+
+---
