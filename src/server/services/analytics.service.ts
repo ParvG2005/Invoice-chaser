@@ -3,8 +3,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { decimalToNumber } from "@/lib/utils/currency";
 import type {
-  AgingBucketLabel, AgingReport, AgingSide, CashflowProjection, CashflowWeek,
-  CollectionTrendPoint, HeadlineTiles,
+  AgentLeaderboardRow, AgingBucketLabel, AgingReport, AgingSide, CashflowProjection, CashflowWeek,
+  CollectionTrendPoint, HeadlineTiles, PartyAnalytics, PartyAnalyticsRow, PartyRiskFlag,
 } from "@/types/analytics";
 
 // Deviation from the Phase 5 plan's assumed schema: Invoice/Bill have no
@@ -180,5 +180,86 @@ export const analyticsService = {
     for (const w of weeks) w.net = w.inflow - w.outflow;
 
     return { overdue, weeks };
+  },
+
+  async getPartyAnalytics(organizationId: string, _asOf: Date = new Date()): Promise<PartyAnalytics> {
+    const [parties, recvRows, payRows, paidInvoices, collectedByParty] = await Promise.all([
+      prisma.party.findMany({
+        where: { organizationId, deletedAt: null },
+        select: { id: true, name: true, type: true, creditLimit: true, agentId: true },
+      }),
+      prisma.$queryRaw<{ party_id: string; sum: unknown }[]>(Prisma.sql`
+        SELECT party_id, COALESCE(SUM(COALESCE(total_amount, amount) - amount_paid), 0) AS sum
+        FROM invoices
+        WHERE organization_id = ${organizationId} AND deleted_at IS NULL AND type = 'RECEIVABLE'
+          AND status <> 'PAID' AND (COALESCE(total_amount, amount) - amount_paid) > 0 AND party_id IS NOT NULL
+        GROUP BY party_id
+      `),
+      prisma.$queryRaw<{ party_id: string; sum: unknown }[]>(Prisma.sql`
+        SELECT party_id, COALESCE(SUM(amount - amount_paid), 0) AS sum
+        FROM bills
+        WHERE organization_id = ${organizationId} AND deleted_at IS NULL
+          AND status <> 'PAID' AND (amount - amount_paid) > 0
+        GROUP BY party_id
+      `),
+      prisma.invoice.findMany({
+        where: { organizationId, deletedAt: null, type: "RECEIVABLE", status: "PAID", paidAt: { not: null }, partyId: { not: null } },
+        select: { partyId: true, createdAt: true, dueDate: true, paidAt: true },
+      }),
+      prisma.payment.groupBy({
+        by: ["partyId"],
+        where: { organizationId, deletedAt: null, direction: "IN" },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const recvBy = new Map(recvRows.map((r) => [r.party_id, num(r.sum)]));
+    const payBy = new Map(payRows.map((r) => [r.party_id, num(r.sum)]));
+    const collectedBy = new Map(collectedByParty.map((r) => [r.partyId, num(r._sum.amount)]));
+
+    const behavior = new Map<string, { paidCount: number; totalDays: number; onTime: number }>();
+    for (const inv of paidInvoices) {
+      const partyId = inv.partyId!;
+      const b = behavior.get(partyId) ?? { paidCount: 0, totalDays: 0, onTime: 0 };
+      b.paidCount += 1;
+      b.totalDays += differenceInCalendarDays(inv.paidAt!, inv.createdAt);
+      if (differenceInCalendarDays(inv.paidAt!, inv.dueDate) <= 0) b.onTime += 1;
+      behavior.set(partyId, b);
+    }
+
+    const rows: PartyAnalyticsRow[] = parties
+      .filter((p) => p.type !== "AGENT")
+      .map((p) => {
+        const receivableExposure = recvBy.get(p.id) ?? 0;
+        const creditLimit = p.creditLimit == null ? null : num(p.creditLimit);
+        const b = behavior.get(p.id);
+        const onTimePct = b ? round1((b.onTime / b.paidCount) * 100) : null;
+        const riskFlags: PartyRiskFlag[] = [];
+        if (creditLimit != null && receivableExposure > creditLimit) riskFlags.push("OVER_CREDIT_LIMIT");
+        if (b && b.paidCount >= 2 && onTimePct != null && onTimePct < 50) riskFlags.push("HABITUAL_LATE");
+        return {
+          partyId: p.id, partyName: p.name, partyType: p.type,
+          receivableExposure, payableExposure: payBy.get(p.id) ?? 0,
+          creditLimit,
+          avgDaysToPay: b ? round1(b.totalDays / b.paidCount) : null,
+          onTimePct, riskFlags,
+        };
+      })
+      .sort((a, b) => b.receivableExposure - a.receivableExposure);
+
+    const agents: AgentLeaderboardRow[] = parties
+      .filter((p) => p.type === "AGENT")
+      .map((agent) => {
+        const managed = parties.filter((p) => p.agentId === agent.id);
+        return {
+          agentId: agent.id, agentName: agent.name,
+          collected: managed.reduce((s, p) => s + (collectedBy.get(p.id) ?? 0), 0),
+          outstanding: managed.reduce((s, p) => s + (recvBy.get(p.id) ?? 0), 0),
+          managedParties: managed.length,
+        };
+      })
+      .sort((a, b) => b.collected - a.collected);
+
+    return { parties: rows, agents };
   },
 };
