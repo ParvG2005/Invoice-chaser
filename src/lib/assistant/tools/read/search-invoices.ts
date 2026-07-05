@@ -36,6 +36,7 @@ export const searchInvoices: ToolDefinition<z.infer<typeof schema>> = {
     // set this tool's description implies — fence both free-text fields.
     const safe = rows.map((row) => ({
       ...row,
+      clientName: wrapUntrusted("invoice_client_name", String(row.clientName)),
       notes: row.notes ? wrapUntrusted("invoice_notes", String(row.notes)) : null,
       party: row.party ? { ...row.party, name: wrapUntrusted("party_name", String(row.party.name)) } : null,
     }));

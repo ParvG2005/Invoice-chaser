@@ -35,6 +35,7 @@ export const listParties: ToolDefinition<z.infer<typeof schema>> = {
       ...row,
       name: wrapUntrusted("party_name", String(row.name ?? "")),
       notes: row.notes ? wrapUntrusted("party_notes", String(row.notes)) : null,
+      billingAddress: row.billingAddress ? wrapUntrusted("party_billing_address", String(row.billingAddress)) : null,
     }));
     return { ok: true, data: safe };
   },

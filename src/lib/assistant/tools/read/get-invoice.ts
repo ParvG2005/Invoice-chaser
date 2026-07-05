@@ -23,6 +23,7 @@ export const getInvoice: ToolDefinition<z.infer<typeof schema>> = {
     // Free-text fields are DB-sourced and untrusted.
     const safe = {
       ...invoice,
+      clientName: wrapUntrusted("invoice_client_name", String(invoice.clientName)),
       notes: invoice.notes ? wrapUntrusted("invoice_notes", String(invoice.notes)) : null,
     };
     return { ok: true, data: safe };

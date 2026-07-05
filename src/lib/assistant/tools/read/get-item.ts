@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { itemService } from "@/server/services/item.service";
+import { wrapUntrusted } from "@/lib/assistant/untrusted";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 
 const schema = z.object({ itemId: z.string().min(1) });
@@ -18,6 +19,8 @@ export const getItem: ToolDefinition<z.infer<typeof schema>> = {
   summarize: (i) => `Get item ${i.itemId}`,
   async execute(ctx, input) {
     const item = await itemService.get(ctx.organizationId, input.itemId);
-    return { ok: true, data: item };
+    // Free-text field is DB-sourced and untrusted.
+    const safe = { ...item, name: wrapUntrusted("item_name", String(item.name)) };
+    return { ok: true, data: safe };
   },
 };
