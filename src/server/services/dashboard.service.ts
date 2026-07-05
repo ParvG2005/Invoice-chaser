@@ -6,13 +6,18 @@ export const dashboardService = {
   async getStats(organizationId: string): Promise<DashboardStats> {
     // Aggregate counts + sums in the database (indexed on [organizationId, status])
     // instead of pulling every invoice row into the app and reducing in JS.
-    const [byStatus, remindersSent, emailSent, recentReminders, recentPaid, invoicesDueSoon] =
+    const [byStatus, billsByStatus, remindersSent, emailSent, recentReminders, recentPaid, invoicesDueSoon] =
       await Promise.all([
         prisma.invoice.groupBy({
           by: ["status"],
           where: { organizationId, deletedAt: null },
           _count: { _all: true },
           _sum: { amount: true },
+        }),
+        prisma.bill.groupBy({
+          by: ["status"],
+          where: { organizationId, deletedAt: null },
+          _sum: { amount: true, amountPaid: true },
         }),
         prisma.reminder.count({
           where: { organizationId, status: "SENT" },
@@ -70,6 +75,14 @@ export const dashboardService = {
     const overdueCount = invoiceCountByStatus.OVERDUE;
     const pendingCount = invoiceCountByStatus.PENDING;
 
+    const moneyToPay = billsByStatus
+      .filter((group) => group.status !== "PAID" && group.status !== "WRITTEN_OFF")
+      .reduce((sum, group) => {
+        const amount = group._sum.amount ? decimalToNumber(group._sum.amount) : 0;
+        const paid = group._sum.amountPaid ? decimalToNumber(group._sum.amountPaid) : 0;
+        return sum + Math.max(amount - paid, 0);
+      }, 0);
+
     const recentActivity: DashboardStats["recentActivity"] = [
       ...recentReminders.map((r) => ({
         id: r.id,
@@ -95,8 +108,7 @@ export const dashboardService = {
       invoiceCountByStatus,
       recentActivity,
       moneyToCome: totalUnpaidAmount.toString(),
-      // TODO(phase-1): wire to billService.outstandingTotal(organizationId) once it exists.
-      moneyToPay: "0",
+      moneyToPay: moneyToPay.toString(),
       pendingCount,
       pendingValue: pendingValue.toString(),
       overdueValue: overdueValue.toString(),
