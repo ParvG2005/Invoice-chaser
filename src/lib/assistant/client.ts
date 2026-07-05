@@ -86,23 +86,38 @@ export async function* runAssistantTurn(params: TurnParams): AsyncGenerator<Assi
         toolResults.push({ type: "tool_result", tool_use_id: call.id, content: "Tool not available.", is_error: true });
         continue;
       }
-      if (tool.kind === "read") {
-        const res = await assistantService.dispatchReadTool(ctx, call.name, call.input);
-        yield { type: "tool_result", toolName: call.name, ok: res.ok };
+      // A tool call that throws (e.g. a service raising NotFoundError instead of
+      // returning ok:false) must still produce a tool_result — Anthropic requires
+      // every tool_use to have a matching tool_result in the next message, and a
+      // dangling one permanently breaks all future turns in the session with a 400.
+      try {
+        if (tool.kind === "read") {
+          const res = await assistantService.dispatchReadTool(ctx, call.name, call.input);
+          yield { type: "tool_result", toolName: call.name, ok: res.ok };
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: call.id,
+            content: JSON.stringify(res.ok ? res.data : { error: res.error }),
+            is_error: !res.ok,
+          });
+        } else {
+          // WRITE: never execute — persist a PROPOSED action and tell the model.
+          const action = await assistantService.proposeWriteAction(ctx, sessionId, call.name, call.input);
+          yield { type: "proposed_action", action };
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: call.id,
+            content: `Proposed action ${action.id} created and is awaiting user approval. It has NOT executed. Do not assume it succeeded.`,
+          });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Tool execution failed";
+        yield { type: "tool_result", toolName: call.name, ok: false };
         toolResults.push({
           type: "tool_result",
           tool_use_id: call.id,
-          content: JSON.stringify(res.ok ? res.data : { error: res.error }),
-          is_error: !res.ok,
-        });
-      } else {
-        // WRITE: never execute — persist a PROPOSED action and tell the model.
-        const action = await assistantService.proposeWriteAction(ctx, sessionId, call.name, call.input);
-        yield { type: "proposed_action", action };
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: call.id,
-          content: `Proposed action ${action.id} created and is awaiting user approval. It has NOT executed. Do not assume it succeeded.`,
+          content: JSON.stringify({ error: message }),
+          is_error: true,
         });
       }
     }
