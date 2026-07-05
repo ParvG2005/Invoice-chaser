@@ -3,6 +3,7 @@ import { withApiHandler } from "@/lib/api/handler";
 import { successResponse, errorResponse } from "@/lib/api/response";
 import { assistantService } from "@/server/services/assistant.service";
 import { runAssistantTurn } from "@/lib/assistant/client";
+import type { AssistantModelTier } from "@/lib/assistant/models";
 import { sendMessageSchema } from "@/lib/validations/assistant";
 import { assistantKillSwitchEnabled } from "@/lib/assistant/killswitch";
 import {
@@ -32,9 +33,13 @@ export const POST = withApiHandler(async (request, ctx, params) => {
   const body = await request.json();
   const input = sendMessageSchema.parse(body);
 
-  // Rebuild prior Anthropic messages from persisted history. Also confirms
-  // the session exists and belongs to ctx.organizationId (getHistory 404s
-  // otherwise), before any model call is made.
+  // Fetch the session first: confirms it exists and belongs to
+  // ctx.organizationId (404s otherwise) before any model call is made, and
+  // gives us the session's actual persisted modelTier so a session created
+  // with a non-default tier is actually routed to that model.
+  const session = await assistantService.getSession(ctx, params.id);
+
+  // Rebuild prior Anthropic messages from persisted history.
   const persisted = await assistantService.getHistory(ctx, params.id);
   const priorMessages: Anthropic.MessageParam[] = persisted.map((m) => ({
     role: m.role === "USER" ? "user" : "assistant",
@@ -50,7 +55,7 @@ export const POST = withApiHandler(async (request, ctx, params) => {
         for await (const ev of runAssistantTurn({
           ctx,
           sessionId: params.id,
-          modelTier: "default",
+          modelTier: session.modelTier as AssistantModelTier,
           priorMessages,
           userText: input.text,
           contextChip: input.contextChip,

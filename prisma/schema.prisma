@@ -635,6 +635,7 @@ model AssistantSession {
   organizationId String    @map("organization_id")
   userId         String    @map("user_id")
   title          String?
+  modelTier      String    @default("default") @map("model_tier")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")

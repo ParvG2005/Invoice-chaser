@@ -27,6 +27,17 @@ vi.mock("@/lib/db/prisma", () => ({
         db.actions.set(where.id, row);
         return row;
       }),
+      // Simulates a real DB's atomic conditional UPDATE ... WHERE status = 'PROPOSED':
+      // only the row matching the where-clause status is mutated, and the count
+      // reflects how many rows actually transitioned (0 or 1), never more.
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        const row = db.actions.get(where.id);
+        if (!row) return { count: 0 };
+        if (where.organizationId && row.organizationId !== where.organizationId) return { count: 0 };
+        if (where.status && row.status !== where.status) return { count: 0 };
+        db.actions.set(where.id, { ...row, ...data });
+        return { count: 1 };
+      }),
     },
     assistantSession: { create: vi.fn(async ({ data }: any) => ({ id: "s1", ...data })) },
     assistantMessage: { create: vi.fn(async ({ data }: any) => ({ id: "m1", ...data })) },
@@ -51,6 +62,18 @@ vi.mock("@/server/services/payment.service", () => ({
     }),
   },
 }));
+
+describe("createSession — modelTier persistence", () => {
+  it("persists the requested modelTier instead of dropping it", async () => {
+    const session = await assistantService.createSession(ctx, { title: "x", modelTier: "tier" });
+    expect(session.modelTier).toBe("tier");
+  });
+
+  it("defaults modelTier to 'default' when not specified", async () => {
+    const session = await assistantService.createSession(ctx, { title: "x" });
+    expect(session.modelTier).toBe("default");
+  });
+});
 
 describe("approval loop — the canonical invariant", () => {
   beforeEach(() => {
@@ -90,6 +113,30 @@ describe("approval loop — the canonical invariant", () => {
     expect(done.status).toBe("EXECUTED");
     expect(done.approvedBy).toBe("u1");
     expect(recorded).toEqual(["paid"]);
+  });
+
+  it("two concurrent approveAction calls execute exactly once (no double-payment race)", async () => {
+    const proposed = await assistantService.proposeWriteAction(ctx, "s1", "record_payment", {
+      invoiceId: "inv1",
+      amount: 18500,
+      mode: "UPI",
+    });
+
+    const [settledA, settledB] = await Promise.allSettled([
+      assistantService.approveAction(ctx, proposed.id),
+      assistantService.approveAction(ctx, proposed.id),
+    ]);
+
+    const outcomes = [settledA, settledB];
+    const fulfilled = outcomes.filter((o) => o.status === "fulfilled");
+    const rejected = outcomes.filter((o) => o.status === "rejected");
+
+    // Exactly one request wins the CAS and executes the underlying tool;
+    // the other must reject rather than silently re-executing it.
+    expect(recorded).toEqual(["paid"]);
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((fulfilled[0] as PromiseFulfilledResult<any>).value.status).toBe("EXECUTED");
   });
 
   it("approveAction rejects cross-org action ids", async () => {

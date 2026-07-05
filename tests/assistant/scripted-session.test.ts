@@ -28,6 +28,22 @@ vi.mock("@/lib/db/prisma", () => ({
         db.actions.set(where.id, row);
         return row;
       }),
+      updateMany: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { id: string; organizationId?: string; status?: string };
+          data: Record<string, unknown>;
+        }) => {
+          const row = db.actions.get(where.id);
+          if (!row) return { count: 0 };
+          if (where.organizationId && row.organizationId !== where.organizationId) return { count: 0 };
+          if (where.status && row.status !== where.status) return { count: 0 };
+          db.actions.set(where.id, { ...row, ...data });
+          return { count: 1 };
+        },
+      ),
     },
     assistantSession: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "s1", ...data })) },
     assistantMessage: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "m1", ...data })) },

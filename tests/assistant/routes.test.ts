@@ -16,6 +16,7 @@ vi.mock("@/server/services/assistant.service", () => ({
   assistantService: {
     listSessions: vi.fn(),
     createSession: vi.fn(),
+    getSession: vi.fn(),
     getHistory: vi.fn(),
     approveAction: vi.fn(),
     rejectAction: vi.fn(),
@@ -104,6 +105,7 @@ describe("assistant API routes", () => {
       expect(checkAssistantRateLimit).not.toHaveBeenCalled();
       expect(assertTokenBudget).not.toHaveBeenCalled();
       expect(assistantService.getHistory).not.toHaveBeenCalled();
+      expect(assistantService.getSession).not.toHaveBeenCalled();
     });
 
     it("returns 503 for POST /actions/:id/approve without touching assistantService", async () => {
@@ -189,6 +191,7 @@ describe("assistant API routes", () => {
     }
 
     it("streams SSE events from runAssistantTurn and records token usage", async () => {
+      vi.mocked(assistantService.getSession).mockResolvedValue({ id: "s1", modelTier: "default" } as never);
       vi.mocked(assistantService.getHistory).mockResolvedValue([]);
       vi.mocked(runAssistantTurn).mockReturnValue(fakeTurn());
 
@@ -212,6 +215,21 @@ describe("assistant API routes", () => {
       );
     });
 
+    it("reads the session's stored modelTier instead of hardcoding it", async () => {
+      vi.mocked(assistantService.getSession).mockResolvedValue({ id: "s1", modelTier: "tier" } as never);
+      vi.mocked(assistantService.getHistory).mockResolvedValue([]);
+      vi.mocked(runAssistantTurn).mockReturnValue(fakeTurn());
+
+      await postMessage(
+        jsonRequest("http://test/api/assistant/sessions/s1/messages", { text: "hello" }),
+        routeContext({ id: "s1" }),
+      );
+
+      expect(runAssistantTurn).toHaveBeenCalledWith(
+        expect.objectContaining({ modelTier: "tier" }),
+      );
+    });
+
     it("returns 429 when the per-org/user rate limit is exceeded, before calling the model", async () => {
       vi.mocked(checkAssistantRateLimit).mockResolvedValue(false);
 
@@ -225,6 +243,7 @@ describe("assistant API routes", () => {
     });
 
     it("does not leak internal error details over SSE on stream failure", async () => {
+      vi.mocked(assistantService.getSession).mockResolvedValue({ id: "s1", modelTier: "default" } as never);
       vi.mocked(assistantService.getHistory).mockResolvedValue([]);
       vi.mocked(runAssistantTurn).mockImplementation(async function* () {
         throw new Error("secret internal stack trace with api key sk-ant-XYZ");

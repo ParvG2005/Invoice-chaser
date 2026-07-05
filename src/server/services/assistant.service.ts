@@ -23,6 +23,7 @@ export const assistantService = {
         organizationId: ctx.organizationId,
         userId: ctx.userId,
         title: opts.title ?? null,
+        modelTier: opts.modelTier ?? "default",
       },
     });
   },
@@ -43,6 +44,14 @@ export const assistantService = {
     return prisma.assistantMessage.create({
       data: { organizationId: ctx.organizationId, sessionId, role, content: content as object },
     });
+  },
+
+  async getSession(ctx: ToolContext, sessionId: string) {
+    const session = await prisma.assistantSession.findFirst({
+      where: { id: sessionId, organizationId: ctx.organizationId, deletedAt: null },
+    });
+    if (!session) throw new NotFoundError("Session not found");
+    return session;
   },
 
   async getHistory(ctx: ToolContext, sessionId: string) {
@@ -100,10 +109,19 @@ export const assistantService = {
     const parsed = tool.inputSchema.safeParse(action.input);
     if (!parsed.success) throw new ValidationError("Stored input no longer valid");
 
-    await prisma.assistantAction.update({
-      where: { id: actionId },
+    // Atomic PROPOSED -> APPROVED transition. This is a compare-and-swap: the
+    // WHERE clause re-checks status === PROPOSED at the DB level, so two
+    // concurrent approve requests for the same action (double-click, two
+    // tabs, a client retry) cannot both win the race and both execute the
+    // underlying tool (e.g. recording a payment twice). Whichever request's
+    // updateMany affects 0 rows loses and must not proceed to execute().
+    const cas = await prisma.assistantAction.updateMany({
+      where: { id: actionId, organizationId: ctx.organizationId, status: "PROPOSED" },
       data: { status: "APPROVED", approvedBy: ctx.userId, approvedAt: new Date() },
     });
+    if (cas.count !== 1) {
+      throw new ValidationError(`Action is ${action.status}, not PROPOSED`);
+    }
 
     try {
       const result = await tool.execute(ctx, parsed.data);
