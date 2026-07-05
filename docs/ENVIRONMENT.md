@@ -28,8 +28,9 @@ Legend: ✅ set · ⬜ not yet set · — not applicable to that environment.
 
 | Variable | Used by | Local dev | Cloudflare Preview | Cloudflare Prod | Owner / where to get it |
 |---|---|---|---|---|---|
-| `RESEND_API_KEY` | Email (Task 6) | ✅ | — | ✅ (key set; sending domain still not verified — works against Resend's default testing domain only) | resend.com dashboard |
-| `RESEND_WEBHOOK_SECRET` | Email delivery webhooks (Task 6) | ⬜ | ⬜ | ⬜ | resend.com webhook config |
+| `RESEND_API_KEY` | Email (Phase 4 Task 3) | ✅ | — | ✅ (key set; sending domain still not verified — works against Resend's default testing domain only) | resend.com dashboard |
+| `RESEND_FROM_EMAIL` | Email (Phase 4 Task 3) — `From` header used by `ResendEmailProvider`; falls back to `SMTP_FROM_EMAIL` then a Resend testing address if unset | ✅ | ⬜ | ⬜ | Config value, not a secret |
+| `RESEND_WEBHOOK_SECRET` | Email delivery webhooks (Phase 4, later task) | ⬜ | ⬜ | ⬜ | resend.com webhook config |
 | `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API (Task 6) | ⬜ | ⬜ | ⬜ | Meta Business Manager → WhatsApp → API Setup |
 | `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API (Task 6) | ⬜ | ⬜ | ⬜ | Meta Business Manager (system user token) |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | WhatsApp Cloud API webhook (Task 6) | ⬜ | ⬜ | ⬜ | Self-generated, registered in Meta webhook config |
