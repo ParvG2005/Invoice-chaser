@@ -14,6 +14,7 @@ import {
   type PlannedAllocation,
 } from "@/server/services/payment-allocation";
 import { withAudit, SYSTEM_ACTOR, type AuditActor } from "@/server/services/audit.service";
+import { enqueueInvoicePaidBestEffort } from "@/server/services/invoice.service";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -65,6 +66,36 @@ async function loadOpenDocuments(
     dueDate: bill.dueDate,
     outstanding: round2(decimalToNumber(bill.amount) - decimalToNumber(bill.amountPaid)),
   }));
+}
+
+/**
+ * Invoice ids that this allocation plan fully settles (allocation amount
+ * covers the document's entire pre-payment outstanding balance). Every
+ * `openDocuments` entry here is guaranteed non-PAID beforehand (both
+ * `findOpenInvoicesForParty` and `findOpenForParty` filter out PAID
+ * documents), so "amount >= outstanding" is exactly the PENDING/OVERDUE ->
+ * PAID transition the repository's `applyAllocation` makes inside the
+ * transaction — computed here from the same validated plan data so the
+ * INVOICE_PAID event fires once per real transition, not on every payment
+ * against an already-PAID invoice.
+ */
+function fullySettledInvoiceIds(
+  openDocuments: OpenDocument[],
+  allocations: PlannedAllocation[],
+): string[] {
+  const outstandingById = new Map(openDocuments.map((d) => [d.id, d.outstanding]));
+  return allocations
+    .filter((a) => {
+      const outstanding = outstandingById.get(a.documentId);
+      return outstanding !== undefined && round2(a.amount) >= round2(outstanding);
+    })
+    .map((a) => a.documentId);
+}
+
+async function enqueuePaidInvoicesBestEffort(organizationId: string, invoiceIds: string[]): Promise<void> {
+  for (const invoiceId of invoiceIds) {
+    await enqueueInvoicePaidBestEffort(organizationId, invoiceId);
+  }
 }
 
 /** Validates explicit bill-wise refs against open documents; returns the plan. */
@@ -154,7 +185,7 @@ export const paymentService = {
         ? validateExplicitAllocations(input.amount, input.allocations, openDocuments)
         : planAllocations(input.amount, openDocuments);
 
-    return withAudit(
+    const result = await withAudit(
       actor,
       "payment.create",
       { organizationId, entityType: "Payment" },
@@ -178,6 +209,13 @@ export const paymentService = {
         return toPaymentDto(payment);
       },
     );
+
+    if (input.direction === "IN") {
+      const paidInvoiceIds = fullySettledInvoiceIds(openDocuments, plan.allocations);
+      await enqueuePaidInvoicesBestEffort(organizationId, paidInvoiceIds);
+    }
+
+    return result;
   },
 
   async allocatePayment(
@@ -208,7 +246,7 @@ export const paymentService = {
       throw new ValidationError("No open documents to allocate against");
     }
 
-    return withAudit(
+    const result = await withAudit(
       actor,
       "payment.allocate",
       { organizationId, entityType: "Payment", entityId: paymentId, before: toPaymentDto(payment) },
@@ -223,5 +261,12 @@ export const paymentService = {
         return toPaymentDto(updated);
       },
     );
+
+    if (payment.direction === "IN") {
+      const paidInvoiceIds = fullySettledInvoiceIds(openDocuments, plan.allocations);
+      await enqueuePaidInvoicesBestEffort(organizationId, paidInvoiceIds);
+    }
+
+    return result;
   },
 };

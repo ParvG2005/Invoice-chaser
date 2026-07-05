@@ -93,7 +93,15 @@ async function enqueueOverdueCheckBestEffort(organizationId: string): Promise<vo
   }
 }
 
-async function enqueueInvoicePaidBestEffort(organizationId: string, id: string): Promise<void> {
+/**
+ * Shared with payment.service.ts: recording a payment that settles an
+ * invoice to PAID (the common path — via payment-allocation, not a direct
+ * PATCH of invoice.status) must fire the same best-effort thank-you-email
+ * trigger as this file's own PAID transition in `update()`. Exported rather
+ * than duplicated so the try/catch/log shape can't drift between the two
+ * call sites.
+ */
+export async function enqueueInvoicePaidBestEffort(organizationId: string, id: string): Promise<void> {
   try {
     await getJobScheduler().enqueueInvoicePaid(organizationId, id);
   } catch (error) {

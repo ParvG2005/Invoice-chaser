@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { paymentService } from "@/server/services/payment.service";
 import { paymentRepository } from "@/server/repositories/payment.repository";
 import { partyRepository } from "@/server/repositories/party.repository";
 import { billRepository } from "@/server/repositories/bill.repository";
+import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { NotFoundError, ValidationError } from "@/lib/api/errors";
 
 vi.mock("@/server/repositories/payment.repository", () => ({
@@ -27,6 +28,10 @@ vi.mock("@/server/services/audit.service", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/services/audit.service")>();
   return { ...actual, withAudit: vi.fn((_a, _b, _c, fn) => fn()) };
 });
+
+vi.mock("@/lib/jobs/inngest/scheduler", () => ({
+  getJobScheduler: vi.fn(),
+}));
 
 const ORG = "org-1";
 
@@ -76,6 +81,20 @@ function fakePayment(overrides: Record<string, unknown> = {}) {
 }
 
 describe("paymentService.create", () => {
+  const enqueueInvoicePaid = vi.fn();
+
+  beforeEach(() => {
+    enqueueInvoicePaid.mockClear();
+    vi.mocked(getJobScheduler).mockReturnValue({
+      enqueueOverdueCheck: vi.fn(),
+      enqueueOverdueChecks: vi.fn(),
+      enqueueReminder: vi.fn(),
+      enqueueReminders: vi.fn(),
+      enqueueTallyImport: vi.fn(),
+      enqueueInvoicePaid,
+    } as never);
+  });
+
   it("rejects an unknown party", async () => {
     vi.mocked(partyRepository.findById).mockResolvedValue(null);
     await expect(
@@ -183,9 +202,77 @@ describe("paymentService.create", () => {
       }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
+
+  it("enqueues INVOICE_PAID when a payment fully settles an invoice", async () => {
+    vi.mocked(partyRepository.findById).mockResolvedValue({ id: "party-1" } as never);
+    vi.mocked(paymentRepository.findOpenInvoicesForParty).mockResolvedValue([
+      openInvoice("inv-1", "2026-06-01", 500),
+    ] as never);
+    vi.mocked(paymentRepository.createWithAllocations).mockResolvedValue(fakePayment() as never);
+
+    await paymentService.create(ORG, {
+      partyId: "party-1",
+      direction: "IN",
+      amount: 500,
+      mode: "CASH",
+    });
+
+    expect(enqueueInvoicePaid).toHaveBeenCalledWith(ORG, "inv-1");
+    expect(enqueueInvoicePaid).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not enqueue INVOICE_PAID when a payment only partially settles an invoice", async () => {
+    vi.mocked(partyRepository.findById).mockResolvedValue({ id: "party-1" } as never);
+    vi.mocked(paymentRepository.findOpenInvoicesForParty).mockResolvedValue([
+      openInvoice("inv-1", "2026-06-01", 500),
+    ] as never);
+    vi.mocked(paymentRepository.createWithAllocations).mockResolvedValue(fakePayment() as never);
+
+    await paymentService.create(ORG, {
+      partyId: "party-1",
+      direction: "IN",
+      amount: 200,
+      mode: "CASH",
+    });
+
+    expect(enqueueInvoicePaid).not.toHaveBeenCalled();
+  });
+
+  it("does not enqueue INVOICE_PAID for OUT (bill) payments", async () => {
+    vi.mocked(partyRepository.findById).mockResolvedValue({ id: "party-1" } as never);
+    vi.mocked(billRepository.findOpenForParty).mockResolvedValue([
+      { id: "bill-1", dueDate: new Date("2026-06-15"), amount: 400, amountPaid: 0 },
+    ] as never);
+    vi.mocked(paymentRepository.createWithAllocations).mockResolvedValue(
+      fakePayment({ direction: "OUT" }) as never,
+    );
+
+    await paymentService.create(ORG, {
+      partyId: "party-1",
+      direction: "OUT",
+      amount: 400,
+      mode: "BANK_TRANSFER",
+    });
+
+    expect(enqueueInvoicePaid).not.toHaveBeenCalled();
+  });
 });
 
 describe("paymentService.allocatePayment", () => {
+  const enqueueInvoicePaid = vi.fn();
+
+  beforeEach(() => {
+    enqueueInvoicePaid.mockClear();
+    vi.mocked(getJobScheduler).mockReturnValue({
+      enqueueOverdueCheck: vi.fn(),
+      enqueueOverdueChecks: vi.fn(),
+      enqueueReminder: vi.fn(),
+      enqueueReminders: vi.fn(),
+      enqueueTallyImport: vi.fn(),
+      enqueueInvoicePaid,
+    } as never);
+  });
+
   it("allocates the remaining unallocated balance FIFO", async () => {
     vi.mocked(paymentRepository.findById).mockResolvedValue(
       fakePayment({ unallocated: 700, allocations: [] }) as never,
@@ -206,6 +293,24 @@ describe("paymentService.allocatePayment", () => {
       [{ documentId: "inv-2", amount: 400 }],
       300,
     );
+    expect(enqueueInvoicePaid).toHaveBeenCalledWith(ORG, "inv-2");
+    expect(enqueueInvoicePaid).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not enqueue INVOICE_PAID when the allocation only partially settles the invoice", async () => {
+    vi.mocked(paymentRepository.findById).mockResolvedValue(
+      fakePayment({ unallocated: 700, allocations: [] }) as never,
+    );
+    vi.mocked(paymentRepository.findOpenInvoicesForParty).mockResolvedValue([
+      openInvoice("inv-2", "2026-07-01", 1000),
+    ] as never);
+    vi.mocked(paymentRepository.addAllocations).mockResolvedValue(
+      fakePayment({ unallocated: 0 }) as never,
+    );
+
+    await paymentService.allocatePayment(ORG, "pay-1");
+
+    expect(enqueueInvoicePaid).not.toHaveBeenCalled();
   });
 
   it("throws when the payment has no unallocated balance", async () => {
