@@ -1,8 +1,11 @@
-import { startOfDay, startOfMonth, subDays } from "date-fns";
+import { addDays, differenceInCalendarDays, format, startOfDay, startOfMonth, subDays, subMonths } from "date-fns";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { decimalToNumber } from "@/lib/utils/currency";
-import type { AgingBucketLabel, AgingReport, AgingSide, HeadlineTiles } from "@/types/analytics";
+import type {
+  AgingBucketLabel, AgingReport, AgingSide, CashflowProjection, CashflowWeek,
+  CollectionTrendPoint, HeadlineTiles,
+} from "@/types/analytics";
 
 // Deviation from the Phase 5 plan's assumed schema: Invoice/Bill have no
 // distinct `issueDate`/`balanceDue` columns (see prisma/schema.prisma).
@@ -106,5 +109,76 @@ export const analyticsService = {
     }
 
     return { side, buckets, total, dso };
+  },
+
+  async getCollectionTrend(organizationId: string, asOf: Date = new Date()): Promise<CollectionTrendPoint[]> {
+    const windowStart = startOfMonth(subMonths(asOf, 5));
+
+    const [invoicedRows, collectedRows] = await Promise.all([
+      prisma.$queryRaw<{ month: string; total: unknown }[]>(Prisma.sql`
+        SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,
+               SUM(COALESCE(total_amount, amount)) AS total
+        FROM invoices
+        WHERE organization_id = ${organizationId} AND deleted_at IS NULL
+          AND type = 'RECEIVABLE'
+          AND created_at >= ${windowStart} AND created_at <= ${asOf}
+        GROUP BY 1
+      `),
+      prisma.$queryRaw<{ month: string; total: unknown }[]>(Prisma.sql`
+        SELECT to_char(date_trunc('month', payment_date), 'YYYY-MM') AS month,
+               SUM(amount) AS total
+        FROM payments
+        WHERE organization_id = ${organizationId} AND deleted_at IS NULL
+          AND direction = 'IN'
+          AND payment_date >= ${windowStart} AND payment_date <= ${asOf}
+        GROUP BY 1
+      `),
+    ]);
+
+    const invoicedBy = new Map(invoicedRows.map((r) => [r.month, num(r.total)]));
+    const collectedBy = new Map(collectedRows.map((r) => [r.month, num(r.total)]));
+
+    return Array.from({ length: 6 }, (_, i) => {
+      const month = format(subMonths(asOf, 5 - i), "yyyy-MM");
+      const invoiced = invoicedBy.get(month) ?? 0;
+      const collected = collectedBy.get(month) ?? 0;
+      return { month, invoiced, collected, rate: invoiced > 0 ? round4(collected / invoiced) : null };
+    });
+  },
+
+  async getCashflowProjection(organizationId: string, asOf: Date = new Date()): Promise<CashflowProjection> {
+    const dayStart = startOfDay(asOf);
+    const WEEKS = 8;
+
+    const [receivables, payables] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { organizationId, deletedAt: null, type: "RECEIVABLE", status: { not: "PAID" } },
+        select: { dueDate: true, totalAmount: true, amount: true, amountPaid: true },
+      }),
+      prisma.bill.findMany({
+        where: { organizationId, deletedAt: null, status: { not: "PAID" } },
+        select: { dueDate: true, amount: true, amountPaid: true },
+      }),
+    ]);
+
+    const overdue = { inflow: 0, outflow: 0 };
+    const weeks: CashflowWeek[] = Array.from({ length: WEEKS }, (_, i) => ({
+      weekStart: format(addDays(dayStart, i * 7), "yyyy-MM-dd"),
+      inflow: 0, outflow: 0, net: 0,
+    }));
+
+    const place = (dueDate: Date, amount: number, key: "inflow" | "outflow") => {
+      if (amount <= 0) return;
+      const days = differenceInCalendarDays(dueDate, dayStart);
+      if (days < 0) overdue[key] += amount;
+      else if (days < WEEKS * 7) weeks[Math.floor(days / 7)][key] += amount;
+      // due dates beyond the horizon are omitted by design
+    };
+
+    for (const r of receivables) place(r.dueDate, num(r.totalAmount ?? r.amount) - num(r.amountPaid), "inflow");
+    for (const b of payables) place(b.dueDate, num(b.amount) - num(b.amountPaid), "outflow");
+    for (const w of weeks) w.net = w.inflow - w.outflow;
+
+    return { overdue, weeks };
   },
 };
