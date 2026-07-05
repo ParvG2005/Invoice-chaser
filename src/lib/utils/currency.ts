@@ -10,3 +10,7 @@ export function decimalToNumber(value: { toNumber?: () => number } | number): nu
   if (value && typeof value.toNumber === "function") return value.toNumber();
   return Number(value);
 }
+
+export function formatInr(amount: number): string {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(amount);
+}
