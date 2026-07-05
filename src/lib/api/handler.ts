@@ -9,11 +9,13 @@ import { hasRole, type Role } from "@/lib/auth/roles";
 
 const log = createLogger("api-handler");
 
+export type OrgRole = "owner" | "admin" | "member" | "viewer";
+
 export interface ApiContext {
   userId: string;
   clerkId: string;
   organizationId: string;
-  role: Role;
+  role: OrgRole;
 }
 
 type RouteHandler = (
@@ -61,7 +63,7 @@ export function withApiHandler(handler: RouteHandler, options: HandlerOptions = 
           clerkId,
           userId: org.userId,
           organizationId: org.organizationId,
-          role: org.role,
+          role: org.role as OrgRole,
         };
 
         if (options.requiredRole && !hasRole(org.role, options.requiredRole)) {
