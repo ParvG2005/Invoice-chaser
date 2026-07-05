@@ -43,7 +43,7 @@ export const reminderRepository = {
   findById(id: string) {
     return prisma.reminder.findUnique({
       where: { id },
-      include: { invoice: true },
+      include: { invoice: { include: { party: true } } },
     });
   },
 

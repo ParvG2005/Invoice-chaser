@@ -48,10 +48,18 @@ export const reminderScanWorkflow = inngest.createFunction(
 );
 
 export const sendReminderWorkflow = inngest.createFunction(
-  { id: "send-reminder", name: "Send Reminder Email", triggers: { event: JOB_EVENTS.SEND_REMINDER } },
+  { id: "send-reminder", name: "Send Reminder (email)", triggers: { event: JOB_EVENTS.SEND_REMINDER } },
   async ({ event, step }) => {
     const reminderId = event.data.reminderId as string;
-    return step.run("send-email", () => reminderService.sendReminder(reminderId));
+
+    const deferUntil = await step.run("check-quiet-hours", () =>
+      reminderService.getQuietHoursDeferral(reminderId),
+    );
+    if (deferUntil) {
+      await step.sleepUntil("wait-for-quiet-hours-end", new Date(deferUntil));
+    }
+
+    return step.run("send", () => reminderService.sendReminder(reminderId));
   },
 );
 

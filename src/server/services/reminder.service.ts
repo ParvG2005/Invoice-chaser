@@ -1,14 +1,16 @@
 import { addDays, differenceInCalendarDays, startOfDay } from "date-fns";
 import { NotFoundError } from "@/lib/api/errors";
-import { getEmailProvider } from "@/lib/email";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { createLogger } from "@/lib/logger";
 import type { ReminderSettingsInput } from "@/lib/validations/reminder";
 import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { reminderRepository } from "@/server/repositories/reminder.repository";
-import { emailLogRepository } from "@/server/repositories/email-log.repository";
 import { organizationRepository } from "@/server/repositories/organization.repository";
 import { aiEmailService } from "@/server/services/ai-email.service";
+import { communicationService } from "@/server/services/communication.service";
+import { toneForOffset } from "@/lib/channels/escalation";
+import { nextAllowedSendTime } from "@/lib/channels/quiet-hours";
+import type { Channel } from "@/lib/channels/channel-provider";
 import type { ReminderSettingsDto } from "@/types";
 
 const log = createLogger("reminder-service");
@@ -59,7 +61,7 @@ async function scheduleForOverdueInvoices(
         organizationId,
         invoiceId: invoice.id,
         scheduledFor: new Date(),
-        tone: settings.emailTone,
+        tone: toneForOffset(settings.reminderDays, settings.escalationTones ?? [], dayOffset),
         dayOffset,
         status: "SCHEDULED",
       });
@@ -170,6 +172,20 @@ export const reminderService = {
     return { processed };
   },
 
+  /** Returns an ISO timestamp to sleep until, or null if sending is allowed now. */
+  async getQuietHoursDeferral(reminderId: string): Promise<string | null> {
+    const reminder = await reminderRepository.findById(reminderId);
+    if (!reminder) return null;
+    const settings = await reminderRepository.getSettings(reminder.organizationId);
+    const now = new Date();
+    const allowedAt = nextAllowedSendTime(now, {
+      quietHoursStart: settings?.quietHoursStart ?? null,
+      quietHoursEnd: settings?.quietHoursEnd ?? null,
+      timezone: settings?.timezone ?? "Asia/Kolkata",
+    });
+    return allowedAt.getTime() > now.getTime() ? allowedAt.toISOString() : null;
+  },
+
   async sendReminder(reminderId: string) {
     const reminder = await reminderRepository.findById(reminderId);
     if (!reminder?.invoice) throw new NotFoundError("Reminder not found");
@@ -201,66 +217,76 @@ export const reminderService = {
         reminder.tone,
         { reminderId: reminder.id },
       );
-
       settings = await reminderRepository.getSettings(reminder.organizationId);
     } catch (error) {
       await reminderRepository.updateStatus(reminder.id, "FAILED");
       throw error;
     }
 
-    // Send WhatsApp if enabled and phone number exists
-    if (settings?.whatsappEnabled && reminder.invoice.clientPhone && emailContent.whatsappText) {
+    const party = reminder.invoice.party ?? null;
+    const contact = {
+      email: party?.email ?? reminder.invoice.clientEmail ?? null,
+      phone: party?.whatsapp ?? party?.phone ?? reminder.invoice.clientPhone ?? null,
+    };
+    const enabledChannels: Channel[] = settings?.enabledChannels?.length
+      ? settings.enabledChannels
+      : ["EMAIL"];
+    const resolvedChannels = communicationService.resolveChannels(
+      { enabledChannels },
+      party
+        ? {
+            preferredChannels: party.preferredChannels ?? [],
+            emailOptOutAt: party.emailOptOutAt ?? null,
+            whatsappOptOutAt: party.whatsappOptOutAt ?? null,
+          }
+        : null,
+      contact,
+    );
+    // Email-only in Phase 4 (WhatsApp provider task dropped): resolvedChannels may still
+    // include "WHATSAPP" if org/party settings allow it (schema unchanged), but only the
+    // EMAIL branch is implemented below, so filter to EMAIL before sending.
+    const channels = resolvedChannels.filter((c) => c === "EMAIL");
+
+    if (channels.length === 0) {
+      log.warn("No sendable channel for reminder", { reminderId });
+      await reminderRepository.updateStatus(reminder.id, "FAILED");
+      return { sent: false, channels: [] };
+    }
+
+    const actor = { type: "SYSTEM" as const, id: null };
+    const sentChannels: Channel[] = [];
+    let lastError: unknown = null;
+
+    for (const channel of channels) {
       try {
-        const { getWhatsappProvider } = await import("@/lib/whatsapp/providers/twilio");
-        const waProvider = getWhatsappProvider();
-        await waProvider.send({
-          to: reminder.invoice.clientPhone,
-          body: emailContent.whatsappText,
+        await communicationService.sendOutbound(reminder.organizationId, actor, {
+          channel,
+          to: contact.email!,
+          subject: emailContent.subject,
+          bodyHtml: emailContent.bodyHtml,
+          bodyText: emailContent.bodyText,
+          invoiceId: reminder.invoice.id,
+          reminderId: reminder.id,
+          partyId: party?.id,
         });
-        log.info("Automated WhatsApp reminder sent", {
-          reminderId,
-          phone: reminder.invoice.clientPhone,
-        });
+        sentChannels.push(channel);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Send failed";
-        log.error("Failed to send automated WhatsApp reminder", { reminderId, error: message });
+        lastError = error;
+        log.error("Channel send failed", {
+          reminderId,
+          channel,
+          error: error instanceof Error ? error.message : "unknown",
+        });
       }
     }
 
-    const logEntry = await emailLogRepository.create({
-      organizationId: reminder.organizationId,
-      invoice: { connect: { id: reminder.invoice.id } },
-      reminder: { connect: { id: reminder.id } },
-      toEmail: reminder.invoice.clientEmail,
-      subject: emailContent.subject,
-      bodyHtml: emailContent.bodyHtml,
-      status: "QUEUED",
-    });
-
-    try {
-      const provider = getEmailProvider();
-      const result = await provider.send({
-        to: reminder.invoice.clientEmail,
-        subject: emailContent.subject,
-        html: emailContent.bodyHtml,
-        text: emailContent.bodyText,
-      });
-
-      await emailLogRepository.updateStatus(logEntry.id, "SENT", {
-        providerId: result.id,
-        sentAt: new Date(),
-      });
-
-      await reminderRepository.updateStatus(reminder.id, "SENT", new Date());
-      return { sent: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Send failed";
-      await emailLogRepository.updateStatus(logEntry.id, "FAILED", {
-        errorMessage: message,
-      });
+    if (sentChannels.length === 0) {
       await reminderRepository.updateStatus(reminder.id, "FAILED");
-      throw error;
+      throw lastError instanceof Error ? lastError : new Error("All channels failed");
     }
+
+    await reminderRepository.updateStatus(reminder.id, "SENT", new Date());
+    return { sent: true, channels: sentChannels };
   },
 
   /**

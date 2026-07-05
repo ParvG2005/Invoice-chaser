@@ -234,11 +234,11 @@ describe("reminderService.sendReminderNow", () => {
     } as never);
     const sendReminderSpy = vi
       .spyOn(reminderService, "sendReminder")
-      .mockResolvedValue({ sent: true });
+      .mockResolvedValue({ sent: true, channels: ["EMAIL"] });
 
     const result = await reminderService.sendReminderNow(ORG, "rem-1");
 
     expect(sendReminderSpy).toHaveBeenCalledWith("rem-1");
-    expect(result).toEqual({ sent: true });
+    expect(result).toEqual({ sent: true, channels: ["EMAIL"] });
   });
 });
