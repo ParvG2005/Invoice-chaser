@@ -4,33 +4,47 @@ import type { ToolContext } from "@/lib/assistant/tools/types";
 
 const ctx: ToolContext = { organizationId: "org1", userId: "u1", role: "member" };
 
+interface ActionData {
+  organizationId: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+type ActionRow = ActionData & { id: string };
+
+interface WhereClause {
+  id: string;
+  organizationId?: string;
+  status?: string;
+}
+
 const db = {
-  actions: new Map<string, any>(),
+  actions: new Map<string, ActionRow>(),
 };
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     assistantAction: {
-      create: vi.fn(async ({ data }: any) => {
-        const row = { id: `act${db.actions.size + 1}`, ...data };
+      create: vi.fn(async ({ data }: { data: ActionData }) => {
+        const row: ActionRow = { id: `act${db.actions.size + 1}`, ...data };
         db.actions.set(row.id, row);
         return row;
       }),
-      findFirst: vi.fn(async ({ where }: any) => {
+      findFirst: vi.fn(async ({ where }: { where: WhereClause }) => {
         const row = db.actions.get(where.id) ?? null;
         if (!row) return null;
         if (where.organizationId && row.organizationId !== where.organizationId) return null;
         return row;
       }),
-      update: vi.fn(async ({ where, data }: any) => {
-        const row = { ...db.actions.get(where.id), ...data };
+      update: vi.fn(async ({ where, data }: { where: WhereClause; data: Partial<ActionRow> }) => {
+        const row = { ...db.actions.get(where.id), ...data } as ActionRow;
         db.actions.set(where.id, row);
         return row;
       }),
       // Simulates a real DB's atomic conditional UPDATE ... WHERE status = 'PROPOSED':
       // only the row matching the where-clause status is mutated, and the count
       // reflects how many rows actually transitioned (0 or 1), never more.
-      updateMany: vi.fn(async ({ where, data }: any) => {
+      updateMany: vi.fn(async ({ where, data }: { where: WhereClause; data: Partial<ActionRow> }) => {
         const row = db.actions.get(where.id);
         if (!row) return { count: 0 };
         if (where.organizationId && row.organizationId !== where.organizationId) return { count: 0 };
@@ -39,8 +53,12 @@ vi.mock("@/lib/db/prisma", () => ({
         return { count: 1 };
       }),
     },
-    assistantSession: { create: vi.fn(async ({ data }: any) => ({ id: "s1", ...data })) },
-    assistantMessage: { create: vi.fn(async ({ data }: any) => ({ id: "m1", ...data })) },
+    assistantSession: {
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "s1", ...data })),
+    },
+    assistantMessage: {
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: "m1", ...data })),
+    },
   },
 }));
 
@@ -136,7 +154,8 @@ describe("approval loop — the canonical invariant", () => {
     expect(recorded).toEqual(["paid"]);
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect((fulfilled[0] as PromiseFulfilledResult<any>).value.status).toBe("EXECUTED");
+    const winner = fulfilled[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof assistantService.approveAction>>>;
+    expect(winner.value.status).toBe("EXECUTED");
   });
 
   it("approveAction rejects cross-org action ids", async () => {

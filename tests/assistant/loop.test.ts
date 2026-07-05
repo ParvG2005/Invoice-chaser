@@ -1,7 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { AssistantStreamEvent } from "@/lib/assistant/client";
+
+interface FinalMessageBlock {
+  type: "text" | "tool_use";
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+}
+
+interface FinalMessage {
+  stop_reason: string;
+  content: FinalMessageBlock[];
+  usage: { input_tokens: number; output_tokens: number };
+}
 
 // Mock the SDK: first turn returns a write tool_use, second returns end_turn text.
-const streams: any[] = [];
+const streams: ReturnType<typeof fakeStream>[] = [];
 vi.mock("@anthropic-ai/sdk", () => {
   return {
     default: class {
@@ -20,7 +35,7 @@ vi.mock("@/server/services/assistant.service", () => ({
   },
 }));
 
-function fakeStream(finalMessage: any) {
+function fakeStream(finalMessage: FinalMessage) {
   return {
     async *[Symbol.asyncIterator]() {
       for (const block of finalMessage.content) {
@@ -53,13 +68,13 @@ describe("runAssistantTurn", () => {
     );
 
     const ctx = { organizationId: "org1", userId: "u1", role: "member" as const };
-    const events: any[] = [];
+    const events: AssistantStreamEvent[] = [];
     for await (const ev of runAssistantTurn({ ctx, sessionId: "s1", modelTier: "default", priorMessages: [], userText: "record 18500 on inv1" })) {
       events.push(ev);
     }
     const proposed = events.find((e) => e.type === "proposed_action");
     expect(proposed).toBeTruthy();
-    expect(proposed.action.status).toBe("PROPOSED");
+    expect(proposed && proposed.type === "proposed_action" && proposed.action.status).toBe("PROPOSED");
     const { assistantService } = await import("@/server/services/assistant.service");
     expect(assistantService.proposeWriteAction).toHaveBeenCalled();
     expect(assistantService.dispatchReadTool).not.toHaveBeenCalled();

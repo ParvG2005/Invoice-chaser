@@ -68,10 +68,15 @@ export function AssistantDrawer() {
 
   const entity = useMemo(() => resolveContextEntity(pathname), [pathname]);
 
-  // Reset the "user dismissed the chip" flag whenever the underlying page changes.
-  useEffect(() => {
+  // Reset the "user dismissed the chip" flag whenever the underlying page
+  // changes. Adjusted during render (not an effect) per React's guidance for
+  // resetting state on a prop change: https://react.dev/learn/you-might-not-need-an-effect
+  const entityKey = entity ? `${entity.kind}:${entity.id}` : null;
+  const prevEntityKeyRef = useRef(entityKey);
+  if (prevEntityKeyRef.current !== entityKey) {
+    prevEntityKeyRef.current = entityKey;
     setChipDismissed(false);
-  }, [entity?.kind, entity?.id]);
+  }
 
   useEffect(() => {
     if (!open || sessionId || sessionError) return;

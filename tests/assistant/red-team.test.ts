@@ -5,8 +5,30 @@ import {
   CROSS_ORG_ATTEMPT,
 } from "../fixtures/assistant/injection-fixtures";
 import { wrapUntrusted } from "@/lib/assistant/untrusted";
+import type { AssistantStreamEvent } from "@/lib/assistant/client";
 
-const streams: any[] = [];
+interface FinalMessageBlock {
+  type: "text" | "tool_use";
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+}
+
+interface FinalMessage {
+  stop_reason: string;
+  content: FinalMessageBlock[];
+  usage: { input_tokens: number; output_tokens: number };
+}
+
+interface ActionData {
+  status: string;
+  [key: string]: unknown;
+}
+
+type ActionRow = ActionData & { id: string };
+
+const streams: ReturnType<typeof stream>[] = [];
 vi.mock("@anthropic-ai/sdk", () => ({
   default: class {
     messages = { stream: vi.fn(() => streams.shift()) };
@@ -25,21 +47,25 @@ vi.mock("@/server/services/invoice.service", () => ({
   },
 }));
 vi.mock("@/server/services/audit.service", () => ({
-  withAudit: vi.fn(async (_a: any, _b: any, _c: any, fn: any) => fn()),
+  withAudit: vi.fn(async (_a: unknown, _b: unknown, _c: unknown, fn: () => unknown) => fn()),
 }));
 
-const proposed: any[] = [];
+const proposed: ActionRow[] = [];
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     assistantAction: {
-      create: vi.fn(async ({ data }: any) => { const a = { id: `a${proposed.length}`, ...data }; proposed.push(a); return a; }),
+      create: vi.fn(async ({ data }: { data: ActionData }) => {
+        const a: ActionRow = { id: `a${proposed.length}`, ...data };
+        proposed.push(a);
+        return a;
+      }),
     },
     assistantMessage: { create: vi.fn(async () => ({})) },
     assistantSession: { findFirst: vi.fn(async () => ({ id: "s1" })) },
   },
 }));
 
-function stream(finalMessage: any) {
+function stream(finalMessage: FinalMessage) {
   return {
     async *[Symbol.asyncIterator]() {},
     finalMessage: async () => finalMessage,
@@ -60,7 +86,7 @@ describe("red-team: injection never yields an unapproved action", () => {
     streams.push(stream({ stop_reason: "end_turn", content: [{ type: "text", text: "ok" }], usage: { input_tokens: 1, output_tokens: 1 } }));
 
     const ctx = { organizationId: "org1", userId: "u1", role: "member" as const };
-    const events: any[] = [];
+    const events: AssistantStreamEvent[] = [];
     for await (const ev of runAssistantTurn({ ctx, sessionId: "s1", modelTier: "default", priorMessages: [], userText: wrapUntrusted("invoice_notes", MALICIOUS_INVOICE_NOTE) })) {
       events.push(ev);
     }
@@ -86,7 +112,7 @@ describe("red-team: injection never yields an unapproved action", () => {
     const { buildRegistry } = await import("@/lib/assistant/tools/registry");
     const reg = buildRegistry({ organizationId: "org1", userId: "u1", role: "member" });
     for (const tool of reg.values()) {
-      const props = (tool.jsonSchema as any).properties ?? {};
+      const props = (tool.jsonSchema as { properties?: Record<string, unknown> }).properties ?? {};
       expect(Object.keys(props)).not.toContain("organizationId");
     }
     expect(CROSS_ORG_ATTEMPT).toContain("org-999"); // fixture sanity
