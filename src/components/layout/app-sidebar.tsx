@@ -29,11 +29,11 @@ export const navLinks = [
   { href: "/dashboard/payments", label: "Payments", icon: Wallet },
   { href: "/dashboard/imports", label: "Imports", icon: Upload },
   { href: "/dashboard/reminders", label: "Reminders", icon: BellRing },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 export const comingSoonLinks = [
-  { label: "Analytics", icon: BarChart3 },
   { label: "Assistant", icon: Bot },
 ];
 
