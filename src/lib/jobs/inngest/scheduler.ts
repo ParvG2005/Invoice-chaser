@@ -59,6 +59,16 @@ export class InngestJobScheduler implements JobScheduler {
       data: { organizationId, invoiceId },
     });
   }
+
+  async enqueueLowStockChecks(organizationIds: string[]): Promise<void> {
+    if (organizationIds.length === 0) return;
+    await inngest.send(
+      organizationIds.map((organizationId) => ({
+        name: JOB_EVENTS.LOW_STOCK_CHECK,
+        data: { organizationId },
+      })),
+    );
+  }
 }
 
 let scheduler: JobScheduler | null = null;

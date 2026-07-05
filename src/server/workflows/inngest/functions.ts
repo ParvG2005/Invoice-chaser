@@ -3,6 +3,7 @@ import { JOB_EVENTS } from "@/lib/jobs/types";
 import { reminderService } from "@/server/services/reminder.service";
 import { tallyImportService } from "@/server/services/import/tally-import.service";
 import { communicationService } from "@/server/services/communication.service";
+import { notificationService } from "@/server/services/notification.service";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { prisma } from "@/lib/db/prisma";
 import { createLogger } from "@/lib/logger";
@@ -96,10 +97,51 @@ export const invoicePaidWorkflow = inngest.createFunction(
   },
 );
 
+export const lowStockScanWorkflow = inngest.createFunction(
+  { id: "low-stock-scan", name: "Daily Low Stock Scan", triggers: { cron: "0 8 * * *" } },
+  async ({ step }) => {
+    let cursor: string | undefined;
+    let dispatched = 0;
+    for (let page = 0; ; page += 1) {
+      const orgs: { id: string }[] = await step.run(`fetch-organizations-${page}`, () =>
+        prisma.organization.findMany({
+          where: { deletedAt: null },
+          select: { id: true },
+          orderBy: { id: "asc" },
+          take: ORG_PAGE_SIZE,
+          ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+        }),
+      );
+      if (orgs.length === 0) break;
+      await step.run(`dispatch-${page}`, () =>
+        getJobScheduler().enqueueLowStockChecks(orgs.map((o) => o.id)),
+      );
+      dispatched += orgs.length;
+      cursor = orgs[orgs.length - 1].id;
+      if (orgs.length < ORG_PAGE_SIZE) break;
+    }
+    log.info("Low-stock scan dispatched", { organizations: dispatched });
+    return { dispatched };
+  },
+);
+
+export const lowStockCheckWorkflow = inngest.createFunction(
+  { id: "low-stock-check", name: "Low Stock Check", triggers: { event: JOB_EVENTS.LOW_STOCK_CHECK } },
+  async ({ event, step }) => {
+    const organizationId = event.data.organizationId as string;
+    const sent = await step.run("check-and-notify", () =>
+      notificationService.sendLowStockDigest(organizationId),
+    );
+    return { organizationId, sent };
+  },
+);
+
 export const inngestFunctions = [
   reminderScanWorkflow,
   sendReminderWorkflow,
   overdueCheckWorkflow,
   tallyImportWorkflow,
   invoicePaidWorkflow,
+  lowStockScanWorkflow,
+  lowStockCheckWorkflow,
 ];

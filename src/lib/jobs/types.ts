@@ -6,6 +6,7 @@ export interface JobScheduler {
   enqueueOverdueChecks(organizationIds: string[]): Promise<void>;
   enqueueTallyImport(organizationId: string, batchId: string): Promise<void>;
   enqueueInvoicePaid(organizationId: string, invoiceId: string): Promise<void>;
+  enqueueLowStockChecks(organizationIds: string[]): Promise<void>;
 }
 
 export const JOB_EVENTS = {
@@ -14,4 +15,6 @@ export const JOB_EVENTS = {
   OVERDUE_CHECK: "invoicepilot/invoice.overdue-check",
   TALLY_IMPORT_RUN: "invoicepilot/import.tally.run",
   INVOICE_PAID: "invoicepilot/invoice.paid",
+  LOW_STOCK_SCAN: "invoicepilot/stock.low-stock-scan",
+  LOW_STOCK_CHECK: "invoicepilot/stock.low-stock-check",
 } as const;
