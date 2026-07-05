@@ -671,9 +671,11 @@ model AssistantAction {
   toolName       String                @map("tool_name")
   input          Json
   status         AssistantActionStatus @default(PROPOSED)
+  diffSummary    String                @default("") @map("diff_summary")
   result         Json?
   errorMessage   String?               @map("error_message")
-  approvedById   String?               @map("approved_by_id")
+  approvedBy     String?               @map("approved_by_id")
+  rejectFeedback String?               @map("reject_feedback")
   approvedAt     DateTime?             @map("approved_at")
   executedAt     DateTime?             @map("executed_at")
   createdAt      DateTime              @default(now()) @map("created_at")
