@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("dashboard", () => {
-  test("headline tiles render with rupee values", async ({ page }) => {
+  test("headline tiles render with rupee values @smoke", async ({ page }) => {
     await page.goto("/dashboard");
     for (const tile of ["Money to come", "Money to pay", "Pending invoices", "Overdue"]) {
       const card = page.getByTestId(`tile-${tile.toLowerCase().replace(/ /g, "-")}`);

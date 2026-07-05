@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
     "test:e2e:ui": "playwright test --ui",
     "pages-build": "prisma generate && prisma migrate deploy && npx opennextjs-cloudflare build",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",

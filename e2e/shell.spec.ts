@@ -13,7 +13,7 @@ const NAV_LINKS = [
 ];
 
 test.describe("app shell", () => {
-  test("sidebar shows all nav links", async ({ page, isMobile }) => {
+  test("sidebar shows all nav links @smoke", async ({ page, isMobile }) => {
     test.skip(isMobile, "desktop sidebar only; mobile nav is covered by its own test below");
     await page.goto("/dashboard");
     const nav = page.getByRole("navigation");

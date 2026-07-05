@@ -13,7 +13,7 @@ import { gotoScreen } from "./helpers/nav";
 const LEDGERS_FIXTURE = path.join(__dirname, "fixtures/tally/masters-ledgers.xml");
 
 test.describe("imports", () => {
-  test("page shows heading, wizard entry point, and batch history region", async ({ page }) => {
+  test("page shows heading, wizard entry point, and batch history region @smoke", async ({ page }) => {
     await gotoScreen(page, "Imports", /imports/i);
     await expect(page.getByRole("heading", { name: "Imports", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: /ledgers/i })).toBeVisible();

@@ -29,7 +29,7 @@ test.describe("reminders", () => {
   });
 
 
-  test("sequence editor shows a step row with offset, tone, and channel switches", async ({ page }) => {
+  test("sequence editor shows a step row with offset, tone, and channel switches @smoke", async ({ page }) => {
     await gotoScreen(page, "Reminders", /reminders/i);
 
     const row = page.getByTestId("sequence-step-row").first();

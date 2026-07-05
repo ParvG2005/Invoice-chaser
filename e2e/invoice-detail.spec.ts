@@ -9,7 +9,7 @@ async function gotoInvoiceDetail(page: import("@playwright/test").Page, invoiceN
 }
 
 test.describe("invoice detail", () => {
-  test("navigating from the list lands on the detail page", async ({ page }) => {
+  test("navigating from the list lands on the detail page @smoke", async ({ page }) => {
     await gotoInvoiceDetail(page, "E2E-INV-002");
     await expect(page.getByRole("heading", { name: "E2E-INV-002" })).toBeVisible();
   });

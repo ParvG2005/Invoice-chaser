@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { gotoScreen } from "./helpers/nav";
 
 test.describe("invoices list", () => {
-  test("renders seeded invoices with status chips", async ({ page }) => {
+  test("renders seeded invoices with status chips @smoke", async ({ page }) => {
     await gotoScreen(page, "Invoices", /invoices/i);
     const row = page.getByRole("row", { name: /E2E-INV-002/ });
     await expect(row).toBeVisible();
