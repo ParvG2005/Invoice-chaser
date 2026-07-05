@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { invoiceService } from "@/server/services/invoice.service";
 import { paymentService } from "@/server/services/payment.service";
-import { withAudit } from "@/server/services/audit.service";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 
 /**
@@ -53,24 +52,21 @@ export const recordPayment: ToolDefinition<z.infer<typeof schema>> = {
     }
 
     const actor = { type: "ASSISTANT" as const, id: ctx.userId };
-    const result = await withAudit(
+    // paymentService.create already wraps itself in withAudit — do not
+    // double-wrap here, or every approved action would produce two
+    // AuditLog rows instead of one.
+    const result = await paymentService.create(
+      ctx.organizationId,
+      {
+        partyId: invoice.partyId!,
+        direction: "IN",
+        amount: input.amount,
+        mode: input.mode,
+        paymentDate: input.date ? new Date(input.date) : undefined,
+        reference: input.reference,
+        allocations: [{ documentId: input.invoiceId, amount: input.amount }],
+      },
       actor,
-      "record_payment",
-      { organizationId: ctx.organizationId, entityType: "Payment", entityId: input.invoiceId },
-      () =>
-        paymentService.create(
-          ctx.organizationId,
-          {
-            partyId: invoice.partyId!,
-            direction: "IN",
-            amount: input.amount,
-            mode: input.mode,
-            paymentDate: input.date ? new Date(input.date) : undefined,
-            reference: input.reference,
-            allocations: [{ documentId: input.invoiceId, amount: input.amount }],
-          },
-          actor,
-        ),
     );
     return { ok: true, data: result };
   },

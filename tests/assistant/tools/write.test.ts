@@ -82,23 +82,21 @@ describe("write tools", () => {
     expect(t.summarize(input)).toMatch(/18[,.]?500/);
   });
 
-  it("record_payment.execute goes through withAudit with ASSISTANT actor", async () => {
+  it("record_payment.execute calls paymentService.create directly with ASSISTANT actor (paymentService self-audits; no outer withAudit)", async () => {
     const { withAudit } = await import("@/server/services/audit.service");
     const { paymentService } = await import("@/server/services/payment.service");
     const t = tool("record_payment");
     const input = t.inputSchema.parse({ invoiceId: "inv1", amount: 18500, mode: "UPI" });
     const res = await t.execute(ctx, input);
     expect(res.ok).toBe(true);
-    expect(withAudit).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
-      "record_payment",
-      expect.anything(),
-      expect.any(Function),
-    );
+    // paymentService.create wraps itself in withAudit ("payment.create") —
+    // the tool must call it directly, not via an outer withAudit, or every
+    // approved action would produce two AuditLog rows instead of one.
+    expect(withAudit).not.toHaveBeenCalled();
     expect(paymentService.create).toHaveBeenCalledWith(
       "org1",
       expect.objectContaining({ amount: 18500 }),
-      expect.anything(),
+      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
     );
   });
 
@@ -134,30 +132,39 @@ describe("write tools", () => {
     expect(invoiceService.writeOff).toHaveBeenCalledWith("org1", "inv1", "bad debt");
   });
 
-  it("create_party.execute calls partyService.create", async () => {
+  it("create_party.execute calls partyService.create directly (partyService self-audits; no outer withAudit)", async () => {
+    const { withAudit } = await import("@/server/services/audit.service");
     const { partyService } = await import("@/server/services/party.service");
     const t = tool("create_party");
     const input = t.inputSchema.parse({ name: "Acme Corp", type: "CUSTOMER" });
     const res = await t.execute(ctx, input);
     expect(res.ok).toBe(true);
-    expect(partyService.create).toHaveBeenCalled();
+    expect(withAudit).not.toHaveBeenCalled();
+    expect(partyService.create).toHaveBeenCalledWith(
+      "org1",
+      expect.objectContaining({ name: "Acme Corp" }),
+      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
+    );
   });
 
-  it("update_party.execute calls partyService.update", async () => {
+  it("update_party.execute calls partyService.update directly (partyService self-audits; no outer withAudit)", async () => {
+    const { withAudit } = await import("@/server/services/audit.service");
     const { partyService } = await import("@/server/services/party.service");
     const t = tool("update_party");
     const input = t.inputSchema.parse({ partyId: "party1", creditDays: 30 });
     const res = await t.execute(ctx, input);
     expect(res.ok).toBe(true);
+    expect(withAudit).not.toHaveBeenCalled();
     expect(partyService.update).toHaveBeenCalledWith(
       "org1",
       "party1",
       expect.objectContaining({ creditDays: 30 }),
-      expect.anything(),
+      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
     );
   });
 
-  it("create_bill.execute calls billService.create (not disabled)", async () => {
+  it("create_bill.execute calls billService.create directly (billService self-audits; not disabled; no outer withAudit)", async () => {
+    const { withAudit } = await import("@/server/services/audit.service");
     const { billService } = await import("@/server/services/bill.service");
     const t = tool("create_bill");
     expect(t.disabled).not.toBe(true);
@@ -169,7 +176,12 @@ describe("write tools", () => {
     });
     const res = await t.execute(ctx, input);
     expect(res.ok).toBe(true);
-    expect(billService.create).toHaveBeenCalled();
+    expect(withAudit).not.toHaveBeenCalled();
+    expect(billService.create).toHaveBeenCalledWith(
+      "org1",
+      expect.objectContaining({ billNumber: "BILL-1" }),
+      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
+    );
   });
 
   it("send_reminder.execute calls reminderService.scheduleRemindersForInvoices", async () => {
@@ -202,17 +214,19 @@ describe("write tools", () => {
     );
   });
 
-  it("adjust_stock.execute calls stockService.adjust", async () => {
+  it("adjust_stock.execute calls stockService.adjust directly (stockService self-audits; no outer withAudit)", async () => {
+    const { withAudit } = await import("@/server/services/audit.service");
     const { stockService } = await import("@/server/services/stock.service");
     const t = tool("adjust_stock");
     const input = t.inputSchema.parse({ itemId: "item1", delta: -5, reason: "damaged" });
     const res = await t.execute(ctx, input);
     expect(res.ok).toBe(true);
+    expect(withAudit).not.toHaveBeenCalled();
     expect(stockService.adjust).toHaveBeenCalledWith(
       "org1",
       "item1",
       expect.objectContaining({ qty: -5, reason: "damaged" }),
-      expect.anything(),
+      expect.objectContaining({ type: "ASSISTANT", id: "u1" }),
     );
   });
 

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { stockService } from "@/server/services/stock.service";
-import { withAudit } from "@/server/services/audit.service";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 
 const schema = z.object({
@@ -28,17 +27,14 @@ export const adjustStock: ToolDefinition<z.infer<typeof schema>> = {
   summarize: (i) => `Adjust stock of item ${i.itemId} by ${i.delta > 0 ? "+" : ""}${i.delta} (${i.reason})`,
   async execute(ctx, input) {
     const actor = { type: "ASSISTANT" as const, id: ctx.userId };
-    const result = await withAudit(
+    // stockService.adjust already wraps itself in withAudit ("stock.adjust")
+    // — do not double-wrap here, or every approved action would produce
+    // two AuditLog rows instead of one.
+    const result = await stockService.adjust(
+      ctx.organizationId,
+      input.itemId,
+      { qty: input.delta, reason: input.reason },
       actor,
-      "adjust_stock",
-      { organizationId: ctx.organizationId, entityType: "StockMovement", entityId: input.itemId },
-      () =>
-        stockService.adjust(
-          ctx.organizationId,
-          input.itemId,
-          { qty: input.delta, reason: input.reason },
-          actor,
-        ),
     );
     return { ok: true, data: result };
   },

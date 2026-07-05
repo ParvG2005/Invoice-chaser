@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { partyService } from "@/server/services/party.service";
-import { withAudit } from "@/server/services/audit.service";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 
 const schema = z.object({
@@ -41,12 +40,10 @@ export const updateParty: ToolDefinition<z.infer<typeof schema>> = {
   async execute(ctx, input) {
     const { partyId, ...fields } = input;
     const actor = { type: "ASSISTANT" as const, id: ctx.userId };
-    const result = await withAudit(
-      actor,
-      "update_party",
-      { organizationId: ctx.organizationId, entityType: "Party", entityId: partyId },
-      () => partyService.update(ctx.organizationId, partyId, fields, actor),
-    );
+    // partyService.update already wraps itself in withAudit ("party.update")
+    // — do not double-wrap here, or every approved action would produce
+    // two AuditLog rows instead of one.
+    const result = await partyService.update(ctx.organizationId, partyId, fields, actor);
     return { ok: true, data: result };
   },
 };

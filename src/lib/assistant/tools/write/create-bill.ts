@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { billService } from "@/server/services/bill.service";
-import { withAudit } from "@/server/services/audit.service";
 import type { ToolDefinition } from "@/lib/assistant/tools/types";
 
 /**
@@ -41,12 +40,10 @@ export const createBill: ToolDefinition<z.infer<typeof schema>> = {
   summarize: (i) => `Create bill ${i.billNumber} from party ${i.partyId} — ₹${i.amount.toLocaleString("en-IN")} due ${i.dueDate}`,
   async execute(ctx, input) {
     const actor = { type: "ASSISTANT" as const, id: ctx.userId };
-    const result = await withAudit(
-      actor,
-      "create_bill",
-      { organizationId: ctx.organizationId, entityType: "Bill" },
-      () => billService.create(ctx.organizationId, input, actor),
-    );
+    // billService.create already wraps itself in withAudit ("bill.create")
+    // — do not double-wrap here, or every approved action would produce
+    // two AuditLog rows instead of one.
+    const result = await billService.create(ctx.organizationId, input, actor);
     return { ok: true, data: result };
   },
 };
