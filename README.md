@@ -1,49 +1,45 @@
 # InvoicePilot
 
-AI-powered automated invoice chaser for freelancers, agencies, and SMBs. Upload invoices, configure reminder sequences, and send professional follow-up emails via OpenRouter + Resend.
+AI-assisted receivables/payables and inventory platform for freelancers, agencies, and SMBs — invoices, bills, stock, Tally Prime import, automated reminders, and an in-app AI assistant.
 
 ## Stack
 
-- **Frontend:** Next.js 15, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Zod, Zustand
-- **Backend:** Next.js Route Handlers, Prisma, PostgreSQL (Supabase)
-- **Auth:** Clerk
-- **Email:** Resend
-- **AI:** OpenRouter (free-tier models)
-- **Jobs:** Inngest (abstracted for future BullMQ/Temporal)
-- **Deploy:** Cloudflare Pages (via the OpenNext Cloudflare adapter — see [ADR-001](docs/architecture/ADR-001-monolith-on-cloudflare-pages.md))
+- **Frontend:** Next.js 16.2, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query/Table, Zod
+- **Backend:** Next.js Route Handlers, Prisma 7 (driver adapter, not the legacy `url` field), PostgreSQL (Supabase)
+- **Auth:** Clerk (currently the `refined-collie-21` dev instance, used in every environment including production — no custom domain yet, see `docs/setup/PROVISIONING.md`)
+- **Email:** Nodemailer over Gmail SMTP (`src/lib/email/providers/nodemailer.ts`) — Resend is referenced in config but not actually wired into any send path
+- **AI (email drafting):** Groq / Gemini, with automatic fallback between them (`src/lib/ai`)
+- **AI (assistant):** Anthropic (`claude-sonnet-5`), tool-use loop with mandatory human approval on every write (`src/lib/assistant`, ADR-005)
+- **Jobs:** Inngest
+- **Rate limiting / assistant budgets:** Upstash Redis
+- **Deploy:** a single native Cloudflare Worker (`invoicechaser`, via the OpenNext Cloudflare adapter) — not the classic Pages product. See ADR-001 and `docs/setup/PROVISIONING.md`.
 
 ## Prerequisites
 
-- Node.js 26+ (see `.nvmrc`) and npm (recommended: use your `gpu_env` conda environment)
-- Supabase Postgres database
-- Clerk, OpenRouter, Resend, and Inngest accounts
+- Node.js 26+ (see `.nvmrc`) and npm
+- A Supabase Postgres database
+- Clerk, Groq/Gemini, Gmail (or another SMTP account), Inngest, and Upstash accounts
 
-## Setup (Windows + Conda `gpu_env`)
+## Setup
 
-```powershell
-conda activate gpu_env
-cd c:\invoice_chaser
+```bash
+npm ci
+cp .env.example .env
+# fill in .env — see docs/ENVIRONMENT.md for what each variable is and where to get it
 
-# Ensure conda node/npm are first on PATH
-$env:PATH = "C:\Users\parvg\anaconda3\envs\gpu_env;C:\Users\parvg\anaconda3\envs\gpu_env\Library\bin;" + $env:PATH
-
-npm install
-cp .env.example .env.local
-# Fill in all values in .env.local
-
-npx prisma db push
+npm run db:migrate   # applies prisma/migrations
 npm run dev
 ```
 
-In a second terminal (for background jobs locally):
+In a second terminal, for background jobs locally:
 
-```powershell
+```bash
 npx inngest-cli@latest dev
 ```
 
 ## Environment variables
 
-See [.env.example](.env.example) for the full list.
+See [.env.example](.env.example) for the full list and [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) for what's actually set where (local/preview/prod) and who owns each.
 
 ## CSV upload format
 
@@ -53,33 +49,34 @@ Use `public/sample-invoices.csv` as a template:
 clientName,clientEmail,amount,dueDate,invoiceNumber,notes
 ```
 
+For bulk data from Tally Prime, see [docs/TALLY.md](docs/TALLY.md) instead — it's a richer, foreign-key-ordered XML import (ledgers → stock items → vouchers), not this CSV path.
+
 ## Project structure
 
 ```
 src/
   app/              # Next.js App Router pages & API routes
-  components/       # Shared UI (shadcn) and providers
-  modules/          # Feature UI (dashboard, invoices)
-  lib/              # Cross-cutting utilities (AI, email, jobs, logger)
+  components/       # Shared UI (shadcn), providers, assistant drawer
+  modules/          # Feature UI (dashboard, invoices, bills, stock, analytics)
+  lib/              # Cross-cutting utilities (AI, email, jobs, logger, assistant, import)
   server/
     repositories/   # Data access layer
     services/       # Business logic
     workflows/      # Inngest functions
   types/            # Shared TypeScript types
-prisma/             # Database schema
+prisma/             # Database schema + migrations
+e2e/                # Playwright specs (run: npm run test:e2e; smoke subset: npm run test:smoke)
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for scalability notes.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design principles and layer diagram (some of it — the Resend/OpenRouter references — predates the actual providers in use above).
 
-## MVP features
+## Tests
 
-- Clerk authentication with protected dashboard
-- Invoice CRUD + CSV bulk import
-- AI reminder email generation (friendly / professional / firm)
-- Configurable reminder days, tone, and auto-send
-- Daily Inngest cron to scan overdue invoices and queue reminders
-- Resend HTML emails with reusable templates
-- Dashboard: unpaid total, overdue count, reminders sent, recovered amount
+```bash
+npm test              # vitest unit/integration tests
+npx playwright test   # full e2e suite
+npm run test:smoke    # tagged @smoke subset — read-only, safe to run against a deployed URL
+```
 
 ## Scripts
 
@@ -87,24 +84,25 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for scalability notes.
 |---------|-------------|
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
-| `npm run db:push` | Push Prisma schema to database |
+| `npm run db:migrate` | Apply Prisma migrations (dev) |
 | `npm run db:studio` | Open Prisma Studio |
+| `npm run seed:staging` | Seed a small deterministic demo org (`SEED_ALLOW=staging` required) |
+| `npm run seed:volume` / `npm run explain:check` | Load-sanity seed (10k invoices/1k parties) + EXPLAIN checks on hot-path queries |
 
-## Deployment (Cloudflare Pages)
+## Deployment
 
-1. Add the OpenNext Cloudflare adapter (`@opennextjs/cloudflare`) and configure `wrangler.jsonc`/`open-next.config.ts` per its Next.js App Router setup.
-2. Connect this repo in Cloudflare dashboard → Workers & Pages → Create → Pages.
-3. Add all env vars from `.env.example`.
-4. Set `DATABASE_URL` to the Supabase pooled connection string.
-5. Deploy Inngest app sync at `/api/inngest`.
-6. Run `prisma migrate deploy` or `db push` against production DB.
-7. Smoke-test Prisma and Clerk middleware under Cloudflare's Workers runtime before treating a deploy as done — see ADR-001's Consequences for why this isn't a formality.
-
-See `docs/setup/PROVISIONING.md` for full step-by-step instructions.
+Cloudflare's Git integration builds and deploys `main` automatically as a native Worker (build: `npx opennextjs-cloudflare build`, deploy: `npx wrangler deploy`) — this is independent of GitHub Actions CI, which runs lint/typecheck/tests and, separately, gates `prisma migrate deploy` against production (see `.github/workflows/ci.yml` and `docs/RUNBOOK.md` §2–3). See `docs/setup/PROVISIONING.md` for the full provisioning history and current status of every external service.
 
 ## Program plan
 
-This repo is mid-way through a larger platform buildout (receivables/payables, inventory, Tally Prime import, WhatsApp/email dunning, AI assistant). See `docs/superpowers/plans/2026-07-03-invoice-chaser-state-of-the-art.md` for the master plan and `docs/architecture/README.md` for accepted architecture decisions (ADRs).
+This repo is mid-way through a larger platform buildout. See `docs/superpowers/plans/2026-07-03-invoice-chaser-state-of-the-art.md` for the master plan and `docs/architecture/README.md` for accepted architecture decisions (ADRs).
+
+## Operations
+
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — service map, deploy/rollback, migrations, incidents, secrets rotation
+- [docs/ONBOARDING.md](docs/ONBOARDING.md) — first-run walkthrough for a new user
+- [docs/TALLY.md](docs/TALLY.md) — Tally Prime export/import guide
+- [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) — environment variable matrix
 
 ## License
 

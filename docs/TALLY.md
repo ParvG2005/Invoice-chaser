@@ -86,6 +86,20 @@ If an import creates unwanted records, use the batch undo feature (available on 
 - **Restores updates:** Records marked "updated" are rolled back to their previous values.
 - **Payment-before-invoice order:** Payments tied to invoices are undone *before* their invoices, so referential integrity is maintained.
 
+## Troubleshooting import warnings
+
+Common per-record messages on the import result screen, what they mean, and the fix (from `src/lib/import/tally/parse-masters.ts`, `parse-vouchers.ts`, and `src/server/services/import/tally-import.service.ts`):
+
+| Message | Meaning | Fix |
+|---|---|---|
+| `Skipped: no GUID (re-export with default XML settings)` | The XML record has no `GUID` element — usually a non-default Tally export configuration stripped it. | Re-export with Tally's default XML export settings; don't disable GUID/ALTERID in the export config. |
+| `Skipped: no NAME attribute` | A ledger or stock-item node is missing its `NAME` attribute. | Check the source Tally data for that master — it likely has a data-integrity issue in Tally itself. |
+| `Skipped: unparseable DATE "..."` | A voucher's date couldn't be parsed. | Check the voucher in Tally for a malformed or missing date; fix in Tally and re-export. |
+| `Unknown stock item "..." — line kept without item link` | A sales/purchase line references a stock item name that doesn't exist as a `masters-stockitems.xml` record yet. | Import `masters-stockitems.xml` before the voucher file (see "Required import order" above); if the item genuinely doesn't exist, it's not blocking — the invoice line still imports, just without stock-movement tracking. |
+| `Unsupported voucher type "..."` | The voucher isn't Sales, Purchase, Receipt, Payment, Credit Note, or Debit Note. | Expected for voucher types InvoicePilot doesn't model (e.g. Journal, Contra) — not an error, just not imported. |
+| `Unchanged (ALTERID not newer)` | The record was already imported and Tally's `ALTERID` hasn't increased since. | Not an error — re-importing the same export is a safe no-op by design. |
+| Unmatched bill allocation on a Receipt/Payment | The invoice/bill it settles wasn't in the imported date range. | See "Unmatched bill references" above — widen the export window or manually allocate on the Payments screen. |
+
 ## Optional: LAN auto-sync via Tally HTTP-XML (future enhancement)
 
 Tally Prime includes a built-in HTTP-XML server that can export data without manual intervention. This section documents a potential enhancement; **it is not implemented in Phase 2**. The file-upload path (via the `Dashboard → Imports → New import` wizard) remains the canonical, tested path.
