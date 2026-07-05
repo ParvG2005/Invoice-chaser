@@ -24,7 +24,7 @@ $ npm run typecheck
 ## Step 3 checklist (adapted to email-only)
 
 1. **Reminder scheduling with escalation tone**
-   ✅ Verified via automated test — `tests/unit/services/reminder-fanout.test.ts` (`reminderService.sendReminder fan-out`: sends on EMAIL, marks reminder SENT, cancels when invoice already paid, retries on failure) plus `src/lib/channels/escalation.ts`'s `toneForOffset` unit coverage in that same suite for tone-by-day-offset selection.
+   ✅ Verified via automated test — `tests/unit/services/reminder-fanout.test.ts` (`reminderService.sendReminder fan-out`: sends on EMAIL, marks reminder SENT, cancels when invoice already paid, retries on failure) plus `tests/unit/channels/escalation.test.ts` (tone-by-day-offset selection: index mapping, clamping, offset sorting).
 
 2. **`send-reminder` Inngest run visible / CommunicationLog reaches SENT with providerId**
    ✅ Verified via automated test (mocked) — `tests/unit/services/communication.service.test.ts` (`sendOutbound`: creates QUEUED log, sends via provider, marks SENT with `providerId`) and `reminder-fanout.test.ts` for the reminder→send path.
@@ -39,7 +39,7 @@ $ npm run typecheck
    ⬜ Pending — no live inbound-email webhook route exists to receive a real reply in this phase (Resend inbound parsing/routing was not part of this plan's scope); confirm with the user whether inbound email capture is expected to go live via a different mechanism before relying on this in production.
 
 5. **STOP-style opt-out (email)**
-   ✅ Verified via automated test — `communication.service.test.ts` ("treats STOP as a WhatsApp opt-out" — same code path keys off `input.channel`, so an `EMAIL`-channel STOP sets `emailOptOutAt`) and `resolveChannels` tests (drops opted-out channels). Re-trigger-after-opt-out behavior is covered by `resolveChannels`'s channel-filtering test, not a full second reminder-fanout run.
+   ✅ Verified via shared logic path — `communication.service.test.ts` (WHATSAPP opt-out case directly tested: `whatsappOptOutAt`), EMAIL case inferred from same ternary code path (`input.channel` branches to `emailOptOutAt` for EMAIL, `whatsappOptOutAt` for WHATSAPP). ⚠️ **Note:** EMAIL-channel STOP opt-out has no dedicated test case. `resolveChannels` tests (drops opted-out channels) cover re-trigger-after-opt-out behavior, not a full second reminder-fanout run.
    ⬜ Pending — live confirmation that a real inbound reply of "STOP" reaches `recordInbound` end-to-end requires the inbound webhook wiring noted in item 4.
 
 6. **Quiet hours deferral**
@@ -47,7 +47,7 @@ $ npm run typecheck
    ⬜ Pending — actual `step.sleepUntil` visibility in the Inngest dev UI requires a live run.
 
 7. **PAID → thank-you email; remaining reminders cancel**
-   ✅ Verified via automated test — `tests/unit/invoice.service.test.ts` ("update to PAID sets paidAt", enqueues `enqueueInvoicePaid`) and `communication.service.test.ts` / `sendPaidThankYou` code path (sends EMAIL branch only, logs and continues on per-channel failure); `reminder-fanout.test.ts` ("cancels when the invoice is already paid") covers the already-scheduled-reminder no-op.
+   ✅ Verified via automated test — `tests/unit/invoice.service.test.ts` ("update to PAID sets paidAt") and `communication.service.test.ts` / `sendPaidThankYou` code path (sends EMAIL branch only, logs and continues on per-channel failure); `reminder-fanout.test.ts` ("cancels when the invoice is already paid") covers the already-scheduled-reminder no-op. ⚠️ **Note:** `enqueueInvoicePaid`/`enqueueInvoicePaidBestEffort` invocation is not verified by existing tests — test-coverage gap.
    ⬜ Pending — real email delivery of the thank-you message requires a live Resend account.
 
 8. **AuditLog row per send/opt-out (actor SYSTEM)**
