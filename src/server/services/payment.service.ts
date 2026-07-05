@@ -1,4 +1,5 @@
 import { NotFoundError, ValidationError } from "@/lib/api/errors";
+import { invalidateAnalyticsCache } from "@/lib/cache/analytics-cache";
 import type { CreatePaymentInput, ExplicitAllocation } from "@/lib/validations/payment";
 import type { PaymentDto } from "@/types";
 import { decimalToNumber } from "@/lib/utils/currency";
@@ -215,6 +216,7 @@ export const paymentService = {
       await enqueuePaidInvoicesBestEffort(organizationId, paidInvoiceIds);
     }
 
+    invalidateAnalyticsCache(organizationId);
     return result;
   },
 
@@ -267,6 +269,7 @@ export const paymentService = {
       await enqueuePaidInvoicesBestEffort(organizationId, paidInvoiceIds);
     }
 
+    invalidateAnalyticsCache(organizationId);
     return result;
   },
 };

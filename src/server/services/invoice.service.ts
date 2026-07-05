@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError, NotFoundError } from "@/lib/api/errors";
+import { invalidateAnalyticsCache } from "@/lib/cache/analytics-cache";
 import type { CreateInvoiceInput } from "@/lib/validations/invoice";
 import { invoiceRepository, type InvoiceLineItemInput } from "@/server/repositories/invoice.repository";
 import { computeInvoiceStatus, parseDueDate, toInvoiceDto } from "@/server/services/mappers";
@@ -167,6 +168,7 @@ export const invoiceService = {
       for (const id of ids) {
         await invoiceRepository.softDelete(organizationId, id);
       }
+      invalidateAnalyticsCache(organizationId);
       return { action, count: ids.length };
     }
     if (action === "markPaid") {
@@ -176,6 +178,7 @@ export const invoiceService = {
           paidAt: new Date(),
         });
       }
+      invalidateAnalyticsCache(organizationId);
       return { action, count: ids.length };
     }
     // sendReminders: scope the scan to just the selected invoices, same as
@@ -213,6 +216,7 @@ export const invoiceService = {
       : await invoiceRepository.create(data);
 
     await enqueueOverdueCheckBestEffort(organizationId);
+    invalidateAnalyticsCache(organizationId);
     return toInvoiceDto(invoice);
   },
 
@@ -234,6 +238,7 @@ export const invoiceService = {
 
     await invoiceRepository.createMany(data);
     await enqueueOverdueCheckBestEffort(organizationId);
+    invalidateAnalyticsCache(organizationId);
 
     // Return only the invoices from this batch (bounded by input size) rather than
     // re-reading the whole table.
@@ -278,12 +283,14 @@ export const invoiceService = {
       await enqueueInvoicePaidBestEffort(organizationId, id);
     }
 
+    invalidateAnalyticsCache(organizationId);
     return this.get(organizationId, id);
   },
 
   async remove(organizationId: string, id: string) {
     const result = await invoiceRepository.softDelete(organizationId, id);
     if (result.count === 0) throw new NotFoundError("Invoice not found");
+    invalidateAnalyticsCache(organizationId);
     return { deleted: true };
   },
 
@@ -361,6 +368,7 @@ export const invoiceService = {
       : existing.notes;
 
     await invoiceRepository.update(organizationId, id, { status: "WRITTEN_OFF", notes });
+    invalidateAnalyticsCache(organizationId);
     return this.get(organizationId, id);
   },
 
