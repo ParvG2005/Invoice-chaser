@@ -14,5 +14,9 @@ export default defineConfig({
     environment: "node",
     include: ["tests/integration/**/*.test.ts"],
     clearMocks: true,
+    // Analytics fixture files share fixed IDs (org-analytics-fixture) across
+    // test files for hand-computed reconciliation — file-level parallelism
+    // would race resetAndSeed() across workers against the same DB rows.
+    fileParallelism: false,
   },
 });

@@ -5,6 +5,7 @@ import { decimalToNumber } from "@/lib/utils/currency";
 import type {
   AgentLeaderboardRow, AgingBucketLabel, AgingReport, AgingSide, CashflowProjection, CashflowWeek,
   CollectionTrendPoint, HeadlineTiles, PartyAnalytics, PartyAnalyticsRow, PartyRiskFlag,
+  StockAnalytics, StockItemStat, StockMovementTrendPoint,
 } from "@/types/analytics";
 
 // Deviation from the Phase 5 plan's assumed schema: Invoice/Bill have no
@@ -261,5 +262,74 @@ export const analyticsService = {
       .sort((a, b) => b.collected - a.collected);
 
     return { parties: rows, agents };
+  },
+
+  async getStockAnalytics(organizationId: string, asOf: Date = new Date()): Promise<StockAnalytics> {
+    const dayStart = startOfDay(asOf);
+    const deadCutoff = subDays(dayStart, 90);
+    const trendStart = startOfMonth(subMonths(asOf, 5));
+
+    const [items, stockRows, trendRows] = await Promise.all([
+      prisma.item.findMany({
+        where: { organizationId, deletedAt: null },
+        select: { id: true, name: true, sku: true, unit: true, reorderLevel: true, purchasePrice: true },
+      }),
+      prisma.$queryRaw<{ item_id: string; qty: unknown; last_in_rate: unknown; last_out: Date | null }[]>(Prisma.sql`
+        SELECT sm.item_id,
+               COALESCE(SUM(sm.qty), 0) AS qty,
+               (SELECT sm2.rate FROM stock_movements sm2
+                 WHERE sm2.item_id = sm.item_id AND sm2.qty > 0
+                 ORDER BY sm2.movement_date DESC LIMIT 1) AS last_in_rate,
+               MAX(CASE WHEN sm.qty < 0 THEN sm.movement_date END) AS last_out
+        FROM stock_movements sm
+        WHERE sm.organization_id = ${organizationId}
+        GROUP BY sm.item_id
+      `),
+      prisma.$queryRaw<{ month: string; in_qty: unknown; out_qty: unknown }[]>(Prisma.sql`
+        SELECT to_char(date_trunc('month', movement_date), 'YYYY-MM') AS month,
+               COALESCE(SUM(CASE WHEN qty > 0 THEN qty END), 0) AS in_qty,
+               COALESCE(SUM(CASE WHEN qty < 0 THEN -qty END), 0) AS out_qty
+        FROM stock_movements
+        WHERE organization_id = ${organizationId}
+          AND movement_date >= ${trendStart} AND movement_date <= ${asOf}
+        GROUP BY 1
+      `),
+    ]);
+
+    const stockBy = new Map(stockRows.map((r) => [r.item_id, r]));
+
+    const itemStats: StockItemStat[] = items
+      .map((item) => {
+        const row = stockBy.get(item.id);
+        const currentQty = num(row?.qty);
+        const rate = row?.last_in_rate != null ? num(row.last_in_rate)
+          : item.purchasePrice != null ? num(item.purchasePrice) : 0;
+        const reorderLevel = item.reorderLevel == null ? null : num(item.reorderLevel);
+        const lastOut = row?.last_out ?? null;
+        return {
+          itemId: item.id, name: item.name, sku: item.sku, unit: item.unit,
+          currentQty,
+          valuation: Math.round(currentQty * rate * 100) / 100,
+          reorderLevel,
+          lowStock: reorderLevel != null && currentQty < reorderLevel,
+          deadStock: currentQty > 0 && (lastOut == null || lastOut < deadCutoff),
+        };
+      })
+      .sort((a, b) => b.valuation - a.valuation);
+
+    const trendBy = new Map(trendRows.map((r) => [r.month, r]));
+    const movementTrend: StockMovementTrendPoint[] = Array.from({ length: 6 }, (_, i) => {
+      const month = format(subMonths(asOf, 5 - i), "yyyy-MM");
+      const r = trendBy.get(month);
+      return { month, inQty: num(r?.in_qty), outQty: num(r?.out_qty) };
+    });
+
+    return {
+      totalValuation: itemStats.reduce((s, i) => s + i.valuation, 0),
+      items: itemStats,
+      lowStockItems: itemStats.filter((i) => i.lowStock),
+      deadStockItems: itemStats.filter((i) => i.deadStock),
+      movementTrend,
+    };
   },
 };
