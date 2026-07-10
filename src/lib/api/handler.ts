@@ -6,6 +6,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { createLogger } from "@/lib/logger";
 import { organizationService } from "@/server/services/organization.service";
 import { hasRole, type Role } from "@/lib/auth/roles";
+import { prisma } from "@/lib/db/prisma";
+import { hashApiKey } from "@/lib/auth/api-key";
 
 const log = createLogger("api-handler");
 
@@ -53,23 +55,49 @@ export function withApiHandler(handler: RouteHandler, options: HandlerOptions = 
       let apiContext: ApiContext | undefined;
 
       if (requireAuth) {
-        const { userId: clerkId } = await auth();
-        if (!clerkId) {
-          throw new UnauthorizedError();
-        }
+        const authHeader = request.headers.get("authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+          const raw = authHeader.slice("Bearer ".length).trim();
+          const key = await prisma.apiKey.findFirst({
+            where: { hashedKey: hashApiKey(raw), revokedAt: null },
+          });
+          if (!key) {
+            throw new UnauthorizedError();
+          }
+          await prisma.apiKey.update({
+            where: { id: key.id },
+            data: { lastUsedAt: new Date() },
+          });
+          apiContext = {
+            clerkId: `apikey:${key.id}`,
+            userId: key.createdByUserId,
+            organizationId: key.organizationId,
+            role: "member",
+          };
+          if (options.requiredRole && !hasRole("member", options.requiredRole)) {
+            throw new ForbiddenError(
+              `This action requires the ${options.requiredRole} role or higher`,
+            );
+          }
+        } else {
+          const { userId: clerkId } = await auth();
+          if (!clerkId) {
+            throw new UnauthorizedError();
+          }
 
-        const org = await organizationService.ensureUserOrganization(clerkId);
-        apiContext = {
-          clerkId,
-          userId: org.userId,
-          organizationId: org.organizationId,
-          role: org.role as OrgRole,
-        };
+          const org = await organizationService.ensureUserOrganization(clerkId);
+          apiContext = {
+            clerkId,
+            userId: org.userId,
+            organizationId: org.organizationId,
+            role: org.role as OrgRole,
+          };
 
-        if (options.requiredRole && !hasRole(org.role, options.requiredRole)) {
-          throw new ForbiddenError(
-            `This action requires the ${options.requiredRole} role or higher`,
-          );
+          if (options.requiredRole && !hasRole(org.role, options.requiredRole)) {
+            throw new ForbiddenError(
+              `This action requires the ${options.requiredRole} role or higher`,
+            );
+          }
         }
       }
 
