@@ -1,4 +1,13 @@
-type FetchLike = (url: string, init: any) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }>;
+interface FetchInit {
+  method: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+type FetchLike = (
+  url: string,
+  init: FetchInit,
+) => Promise<{ ok: boolean; status: number; text: () => Promise<string> }>;
 
 export function buildExportRequest(
   report: "Ledgers" | "List of Accounts" | "Day Book",

@@ -1,4 +1,10 @@
-type FetchLike = (url: string, init: any) => Promise<{ ok: boolean; status: number }>;
+interface FetchInit {
+  method: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+type FetchLike = (url: string, init: FetchInit) => Promise<{ ok: boolean; status: number }>;
 
 const MAX_ATTEMPTS = 4;
 
