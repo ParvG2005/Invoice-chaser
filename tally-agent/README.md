@@ -23,7 +23,16 @@ node src/index.ts config.json
 ```
 
 Config fields: `tallyHost`, `tallyPort`, `appUrl`, `apiKey`, `voucherFrom`,
-`voucherTo`.
+`voucherTo`, and optional `bypassSecret`.
+
+### Vercel Deployment Protection
+
+If the app has Deployment Protection (Vercel Authentication) enabled, set
+`bypassSecret` to the project's **Protection Bypass for Automation** secret
+(Vercel → project → Settings → Deployment Protection). The agent sends it as the
+`x-vercel-protection-bypass` header so its keyed requests reach the app. Leave
+`bypassSecret` empty ("") if protection is off. This secret is separate from the
+API key — never commit `config.json`.
 
 ## Scheduling (hourly)
 

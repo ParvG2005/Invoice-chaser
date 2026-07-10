@@ -3,6 +3,7 @@
   "tallyPort": 9000,
   "appUrl": "https://invoice-chaser-tawny.vercel.app",
   "apiKey": "oc_live_REPLACE_ME",
+  "bypassSecret": "",
   "voucherFrom": "2026-04-01",
   "voucherTo": "2026-07-10"
 }

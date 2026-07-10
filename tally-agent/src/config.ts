@@ -5,6 +5,7 @@ export interface AgentConfig {
   tallyPort: number;
   appUrl: string;
   apiKey: string;
+  bypassSecret?: string;
   voucherFrom?: string;
   voucherTo?: string;
 }

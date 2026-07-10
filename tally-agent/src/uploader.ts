@@ -14,13 +14,20 @@ export async function uploadDoc(
   source: string,
   fileName: string,
   xml: string,
+  bypassSecret?: string,
   fetchImpl: FetchLike = fetch as unknown as FetchLike,
 ): Promise<void> {
   const body = JSON.stringify({ source, fileName, xml });
+  const headers: Record<string, string> = {
+    authorization: `Bearer ${apiKey}`,
+    "content-type": "application/json",
+  };
+  // Lets the agent through Vercel Deployment Protection without a browser login.
+  if (bypassSecret) headers["x-vercel-protection-bypass"] = bypassSecret;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const res = await fetchImpl(`${appUrl}/api/import/tally`, {
       method: "POST",
-      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      headers,
       body,
     });
     if (res.ok) return;

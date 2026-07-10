@@ -4,7 +4,14 @@ import type { AgentConfig } from "./config.ts";
 
 interface Deps {
   fetchTally?: (host: string, port: number, xml: string) => Promise<string>;
-  upload?: (appUrl: string, apiKey: string, source: string, fileName: string, xml: string) => Promise<void>;
+  upload?: (
+    appUrl: string,
+    apiKey: string,
+    source: string,
+    fileName: string,
+    xml: string,
+    bypassSecret?: string,
+  ) => Promise<void>;
 }
 
 const SOURCES = [
@@ -15,13 +22,13 @@ const SOURCES = [
 
 export async function runSync(config: AgentConfig, deps: Deps = {}): Promise<void> {
   const fetchTally = deps.fetchTally ?? ((h, p, xml) => fetchFromTally(h, p, xml));
-  const upload = deps.upload ?? ((a, k, s, f, x) => uploadDoc(a, k, s, f, x));
+  const upload = deps.upload ?? ((a, k, s, f, x, b) => uploadDoc(a, k, s, f, x, b));
   for (const s of SOURCES) {
     const reqXml = buildExportRequest(
       s.report,
       s.period ? { from: config.voucherFrom, to: config.voucherTo } : {},
     );
     const xml = await fetchTally(config.tallyHost, config.tallyPort, reqXml);
-    await upload(config.appUrl, config.apiKey, s.source, s.fileName, xml);
+    await upload(config.appUrl, config.apiKey, s.source, s.fileName, xml, config.bypassSecret);
   }
 }
