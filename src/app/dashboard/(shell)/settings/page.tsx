@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ApiKeysSection } from "@/components/settings/ApiKeysSection";
 import { Building2, Mail, MessageCircle, Palette, ShieldAlert } from "lucide-react";
 import type { OrganizationSettingsDto } from "@/types";
 
@@ -241,6 +242,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ApiKeysSection />
 
       <Card className="border-red-200 dark:border-red-900">
         <CardHeader>
