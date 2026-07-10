@@ -36,7 +36,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
-  serverExternalPackages: ["pg", "pg-cloudflare"],
+  serverExternalPackages: ["pg"],
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

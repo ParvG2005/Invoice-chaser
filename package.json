@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=26"
+    "node": ">=22 <23"
   },
   "scripts": {
     "dev": "next dev",
@@ -17,7 +17,6 @@
     "test:e2e": "playwright test",
     "test:smoke": "playwright test --grep @smoke",
     "test:e2e:ui": "playwright test --ui",
-    "pages-build": "prisma generate && prisma migrate deploy && npx opennextjs-cloudflare build",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -30,9 +29,7 @@
     "seed:staging": "tsx --env-file-if-exists=.env scripts/seed-staging.ts",
     "seed:volume": "tsx --env-file-if-exists=.env scripts/seed-volume.ts",
     "explain:check": "tsx --env-file-if-exists=.env scripts/explain-checks.ts",
-    "postinstall": "prisma generate",
-    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
@@ -75,7 +72,6 @@
   },
   "devDependencies": {
     "@clerk/testing": "^2.2.2",
-    "@opennextjs/cloudflare": "^1.20.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.1.0",
@@ -94,8 +90,7 @@
     "tailwindcss": "^4.3.2",
     "tsx": "^4.19.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9",
-    "wrangler": "^4.107.0"
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "@types/react": "19.2.17",
