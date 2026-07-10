@@ -76,12 +76,15 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: checks
     runs-on: ubuntu-latest
+    # npm ci's postinstall runs `prisma generate`, which (Prisma 7 config-based
+    # generation) resolves DIRECT_URL even just to generate the client — so it
+    # must be set at job level, not only on the migrate step.
+    env:
+      DATABASE_URL: ${{ secrets.PROD_DIRECT_URL }}
+      DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version-file: .nvmrc, cache: npm }
       - run: npm ci
       - run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.PROD_DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}
