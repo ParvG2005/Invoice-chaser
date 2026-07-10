@@ -1,0 +1,11 @@
+{
+  "name": "tally-agent",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22 <23" },
+  "scripts": {
+    "start": "node src/index.ts",
+    "test": "vitest run"
+  },
+  "devDependencies": { "vitest": "^4.1.9" }
+}
