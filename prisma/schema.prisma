@@ -145,6 +145,7 @@ model User {
 
   memberships       OrganizationMember[]
   assistantSessions AssistantSession[]
+  apiKeys           ApiKey[]
 
   @@index([clerkId])
   @@index([email])
@@ -186,6 +187,7 @@ model Organization {
   importBatches     ImportBatch[]
   auditLogs         AuditLog[]
   assistantSessions AssistantSession[]
+  apiKeys           ApiKey[]
 
   @@index([slug])
   @@map("organizations")
@@ -205,6 +207,24 @@ model OrganizationMember {
   @@unique([organizationId, userId])
   @@index([userId])
   @@map("organization_members")
+}
+
+model ApiKey {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  createdByUserId String    @map("created_by_user_id")
+  name            String
+  prefix          String
+  hashedKey       String    @unique @map("hashed_key")
+  lastUsedAt      DateTime? @map("last_used_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  revokedAt       DateTime? @map("revoked_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId])
+  @@map("api_keys")
 }
 
 model Invoice {
