@@ -90,6 +90,13 @@ function addDaysIso(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Basic email-format check — a client-side filter to keep malformed emails
+ * (parsed or user-typed) from tripping `bulkCreateInvoicesSchema`'s
+ * `z.string().email()` and 422-ing the entire batch. Not exhaustive; the
+ * server remains the source of truth. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (email: string) => EMAIL_RE.test(email);
+
 /**
  * Page-embedded import wizard (Stitch "Imports Wizard" design). Source is
  * chosen up front via tabs; each source runs its own Upload → Preview → Done
@@ -107,6 +114,7 @@ export function ImportWizard() {
   const [batchId, setBatchId] = useState<string | null>(null);
   const [netDays, setNetDays] = useState(30);
   const [emailOverrides, setEmailOverrides] = useState<Record<number, string>>({});
+  const [nameOverrides, setNameOverrides] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   const tallySource = TALLY_SOURCES.find((s) => s.key === sourceKey);
@@ -181,6 +189,7 @@ export function ImportWizard() {
     setBatchId(null);
     setNetDays(30);
     setEmailOverrides({});
+    setNameOverrides({});
     startCsvImport.reset();
     parsePdfMutation.reset();
   };
@@ -271,12 +280,13 @@ export function ImportWizard() {
   const effectivePdfInvoice = (r: ExtractedInvoice, index: number): CreateInvoiceInput | null => {
     if (!r.invoice) return null;
     const email = emailOverrides[index]?.trim() || r.invoice.clientEmail;
+    const clientName = nameOverrides[index]?.trim() || r.invoice.clientName;
     const dueDate = r.invoiceDate ? addDaysIso(r.invoiceDate, netDays) : r.invoice.dueDate;
-    return { ...r.invoice, clientEmail: email, dueDate };
+    return { ...r.invoice, clientName, clientEmail: email, dueDate };
   };
   const pdfValidInvoices = (pdfPreview?.results ?? [])
     .map(effectivePdfInvoice)
-    .filter((inv): inv is CreateInvoiceInput => !!inv && !!inv.clientEmail);
+    .filter((inv): inv is CreateInvoiceInput => !!inv && isValidEmail(inv.clientEmail));
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -495,6 +505,7 @@ export function ImportWizard() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {pdfPreview.results.map((r, i) => {
                       const effective = effectivePdfInvoice(r, i);
+                      const emailInvalid = !!effective && !isValidEmail(effective.clientEmail);
                       return (
                         <tr key={`${r.fileName}-${i}`} className={r.method === "failed" ? "bg-red-50 dark:bg-red-950/20" : undefined}>
                           <td className="px-3 py-2">{r.fileName}</td>
@@ -504,15 +515,28 @@ export function ImportWizard() {
                             </Badge>
                           </td>
                           <td className="px-3 py-2">{r.invoice?.invoiceNumber ?? "—"}</td>
-                          <td className="px-3 py-2">{r.invoice?.clientName ?? "—"}</td>
+                          <td className="px-3 py-2">
+                            {r.invoice ? (
+                              <input
+                                type="text"
+                                value={nameOverrides[i] ?? r.invoice.clientName}
+                                onChange={(e) =>
+                                  setNameOverrides((prev) => ({ ...prev, [i]: e.target.value }))
+                                }
+                                className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                              />
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                           <td className="px-3 py-2">{r.invoice ? r.invoice.amount.toFixed(2) : "—"}</td>
                           <td className="px-3 py-2">{effective?.dueDate ?? "—"}</td>
                           <td className="px-3 py-2">
-                            {r.invoice && r.needsEmail ? (
+                            {r.invoice && emailInvalid ? (
                               <input
                                 type="email"
                                 placeholder="client@example.com"
-                                value={emailOverrides[i] ?? ""}
+                                value={emailOverrides[i] ?? r.invoice.clientEmail}
                                 onChange={(e) =>
                                   setEmailOverrides((prev) => ({ ...prev, [i]: e.target.value }))
                                 }

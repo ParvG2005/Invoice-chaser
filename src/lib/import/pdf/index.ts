@@ -9,7 +9,6 @@ export const DEFAULT_NET_DAYS = 30;
 
 export interface PartyMatch {
   email?: string;
-  creditDays?: number;
 }
 
 export interface ExtractOptions {
@@ -76,7 +75,7 @@ export async function extractInvoicesFromPdf(
 
   const match = opts.lookupParty ? await opts.lookupParty(parsed.invoice.clientName, parsed.buyerGstin) : null;
   const email = match?.email ?? "";
-  const dueDate = addDaysIso(parsed.invoiceDate, match?.creditDays ?? netDays);
+  const dueDate = addDaysIso(parsed.invoiceDate, netDays);
 
   const invoice: CreateInvoiceInput = {
     ...parsed.invoice,
