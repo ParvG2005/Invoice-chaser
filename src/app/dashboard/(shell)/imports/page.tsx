@@ -7,7 +7,7 @@ export default function ImportsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Imports</h1>
         <p className="text-zinc-500">
-          Import parties, stock items, and vouchers from TallyPrime XML exports, or invoices from CSV.
+          Import parties, stock items, and vouchers from TallyPrime XML exports, or invoices from CSV or PDF.
         </p>
       </div>
 
