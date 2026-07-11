@@ -203,6 +203,17 @@ export function ImportWizard() {
   const isBulkDone = isCsvDone || isPdfDone;
   const isBulkSource = sourceKey === "csv-invoices" || sourceKey === "pdf-invoices";
 
+  /** An import is mid-flight (parsing PDFs, committing rows, or a Tally batch
+   * still processing). Switching source tabs calls reset(), which wipes that
+   * state — so we block the switch while this is true rather than silently
+   * cancelling the user's import. */
+  const isImporting =
+    parsePdfMutation.isPending ||
+    startPdfImport.isPending ||
+    startCsvImport.isPending ||
+    startTallyImport.isPending ||
+    (!!batchId && !isTallyTerminal);
+
   const stepIndex = !preview ? 0 : isBulkSource ? (isBulkDone ? 2 : 1) : batchId ? (isTallyTerminal ? 2 : 1) : 1;
 
   const reset = () => {
@@ -217,6 +228,11 @@ export function ImportWizard() {
   };
 
   const handleSourceChange = (key: string) => {
+    if (key === sourceKey) return;
+    if (isImporting) {
+      toast.error("Finish or cancel the current import before switching tabs.");
+      return;
+    }
     setSourceKey(key as SourceKey);
     reset();
   };
@@ -354,12 +370,16 @@ export function ImportWizard() {
         <Tabs value={sourceKey} onValueChange={handleSourceChange}>
           <TabsList>
             {TALLY_SOURCES.map((s) => (
-              <TabsTrigger key={s.key} value={s.key}>
+              <TabsTrigger key={s.key} value={s.key} disabled={isImporting && s.key !== sourceKey}>
                 {s.label}
               </TabsTrigger>
             ))}
-            <TabsTrigger value="csv-invoices">CSV Invoices</TabsTrigger>
-            <TabsTrigger value="pdf-invoices">PDF Invoices</TabsTrigger>
+            <TabsTrigger value="csv-invoices" disabled={isImporting && sourceKey !== "csv-invoices"}>
+              CSV Invoices
+            </TabsTrigger>
+            <TabsTrigger value="pdf-invoices" disabled={isImporting && sourceKey !== "pdf-invoices"}>
+              PDF Invoices
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
