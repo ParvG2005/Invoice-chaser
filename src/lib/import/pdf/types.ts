@@ -7,6 +7,8 @@ export interface ParsedInvoice {
   invoiceDate: string;
   buyerGstin?: string;
   buyerPhone?: string;
+  /** Buyer's billing address, when the source exposes it (LLM path only). */
+  buyerAddress?: string;
 }
 
 export interface PdfParseResult {

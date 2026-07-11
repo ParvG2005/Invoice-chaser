@@ -130,6 +130,23 @@ export const invoiceRepository = {
   },
 
   /**
+   * Bulk-inserts line items for already-created invoices (bulk import path).
+   * One `createMany` across every entry; `sortOrder` is per-invoice via
+   * `lineItemsCreateManyData`. Callers pass only invoices that were newly
+   * created in this batch, so re-imported (skipped-duplicate) invoices never
+   * get a second set of rows.
+   */
+  createManyLineItems(
+    entries: { organizationId: string; invoiceId: string; lineItems: InvoiceLineItemInput[] }[],
+  ) {
+    const data = entries.flatMap((e) =>
+      lineItemsCreateManyData(e.organizationId, e.invoiceId, e.lineItems),
+    );
+    if (data.length === 0) return Promise.resolve({ count: 0 });
+    return prisma.invoiceLineItem.createMany({ data });
+  },
+
+  /**
    * Creates an invoice and its line items atomically. Mirrors
    * paymentRepository.createWithAllocations's transaction style.
    */

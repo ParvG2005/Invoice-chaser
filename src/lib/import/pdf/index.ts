@@ -27,6 +27,14 @@ export interface ExtractedInvoice {
    * overrides the net-N days without needing to re-parse the PDF.
    */
   invoiceDate?: string;
+  /**
+   * Buyer GSTIN + billing address, surfaced as siblings of `invoice` so the
+   * commit path can upsert/enrich the buyer Party. `clientPhone` already lives
+   * inside `invoice` (CreateInvoiceInput). All optional — a PDF that omits them
+   * still imports.
+   */
+  buyerGstin?: string;
+  buyerAddress?: string;
   needsEmail: boolean;
   warnings: string[];
 }
@@ -48,24 +56,34 @@ export async function extractInvoicesFromPdf(
   const warnings: string[] = [];
 
   let parsed: ParsedInvoice | undefined;
-  let method: ExtractedInvoice["method"] = "deterministic";
+  let method: ExtractedInvoice["method"] = "llm";
 
-  // Deterministic first (best-effort; text extraction may fail on scanned PDFs).
+  // LLM first: it handles scanned scans and irregular layouts the flat-text
+  // regexes can't. A thrown API error or a null result (no tool call / schema
+  // mismatch) falls through to the deterministic parser below rather than
+  // aborting the file.
   try {
-    const text = await extractPdfText(bytes);
-    const det = parseTallyInvoice(text);
-    warnings.push(...det.warnings);
-    if (det.parsed && det.confidence >= CONFIDENCE_THRESHOLD) parsed = det.parsed;
+    const llmResult = await llm(bytes);
+    if (llmResult) parsed = llmResult;
+    else warnings.push("LLM extraction returned no usable result");
   } catch (e) {
-    warnings.push(`Text extraction failed: ${(e as Error).message}`);
+    warnings.push(`LLM extraction failed: ${(e as Error).message}`);
   }
 
-  // LLM fallback.
+  // Deterministic fallback (flat-text regexes + line-item↔total reconciliation).
+  // Only accepted at high confidence; a low-confidence parse is treated as no
+  // parse so the file surfaces as "failed" rather than importing garbage.
   if (!parsed) {
-    const llmResult = await llm(bytes);
-    if (llmResult) {
-      parsed = llmResult;
-      method = "llm";
+    try {
+      const text = await extractPdfText(bytes);
+      const det = parseTallyInvoice(text);
+      warnings.push(...det.warnings);
+      if (det.parsed && det.confidence >= CONFIDENCE_THRESHOLD) {
+        parsed = det.parsed;
+        method = "deterministic";
+      }
+    } catch (e) {
+      warnings.push(`Text extraction failed: ${(e as Error).message}`);
     }
   }
 
@@ -88,6 +106,8 @@ export async function extractInvoicesFromPdf(
     method,
     invoice,
     invoiceDate: parsed.invoiceDate,
+    buyerGstin: parsed.buyerGstin,
+    buyerAddress: parsed.buyerAddress,
     needsEmail: email === "",
     warnings,
   };

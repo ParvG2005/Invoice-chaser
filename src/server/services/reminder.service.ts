@@ -98,6 +98,8 @@ export const reminderService = {
         : ["FRIENDLY", "PROFESSIONAL", "FIRM", "FINAL_NOTICE"],
       upiId: settings?.upiId ?? null,
       paymentLink: settings?.paymentLink ?? null,
+      sequence: (settings?.sequence as ReminderSettingsDto["sequence"]) ?? undefined,
+      quietHours: (settings?.quietHours as ReminderSettingsDto["quietHours"]) ?? null,
     };
   },
 

@@ -1,8 +1,10 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppError, NotFoundError } from "@/lib/api/errors";
 import { invalidateAnalyticsCache } from "@/lib/cache/analytics-cache";
-import type { CreateInvoiceInput } from "@/lib/validations/invoice";
+import type { CreateInvoiceInput, PdfImportInvoiceInput } from "@/lib/validations/invoice";
 import { invoiceRepository, type InvoiceLineItemInput } from "@/server/repositories/invoice.repository";
+import { partyRepository } from "@/server/repositories/party.repository";
+import { itemRepository } from "@/server/repositories/item.repository";
 import { computeInvoiceStatus, parseDueDate, toInvoiceDto } from "@/server/services/mappers";
 import { getJobScheduler } from "@/lib/jobs/inngest/scheduler";
 import { decimalToNumber } from "@/lib/utils/currency";
@@ -141,6 +143,53 @@ function extraInvoiceFields(
   return fields;
 }
 
+/**
+ * Finds-or-creates the buyer Party for a PDF-imported invoice and returns its
+ * id (or `undefined` when there's nothing to link — no clientName and no
+ * match). Match precedence: GSTIN → name. On a create, all contact fields are
+ * best-effort (nullable). On a match, missing GSTIN/email/phone/address are
+ * backfilled from the invoice; existing values are never overwritten.
+ */
+async function resolvePartyId(
+  organizationId: string,
+  input: PdfImportInvoiceInput,
+): Promise<string | undefined> {
+  const gstin = input.buyerGstin || undefined;
+  const email = input.clientEmail || undefined;
+  const phone = input.clientPhone || undefined;
+  const address = input.buyerAddress || undefined;
+
+  let party = gstin ? await partyRepository.findByGstin(organizationId, gstin) : null;
+  if (!party && input.clientName) {
+    party = await partyRepository.findByName(organizationId, input.clientName);
+  }
+
+  if (!party) {
+    if (!input.clientName) return undefined;
+    const createdParty = await partyRepository.create({
+      organization: { connect: { id: organizationId } },
+      name: input.clientName,
+      email: email ?? null,
+      phone: phone ?? null,
+      gstin: gstin ?? null,
+      billingAddress: address ?? null,
+      type: "CUSTOMER",
+    });
+    return createdParty.id;
+  }
+
+  // Backfill only the fields the matched party is missing.
+  const patch: Prisma.PartyUncheckedUpdateInput = {};
+  if (!party.gstin && gstin) patch.gstin = gstin;
+  if (!party.email && email) patch.email = email;
+  if (!party.phone && phone) patch.phone = phone;
+  if (!party.billingAddress && address) patch.billingAddress = address;
+  if (Object.keys(patch).length > 0) {
+    await partyRepository.update(organizationId, party.id, patch);
+  }
+  return party.id;
+}
+
 export const invoiceService = {
   async list(
     organizationId: string,
@@ -221,30 +270,168 @@ export const invoiceService = {
   },
 
   async bulkCreate(organizationId: string, inputs: CreateInvoiceInput[]) {
-    const data = inputs.map((input) => {
+    // When an input carries line items (PDF/Tally-CSV imports), compute the
+    // persisted line-item rows + subtotal/taxAmount/totalAmount from the same
+    // shared math as `create`/`update`, so bulk-imported invoices are no longer
+    // stored as a bare grand-total. Inputs without line items (plain CSV) keep
+    // exactly their previous flat shape.
+    const rows = inputs.map((input) => {
       const dueDate = parseDueDate(input.dueDate);
+      const computed =
+        input.lineItems && input.lineItems.length > 0
+          ? computeLineItemsForInvoice(input.lineItems)
+          : null;
       return {
-        organizationId,
+        data: {
+          organizationId,
+          clientName: input.clientName,
+          clientEmail: input.clientEmail,
+          clientPhone: input.clientPhone ?? null,
+          amount: input.amount,
+          dueDate,
+          invoiceNumber: input.invoiceNumber,
+          notes: input.notes ?? null,
+          status: computeInvoiceStatus(dueDate, input.status),
+          ...(computed
+            ? {
+                subtotal: computed.subtotal,
+                taxAmount: computed.taxAmount,
+                totalAmount: computed.totalAmount,
+              }
+            : {}),
+        },
+        lineItems: computed?.lineItems ?? null,
+      };
+    });
+
+    // `createMany` skips duplicate invoiceNumbers rather than updating them, so
+    // line items must only be attached to invoices this batch actually created
+    // — never to a pre-existing row (which would double up its items and whose
+    // scalar totals were left untouched). Snapshot the pre-existing numbers
+    // before insert to tell the two apart.
+    const invoiceNumbers = rows.map((r) => r.data.invoiceNumber);
+    const preExisting = new Set(
+      (await invoiceRepository.findByInvoiceNumbers(organizationId, invoiceNumbers)).map(
+        (inv) => inv.invoiceNumber,
+      ),
+    );
+
+    await invoiceRepository.createMany(rows.map((r) => r.data));
+
+    // Return only the invoices from this batch (bounded by input size) rather than
+    // re-reading the whole table.
+    const invoices = await invoiceRepository.findByInvoiceNumbers(organizationId, invoiceNumbers);
+    const invoiceByNumber = new Map(invoices.map((inv) => [inv.invoiceNumber, inv]));
+
+    const lineItemEntries = rows
+      .filter((r) => r.lineItems && !preExisting.has(r.data.invoiceNumber))
+      .map((r) => {
+        const invoice = invoiceByNumber.get(r.data.invoiceNumber);
+        return invoice ? { organizationId, invoiceId: invoice.id, lineItems: r.lineItems! } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+    if (lineItemEntries.length > 0) {
+      await invoiceRepository.createManyLineItems(lineItemEntries);
+    }
+
+    await enqueueOverdueCheckBestEffort(organizationId);
+    invalidateAnalyticsCache(organizationId);
+
+    return invoices.map(toInvoiceDto);
+  },
+
+  /**
+   * PDF-invoice import with full master-data enrichment (distinct from the
+   * generic `bulkCreate`/CSV path, which never touches Party/Item). Per
+   * invoice, sequentially:
+   *   1. Skip entirely if the invoiceNumber already exists (mirrors
+   *      `bulkCreate`'s skip-duplicates semantics).
+   *   2. Upsert the buyer Party — match by GSTIN first, then by name; create
+   *      when neither matches and a clientName is present; otherwise backfill a
+   *      matched party's missing GSTIN/email/phone/address. Link `partyId`.
+   *   3. Create/link a Stock Item per line-item description (by name), stamping
+   *      the line's HSN code + GST rate onto newly-created items. Link `itemId`.
+   *   4. Create the invoice (with computed line-item totals when present).
+   *
+   * Every enrichment field is optional: a missing GSTIN/email/phone/address or
+   * empty line items never blocks the import — Party needs only name+org, Item
+   * only name+org.
+   */
+  async importPdfInvoices(organizationId: string, inputs: PdfImportInvoiceInput[]) {
+    const created: Awaited<ReturnType<typeof invoiceRepository.create>>[] = [];
+
+    for (const input of inputs) {
+      // Dedupe: skip a number that already exists (soft-deleted rows included,
+      // matching the DB-level unique constraint).
+      if (await invoiceRepository.findByInvoiceNumber(organizationId, input.invoiceNumber)) {
+        continue;
+      }
+
+      const partyId = await resolvePartyId(organizationId, input);
+
+      const rawLineItems = input.lineItems ?? [];
+      const itemIds: (string | undefined)[] = [];
+      for (const li of rawLineItems) {
+        let item = await itemRepository.findByName(organizationId, li.description);
+        if (!item) {
+          item = await itemRepository.create({
+            organization: { connect: { id: organizationId } },
+            name: li.description,
+            hsnCode: li.hsnCode ?? null,
+            gstRate: li.taxRatePct ?? null,
+          });
+        }
+        itemIds.push(item.id);
+      }
+
+      const dueDate = parseDueDate(input.dueDate);
+      const status = computeInvoiceStatus(dueDate, input.status);
+
+      const baseData: Prisma.InvoiceCreateInput = {
+        organization: { connect: { id: organizationId } },
         clientName: input.clientName,
-        clientEmail: input.clientEmail,
+        clientEmail: input.clientEmail ?? "",
         clientPhone: input.clientPhone ?? null,
         amount: input.amount,
         dueDate,
         invoiceNumber: input.invoiceNumber,
         notes: input.notes ?? null,
-        status: computeInvoiceStatus(dueDate, input.status),
+        status,
       };
-    });
 
-    await invoiceRepository.createMany(data);
+      let invoice;
+      if (rawLineItems.length > 0) {
+        const computed = computeLineItemsForInvoice(rawLineItems);
+        const lineItems = computed.lineItems.map((li, i) => ({
+          ...li,
+          itemId: itemIds[i] ?? li.itemId,
+        }));
+        invoice = await invoiceRepository.createWithLineItems(
+          {
+            ...baseData,
+            ...extraInvoiceFields({
+              partyId,
+              subtotal: computed.subtotal,
+              taxAmount: computed.taxAmount,
+              totalAmount: computed.totalAmount,
+            }),
+          },
+          lineItems,
+        );
+      } else {
+        invoice = await invoiceRepository.create({
+          ...baseData,
+          ...extraInvoiceFields({ partyId }),
+        });
+      }
+
+      created.push(invoice);
+    }
+
     await enqueueOverdueCheckBestEffort(organizationId);
     invalidateAnalyticsCache(organizationId);
 
-    // Return only the invoices from this batch (bounded by input size) rather than
-    // re-reading the whole table.
-    const invoiceNumbers = data.map((d) => d.invoiceNumber);
-    const invoices = await invoiceRepository.findByInvoiceNumbers(organizationId, invoiceNumbers);
-    return invoices.map(toInvoiceDto);
+    return created.map(toInvoiceDto);
   },
 
   async update(organizationId: string, id: string, input: Partial<InvoiceServiceCreateInput>) {

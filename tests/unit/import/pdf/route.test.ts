@@ -25,6 +25,11 @@ vi.mock("@/lib/api/handler", () => ({
 vi.mock("@/server/services/party.service", () => ({
   partyService: { list: vi.fn().mockResolvedValue([]) },
 }));
+// LLM is primary in the extractor; stub it to null so the route test stays
+// offline and exercises the deterministic fallback against the fixture PDF.
+vi.mock("@/lib/import/pdf/llm-extract", () => ({
+  llmExtractInvoice: vi.fn().mockResolvedValue(null),
+}));
 
 import { readFileSync } from "node:fs";
 import { POST } from "@/app/api/import/pdf-invoices/parse/route";

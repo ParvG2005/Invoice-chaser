@@ -101,6 +101,8 @@ export function parseTallyInvoice(text: string): PdfParseResult {
       rate: num(m[4]),
       qty: num(m[5]),
       taxRatePct: num(m[6]),
+      // m[7] is the trailing 6-8 digit HSN/SAC code (see LINE_ITEM_RE).
+      hsnCode: m[7],
     });
   }
 

@@ -11,6 +11,7 @@ const payloadSchema = z.object({
   amount: z.coerce.number().positive(),
   buyerGstin: z.string().optional(),
   buyerPhone: z.string().optional(),
+  buyerAddress: z.string().optional(),
   lineItems: z
     .array(
       z.object({
@@ -19,6 +20,7 @@ const payloadSchema = z.object({
         rate: z.coerce.number().nonnegative(),
         discountPct: z.coerce.number().min(0).max(100).default(0),
         taxRatePct: z.coerce.number().min(0).max(100).default(0),
+        hsnCode: z.string().optional(),
       }),
     )
     .default([]),
@@ -30,22 +32,25 @@ const TOOL: Anthropic.Tool = {
   input_schema: {
     type: "object",
     properties: {
-      invoiceNumber: { type: "string" },
+      invoiceNumber: { type: "string", description: "Invoice number" },
       clientName: { type: "string", description: "Buyer / Bill-to name" },
-      invoiceDate: { type: "string", description: "ISO yyyy-mm-dd" },
+      invoiceDate: { type: "string", description: "Invoice date, ISO yyyy-mm-dd" },
       amount: { type: "number", description: "Grand total incl. tax" },
-      buyerGstin: { type: "string" },
-      buyerPhone: { type: "string" },
+      buyerGstin: { type: "string", description: "Buyer's GSTIN / UIN, if shown" },
+      buyerPhone: { type: "string", description: "Buyer's contact phone, if shown" },
+      buyerAddress: { type: "string", description: "Buyer's billing address, if shown" },
       lineItems: {
         type: "array",
+        description: "Every product/service row in the item table",
         items: {
           type: "object",
           properties: {
-            description: { type: "string" },
-            qty: { type: "number" },
-            rate: { type: "number" },
-            discountPct: { type: "number" },
+            description: { type: "string", description: "Item / product name" },
+            qty: { type: "number", description: "Quantity" },
+            rate: { type: "number", description: "Unit rate" },
+            discountPct: { type: "number", description: "Discount percent" },
             taxRatePct: { type: "number", description: "GST rate percent" },
+            hsnCode: { type: "string", description: "HSN/SAC code for the item" },
           },
           required: ["description", "qty", "rate"],
         },
@@ -77,7 +82,14 @@ export async function llmExtractInvoice(
             type: "document",
             source: { type: "base64", media_type: "application/pdf", data: toBase64(bytes) },
           },
-          { type: "text", text: "Extract the tax invoice into the emit_invoice tool. Dates as ISO yyyy-mm-dd." },
+          {
+            type: "text",
+            text:
+              "Extract the COMPLETE tax invoice into the emit_invoice tool: invoice number, date, " +
+              "buyer name, GSTIN, phone and billing address, every line item (description, HSN/SAC, " +
+              "quantity, rate, discount %, GST %), and the grand total. Dates as ISO yyyy-mm-dd. " +
+              "Omit any field the invoice does not show rather than guessing.",
+          },
         ],
       },
     ],
@@ -100,5 +112,6 @@ export async function llmExtractInvoice(
     invoiceDate: p.invoiceDate,
     buyerGstin: p.buyerGstin,
     buyerPhone: p.buyerPhone,
+    buyerAddress: p.buyerAddress,
   };
 }

@@ -36,7 +36,7 @@ export default function LandingPage() {
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
           Upload invoices, configure reminder sequences, and let InvoicePilot send professional
-          follow-ups — powered by free-tier AI models.
+          follow-ups automatically.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <Show when="signed-out">

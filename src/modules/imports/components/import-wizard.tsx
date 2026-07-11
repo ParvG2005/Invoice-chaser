@@ -15,7 +15,7 @@ import { parseCsv } from "@/lib/import/csv-parser";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { ParseResult, ParseWarning, TallyLedger, TallyStockItem, TallyVoucher } from "@/lib/import/tally/types";
 import type { ExtractedInvoice } from "@/lib/import/pdf";
-import type { CreateInvoiceInput } from "@/lib/validations/invoice";
+import type { CreateInvoiceInput, PdfImportInvoiceInput } from "@/lib/validations/invoice";
 import type { ApiResponse, InvoiceDto } from "@/types";
 import type { ImportBatchDto } from "@/server/services/import/tally-import.service";
 import type { TallyImportSource } from "@/server/services/import/tally-import.service";
@@ -150,6 +150,24 @@ export function ImportWizard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // PDF import commits to its own endpoint (not /api/invoices/bulk) so it can
+  // enrich master data — upsert the buyer Party + per-line Stock Items — which
+  // the generic CSV bulk path deliberately does not do. Payload is JSON, so
+  // apiFetch is fine here (unlike the multipart parse call below).
+  const startPdfImport = useMutation({
+    mutationFn: (invoices: PdfImportInvoiceInput[]) =>
+      apiFetch<InvoiceDto[]>("/api/import/pdf-invoices/commit", {
+        method: "POST",
+        body: JSON.stringify({ invoices }),
+      }),
+    onSuccess: (data) => {
+      toast.success(`Imported ${data.length} invoice${data.length !== 1 ? "s" : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   // apiFetch hardcodes a JSON Content-Type header, which breaks
   // request.formData() on the server for multipart uploads — use a raw
   // fetch here and unwrap the { success, data, error } envelope by hand.
@@ -181,9 +199,11 @@ export function ImportWizard() {
   const batch = batchData?.batch;
   const isTallyTerminal = !!batch && !NON_TERMINAL_STATUSES.includes(batch.status);
   const isCsvDone = startCsvImport.isSuccess;
+  const isPdfDone = startPdfImport.isSuccess;
+  const isBulkDone = isCsvDone || isPdfDone;
   const isBulkSource = sourceKey === "csv-invoices" || sourceKey === "pdf-invoices";
 
-  const stepIndex = !preview ? 0 : isBulkSource ? (isCsvDone ? 2 : 1) : batchId ? (isTallyTerminal ? 2 : 1) : 1;
+  const stepIndex = !preview ? 0 : isBulkSource ? (isBulkDone ? 2 : 1) : batchId ? (isTallyTerminal ? 2 : 1) : 1;
 
   const reset = () => {
     setPreview(null);
@@ -192,6 +212,7 @@ export function ImportWizard() {
     setEmailOverrides({});
     setNameOverrides({});
     startCsvImport.reset();
+    startPdfImport.reset();
     parsePdfMutation.reset();
   };
 
@@ -277,17 +298,26 @@ export function ImportWizard() {
   const tallyPreview = preview?.kind === "tally" ? preview : null;
 
   const pdfPreview = preview?.kind === "pdf" ? preview : null;
-  /** Row's invoice with the user's net-N days and any typed-in email applied. Keyed by row index (stable within a single parse result set) rather than fileName, since two uploaded files can share the same name. */
-  const effectivePdfInvoice = (r: ExtractedInvoice, index: number): CreateInvoiceInput | null => {
+  /** Row's invoice with the user's net-N days and any typed-in email applied, plus the enrichment fields (GSTIN/address) the commit endpoint upserts onto the buyer Party. Keyed by row index (stable within a single parse result set) rather than fileName, since two uploaded files can share the same name. */
+  const effectivePdfInvoice = (r: ExtractedInvoice, index: number): PdfImportInvoiceInput | null => {
     if (!r.invoice) return null;
     const email = emailOverrides[index]?.trim() || r.invoice.clientEmail;
     const clientName = nameOverrides[index]?.trim() || r.invoice.clientName;
     const dueDate = r.invoiceDate ? addDaysIso(r.invoiceDate, netDays) : r.invoice.dueDate;
-    return { ...r.invoice, clientName, clientEmail: email, dueDate };
+    return {
+      ...r.invoice,
+      clientName,
+      clientEmail: email,
+      dueDate,
+      buyerGstin: r.buyerGstin,
+      buyerAddress: r.buyerAddress,
+    };
   };
   const pdfValidInvoices = (pdfPreview?.results ?? [])
     .map(effectivePdfInvoice)
-    .filter((inv): inv is CreateInvoiceInput => !!inv && isValidEmail(inv.clientEmail));
+    .filter(
+      (inv): inv is PdfImportInvoiceInput => !!inv && !!inv.clientEmail && isValidEmail(inv.clientEmail),
+    );
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -468,7 +498,7 @@ export function ImportWizard() {
           )}
 
           {/* Preview: PDF invoices */}
-          {pdfPreview && !isCsvDone && (
+          {pdfPreview && !isPdfDone && (
             <div data-testid="import-preview" className="space-y-3">
               <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
                 <FileText className="h-4 w-4" />
@@ -506,7 +536,7 @@ export function ImportWizard() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {pdfPreview.results.map((r, i) => {
                       const effective = effectivePdfInvoice(r, i);
-                      const emailInvalid = !!effective && !isValidEmail(effective.clientEmail);
+                      const emailInvalid = !!effective && !(effective.clientEmail && isValidEmail(effective.clientEmail));
                       return (
                         <tr key={`${r.fileName}-${i}`} className={r.method === "failed" ? "bg-red-50 dark:bg-red-950/20" : undefined}>
                           <td className="px-3 py-2">{r.fileName}</td>
@@ -638,11 +668,23 @@ export function ImportWizard() {
               </div>
             </div>
           )}
+
+          {/* Done: PDF result */}
+          {isPdfDone && (
+            <div className="space-y-4">
+              <Badge variant="success">
+                Imported {startPdfImport.data?.length ?? 0} invoice{startPdfImport.data?.length !== 1 ? "s" : ""}
+              </Badge>
+              <div className="flex justify-end">
+                <Button onClick={reset}>Start another import</Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer actions for Upload/Preview steps */}
-      {!batchId && !isCsvDone && preview && (
+      {!batchId && !isBulkDone && preview && (
         <div className="flex items-center justify-end gap-3 border-t border-zinc-200 px-6 py-4 dark:border-zinc-800">
           <Button variant="outline" onClick={() => setPreview(null)}>
             Cancel
@@ -656,10 +698,10 @@ export function ImportWizard() {
             </Button>
           ) : sourceKey === "pdf-invoices" ? (
             <Button
-              disabled={pdfValidInvoices.length === 0 || startCsvImport.isPending}
-              onClick={() => startCsvImport.mutate(pdfValidInvoices)}
+              disabled={pdfValidInvoices.length === 0 || startPdfImport.isPending}
+              onClick={() => startPdfImport.mutate(pdfValidInvoices)}
             >
-              {startCsvImport.isPending ? "Importing..." : `Import ${pdfValidInvoices.length} invoice${pdfValidInvoices.length !== 1 ? "s" : ""}`}
+              {startPdfImport.isPending ? "Importing..." : `Import ${pdfValidInvoices.length} invoice${pdfValidInvoices.length !== 1 ? "s" : ""}`}
             </Button>
           ) : (
             <Button disabled={startTallyImport.isPending} onClick={() => startTallyImport.mutate()}>

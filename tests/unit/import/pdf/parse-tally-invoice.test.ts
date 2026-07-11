@@ -23,6 +23,7 @@ describe("parseTallyInvoice", () => {
       rate: 250,
       discountPct: 15.25,
       taxRatePct: 18,
+      hsnCode: "38245090",
     });
     expect(r.parsed?.buyerGstin).toBe("23ABRPV7692P1ZC");
   });

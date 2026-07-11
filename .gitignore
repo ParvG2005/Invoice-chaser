@@ -65,3 +65,4 @@ src/generated/
 /.goose/
 /.neon
 /skills-lock.json
+.gstack/

@@ -13,6 +13,7 @@ vi.mock("@/server/repositories/invoice.repository", () => ({
     findByInvoiceNumbers: vi.fn(),
     create: vi.fn(),
     createMany: vi.fn(),
+    createManyLineItems: vi.fn(),
     createWithLineItems: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
@@ -21,6 +22,22 @@ vi.mock("@/server/repositories/invoice.repository", () => ({
     findCommunicationLogs: vi.fn(),
     findEmailLogs: vi.fn(),
     findPaymentAllocations: vi.fn(),
+  },
+}));
+
+vi.mock("@/server/repositories/party.repository", () => ({
+  partyRepository: {
+    findByGstin: vi.fn(),
+    findByName: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+}));
+
+vi.mock("@/server/repositories/item.repository", () => ({
+  itemRepository: {
+    findByName: vi.fn(),
+    create: vi.fn(),
   },
 }));
 
@@ -400,6 +417,103 @@ describe("invoiceService (characterization)", () => {
       ]);
       expect(reminderService.scheduleRemindersForOrganization).not.toHaveBeenCalled();
       expect(result).toEqual({ action: "sendReminders", count: 2 });
+    });
+  });
+
+  describe("bulkCreate", () => {
+    beforeEach(() => {
+      vi.mocked(invoiceRepository.createMany).mockResolvedValue({ count: 1 } as never);
+      vi.mocked(invoiceRepository.createManyLineItems).mockResolvedValue({ count: 0 } as never);
+    });
+
+    it("persists computed line items and subtotal/tax/total for inputs that carry line items", async () => {
+      // No pre-existing row, then the re-fetch returns the created invoice.
+      vi.mocked(invoiceRepository.findByInvoiceNumbers)
+        .mockResolvedValueOnce([] as never)
+        .mockResolvedValueOnce([fakeInvoice({ invoiceNumber: "PDF-1" })] as never);
+
+      await invoiceService.bulkCreate(ORG, [
+        {
+          clientName: "Acme",
+          clientEmail: "a@acme.test",
+          amount: 236,
+          dueDate: "2026-08-01",
+          invoiceNumber: "PDF-1",
+          lineItems: [{ description: "Widget", qty: 2, rate: 100, discountPct: 0, taxRatePct: 18 }],
+        },
+      ] as never);
+
+      // Scalar totals land on the invoice row.
+      expect(invoiceRepository.createMany).toHaveBeenCalledWith([
+        expect.objectContaining({
+          invoiceNumber: "PDF-1",
+          subtotal: 200,
+          taxAmount: 36,
+          totalAmount: 236,
+        }),
+      ]);
+      // Line items are attached to the newly-created invoice, in persisted shape.
+      expect(invoiceRepository.createManyLineItems).toHaveBeenCalledWith([
+        {
+          organizationId: ORG,
+          invoiceId: "inv-1",
+          lineItems: [
+            expect.objectContaining({
+              description: "Widget",
+              quantity: 2,
+              rate: 100,
+              discount: 0,
+              taxRate: 18,
+              amount: 236,
+            }),
+          ],
+        },
+      ]);
+    });
+
+    it("does not attach line items to a pre-existing (skipped-duplicate) invoice number", async () => {
+      const existing = fakeInvoice({ invoiceNumber: "PDF-1" });
+      // The number already exists before insert, so createMany skips it and its
+      // line items must NOT be duplicated.
+      vi.mocked(invoiceRepository.findByInvoiceNumbers)
+        .mockResolvedValueOnce([existing] as never)
+        .mockResolvedValueOnce([existing] as never);
+
+      await invoiceService.bulkCreate(ORG, [
+        {
+          clientName: "Acme",
+          clientEmail: "a@acme.test",
+          amount: 236,
+          dueDate: "2026-08-01",
+          invoiceNumber: "PDF-1",
+          lineItems: [{ description: "Widget", qty: 2, rate: 100, discountPct: 0, taxRatePct: 18 }],
+        },
+      ] as never);
+
+      expect(invoiceRepository.createManyLineItems).not.toHaveBeenCalled();
+    });
+
+    it("keeps plain CSV inputs (no line items) as a flat amount with no totals or line items", async () => {
+      vi.mocked(invoiceRepository.findByInvoiceNumbers)
+        .mockResolvedValueOnce([] as never)
+        .mockResolvedValueOnce([fakeInvoice({ invoiceNumber: "CSV-1" })] as never);
+
+      await invoiceService.bulkCreate(ORG, [
+        {
+          clientName: "Acme",
+          clientEmail: "a@acme.test",
+          amount: 500,
+          dueDate: "2026-08-01",
+          invoiceNumber: "CSV-1",
+        },
+      ] as never);
+
+      const [rows] = vi.mocked(invoiceRepository.createMany).mock.calls[0];
+      expect(rows[0]).not.toHaveProperty("subtotal");
+      expect(rows[0]).not.toHaveProperty("taxAmount");
+      expect(rows[0]).not.toHaveProperty("totalAmount");
+      expect(rows[0]).toMatchObject({ invoiceNumber: "CSV-1", amount: 500 });
+      expect(invoiceRepository.createManyLineItems).not.toHaveBeenCalled();
     });
   });
 });

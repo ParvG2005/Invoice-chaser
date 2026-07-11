@@ -264,7 +264,6 @@ export default function RemindersPage() {
                 <ul className="mt-1.5 space-y-1 text-zinc-500 text-xs list-disc list-inside">
                   <li>Daily cron job runs at 9 AM and scans all invoices</li>
                   <li>Overdue invoices are matched against your reminder schedule</li>
-                  <li>Groq AI writes a unique, personalised email for each invoice</li>
                   <li>Each invoice only receives one reminder per milestone (e.g. 3-day, 7-day)</li>
                 </ul>
               </div>
