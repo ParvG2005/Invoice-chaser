@@ -113,6 +113,10 @@ const pdfLineItemSchema = z.object({
   hsnCode: clampedString(20),
 });
 
+/** Basic email shape — the SAME check the import wizard uses client-side, so
+ * the two never disagree on what "valid" means. */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const pdfImportInvoiceSchema = z.object({
   invoiceNumber: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().slice(0, 100) : v),
@@ -122,7 +126,16 @@ export const pdfImportInvoiceSchema = z.object({
     (v) => (typeof v === "string" ? v.trim().slice(0, 200) : v),
     z.string().min(1).max(200),
   ),
-  clientEmail: z.string().email().or(z.literal("")).nullish(),
+  // Email is optional enrichment — it must NEVER 422 the import. A trimmed
+  // value that looks like an email is kept; anything else (blank, malformed, a
+  // party-record's garbage email) collapses to "" so the invoice still imports
+  // (reminders just can't send until it's fixed on the Party page).
+  clientEmail: z.preprocess((v) => {
+    if (v == null) return "";
+    if (typeof v !== "string") return v;
+    const t = v.trim();
+    return EMAIL_SHAPE.test(t) ? t : "";
+  }, z.string()),
   clientPhone: clampedString(30),
   buyerGstin: clampedGstin,
   buyerAddress: clampedString(500),

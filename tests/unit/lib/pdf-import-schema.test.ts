@@ -47,6 +47,19 @@ describe("pdfImportCommitSchema resilience", () => {
     expect(parsed.invoices[0].clientPhone).toBeNull();
   });
 
+  it("collapses a malformed / untrimmed email to '' instead of 422-ing", () => {
+    const parsed = pdfImportCommitSchema.parse({
+      invoices: [
+        { ...base, clientEmail: "not-an-email" },
+        { ...base, invoiceNumber: "INV-002", clientEmail: "  spaced@example.com  " },
+        { ...base, invoiceNumber: "INV-003", clientEmail: "acme@x" },
+      ],
+    });
+    expect(parsed.invoices[0].clientEmail).toBe("");
+    expect(parsed.invoices[1].clientEmail).toBe("spaced@example.com");
+    expect(parsed.invoices[2].clientEmail).toBe("");
+  });
+
   it("still rejects a genuinely missing required field", () => {
     expect(() =>
       pdfImportCommitSchema.parse({ invoices: [{ ...base, amount: -5 }] }),
