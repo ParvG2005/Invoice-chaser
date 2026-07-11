@@ -72,18 +72,65 @@ export const bulkCreateInvoicesSchema = z.object({
  * `invoiceService.importPdfInvoices`, which upserts the buyer Party + per-line
  * Stock Items in addition to creating the invoice.
  */
+/**
+ * Trim a string, coerce empty → null, and clamp to `max` chars. LLM extraction
+ * (llm-extract.ts) puts NO length cap on the enrichment fields it returns, so a
+ * GSTIN carrying a label prefix or a long buyer address would pass extraction
+ * and then 422 the WHOLE commit batch on the strict `.max()` below. Enrichment
+ * is best-effort — silently clamp rather than reject a real invoice over it.
+ */
+const clampedString = (max: number) =>
+  z.preprocess((v) => {
+    if (typeof v !== "string") return v;
+    const t = v.trim();
+    return t ? t.slice(0, max) : null;
+  }, z.string().max(max).nullish());
+
+/** GSTIN is 15 chars; strip whitespace + uppercase before clamping so a value
+ * like "GSTIN 27AAAAA0000A1Z5" or "27aaaaa0000a1z5 " still imports cleanly. */
+const clampedGstin = z.preprocess((v) => {
+  if (typeof v !== "string") return v;
+  const t = v.replace(/\s+/g, "").toUpperCase();
+  return t ? t.slice(0, 15) : null;
+}, z.string().max(15).nullish());
+
+/**
+ * Line item as it arrives from PDF extraction. Same shape as
+ * `lineItemInputSchema` but tolerant: the description is trimmed/clamped
+ * instead of hard-failing, since an over-length item name from a PDF must not
+ * abort the whole import (the manual invoice editor keeps the strict schema).
+ */
+const pdfLineItemSchema = z.object({
+  itemId: z.string().optional(),
+  description: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().slice(0, 500) : v),
+    z.string().min(1).max(500),
+  ),
+  qty: z.coerce.number().positive(),
+  rate: z.coerce.number().nonnegative(),
+  discountPct: z.coerce.number().min(0).max(100).default(0),
+  taxRatePct: z.coerce.number().min(0).max(100).default(0),
+  hsnCode: clampedString(20),
+});
+
 export const pdfImportInvoiceSchema = z.object({
-  invoiceNumber: z.string().min(1).max(100),
-  clientName: z.string().min(1).max(200),
+  invoiceNumber: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().slice(0, 100) : v),
+    z.string().min(1).max(100),
+  ),
+  clientName: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim().slice(0, 200) : v),
+    z.string().min(1).max(200),
+  ),
   clientEmail: z.string().email().or(z.literal("")).nullish(),
-  clientPhone: z.string().max(30).nullish(),
-  buyerGstin: z.string().max(15).nullish(),
-  buyerAddress: z.string().max(500).nullish(),
+  clientPhone: clampedString(30),
+  buyerGstin: clampedGstin,
+  buyerAddress: clampedString(500),
   dueDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
   amount: z.coerce.number().positive(),
   status: invoiceStatusSchema.optional(),
-  notes: z.string().max(2000).nullish(),
-  lineItems: z.array(lineItemInputSchema).optional(),
+  notes: clampedString(2000),
+  lineItems: z.array(pdfLineItemSchema).optional(),
 });
 
 export const pdfImportCommitSchema = z.object({
