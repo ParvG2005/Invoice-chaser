@@ -35,6 +35,17 @@ export const partyRepository = {
     });
   },
 
+  /**
+   * Lookup by GSTIN, used by the PDF-import enrichment path to match a buyer
+   * to an existing party before falling back to a name match. GSTIN is a
+   * stable business identifier, so it's the more reliable key when present.
+   */
+  findByGstin(organizationId: string, gstin: string) {
+    return prisma.party.findFirst({
+      where: { organizationId, deletedAt: null, gstin },
+    });
+  },
+
   /** Case-insensitive lookup by name, used by import + backfill to avoid duplicate parties. */
   findByName(organizationId: string, name: string) {
     return prisma.party.findFirst({

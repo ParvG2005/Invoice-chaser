@@ -23,6 +23,8 @@ export const reminderRepository = {
         escalationTones: data.escalationTones as EmailTone[],
         upiId: data.upiId,
         paymentLink: data.paymentLink,
+        sequence: data.sequence ?? undefined,
+        quietHours: data.quietHours ?? undefined,
       },
       update: {
         reminderDays: data.reminderDays,
@@ -36,6 +38,8 @@ export const reminderRepository = {
         escalationTones: data.escalationTones as EmailTone[],
         upiId: data.upiId,
         paymentLink: data.paymentLink,
+        sequence: data.sequence ?? undefined,
+        quietHours: data.quietHours ?? undefined,
       },
     });
   },

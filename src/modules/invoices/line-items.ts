@@ -12,6 +12,13 @@ export interface LineItemInput {
   rate: number;
   discountPct: number;
   taxRatePct: number;
+  /**
+   * HSN/SAC code, carried through from PDF import so the enrichment path can
+   * stamp it onto the created Stock Item. Not used by the amount/totals math
+   * below; optional so the invoice editor's rows (which don't track HSN) stay
+   * assignable.
+   */
+  hsnCode?: string | null;
 }
 
 /** Rounds to 2dp using standard half-up rounding, matching `Decimal(12,2)` columns. */

@@ -17,6 +17,13 @@ export const lineItemInputSchema = z.object({
   rate: z.coerce.number().nonnegative(),
   discountPct: z.coerce.number().min(0).max(100).default(0),
   taxRatePct: z.coerce.number().min(0).max(100).default(0),
+  /**
+   * HSN/SAC code for the line's product, when the source exposes one (Tally
+   * PDF exports do). Optional/nullable so non-import callers (the invoice
+   * editor) are unaffected; on PDF import it's persisted onto the linked
+   * Stock Item's `hsnCode` (InvoiceLineItem has no HSN column).
+   */
+  hsnCode: z.string().max(20).nullish(),
 });
 
 export const createInvoiceSchema = z.object({
@@ -56,6 +63,34 @@ export const bulkCreateInvoicesSchema = z.object({
 });
 
 /**
+ * Commit payload for the PDF-invoice import path (POST
+ * /api/import/pdf-invoices/commit) — distinct from `createInvoiceSchema` so
+ * the generic invoice-create/CSV-bulk contract stays clean. Every enrichment
+ * field (email, phone, GSTIN, address, line items) is optional/nullable: a
+ * PDF that omits any of them must still import (only invoiceNumber/clientName/
+ * amount/dueDate are required). The route hands parsed rows to
+ * `invoiceService.importPdfInvoices`, which upserts the buyer Party + per-line
+ * Stock Items in addition to creating the invoice.
+ */
+export const pdfImportInvoiceSchema = z.object({
+  invoiceNumber: z.string().min(1).max(100),
+  clientName: z.string().min(1).max(200),
+  clientEmail: z.string().email().or(z.literal("")).nullish(),
+  clientPhone: z.string().max(30).nullish(),
+  buyerGstin: z.string().max(15).nullish(),
+  buyerAddress: z.string().max(500).nullish(),
+  dueDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  amount: z.coerce.number().positive(),
+  status: invoiceStatusSchema.optional(),
+  notes: z.string().max(2000).nullish(),
+  lineItems: z.array(lineItemInputSchema).optional(),
+});
+
+export const pdfImportCommitSchema = z.object({
+  invoices: z.array(pdfImportInvoiceSchema).min(1).max(500),
+});
+
+/**
  * Bulk row-selection actions from the invoices-list bulk-actions bar (Task
  * 12): distinguished from `bulkCreateInvoicesSchema` by the `action` key so
  * `POST /api/invoices/bulk` can dispatch to either additively.
@@ -75,6 +110,7 @@ export const writeOffSchema = z.object({
 
 export type LineItemInputSchema = z.infer<typeof lineItemInputSchema>;
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
+export type PdfImportInvoiceInput = z.infer<typeof pdfImportInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
 export type SnoozeInput = z.infer<typeof snoozeSchema>;
 export type WriteOffInput = z.infer<typeof writeOffSchema>;

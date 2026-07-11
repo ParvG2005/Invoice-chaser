@@ -7,11 +7,17 @@ import path from "path";
 // domain + Clerk production instance land (Phase 7 Task 3).
 const CLERK_ORIGINS = "https://*.clerk.accounts.dev";
 
+// React's dev build + Turbopack use eval() for fast refresh / callstack
+// reconstruction, which CSP blocks without 'unsafe-eval'. Scope it to
+// development only so production keeps the stricter policy (React never uses
+// eval in production builds).
+const DEV_SCRIPT_SRC = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+
 const csp = [
   "default-src 'self'",
   // 'unsafe-inline' is required by Next.js inline runtime scripts and Clerk;
   // revisit with nonces if we later adopt next/script strict mode.
-  `script-src 'self' 'unsafe-inline' ${CLERK_ORIGINS}`,
+  `script-src 'self' 'unsafe-inline'${DEV_SCRIPT_SRC} ${CLERK_ORIGINS}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://img.clerk.com",
   "font-src 'self' data:",

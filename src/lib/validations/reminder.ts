@@ -4,6 +4,14 @@ export const emailToneSchema = z.enum(["FRIENDLY", "PROFESSIONAL", "FIRM", "FINA
 export const channelSchema = z.enum(["EMAIL", "WHATSAPP"]);
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:mm");
 
+export const reminderSequenceStepSchema = z.object({
+  offsetDays: z.number().int().min(0).max(90),
+  tone: emailToneSchema,
+  channels: z.object({ email: z.boolean(), whatsapp: z.boolean() }),
+});
+
+export const quietHoursSchema = z.object({ start: hhmm, end: hhmm });
+
 export const reminderSettingsSchema = z.object({
   reminderDays: z.array(z.number().int().min(0).max(90)).min(1).max(10),
   emailTone: emailToneSchema,
@@ -25,6 +33,10 @@ export const reminderSettingsSchema = z.object({
     .default(["FRIENDLY", "PROFESSIONAL", "FIRM", "FINAL_NOTICE"]),
   upiId: z.string().max(100).nullable().optional(),
   paymentLink: z.string().url().nullable().optional(),
+  // Sequence editor + quiet hours (Task 26). Persisted as JSON; surfaced in the
+  // reminders settings UI. Optional so older clients that omit them still validate.
+  sequence: z.array(reminderSequenceStepSchema).max(10).optional(),
+  quietHours: quietHoursSchema.nullable().optional(),
 });
 
 export const generateEmailSchema = z.object({

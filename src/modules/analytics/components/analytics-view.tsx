@@ -2,6 +2,7 @@
 
 import { HeadlineTiles } from "./headline-tiles";
 import { AgingChart } from "./aging-chart";
+import { AgingDonutChart } from "./aging-donut-chart";
 import { CollectionTrendChart } from "./collection-trend-chart";
 import { CashflowChart } from "./cashflow-chart";
 import { PartyRiskTable } from "./party-risk-table";
@@ -13,9 +14,10 @@ export function AnalyticsView() {
     <div className="space-y-6">
       <HeadlineTiles />
       <div className="grid gap-6 lg:grid-cols-2">
+        <AgingDonutChart />
         <AgingChart />
-        <CashflowChart />
         <CollectionTrendChart />
+        <CashflowChart />
         <StockPanel />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
