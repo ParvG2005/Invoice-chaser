@@ -3,10 +3,19 @@
 import { useCallback, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 
+export interface AssistantToolActivity {
+  /** Raw tool name (e.g. "search_invoices"); humanized at render time. */
+  name: string;
+  ok: boolean;
+}
+
 export interface AssistantChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
+  /** Tool calls made while producing this reply, shown as subtle chips —
+   * NOT concatenated into `text`, so they never pollute the prose. */
+  tools?: AssistantToolActivity[];
 }
 
 export type AssistantActionStatus = "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED";
@@ -111,13 +120,10 @@ export function useAssistantStream(sessionId: string | null): UseAssistantStream
             } else if (event.type === "proposed_action") {
               setActions((prev) => [...prev, event.action]);
             } else if (event.type === "tool_result") {
-              const statusLine = event.ok
-                ? `Looked up: ${event.toolName}`
-                : `Lookup failed: ${event.toolName}`;
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantId
-                    ? { ...m, text: `${m.text}${m.text ? "\n" : ""}${statusLine}\n` }
+                    ? { ...m, tools: [...(m.tools ?? []), { name: event.toolName, ok: event.ok }] }
                     : m,
                 ),
               );

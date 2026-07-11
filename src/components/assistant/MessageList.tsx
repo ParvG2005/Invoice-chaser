@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { AssistantChatMessage, AssistantProposedAction } from "@/components/assistant/useAssistantStream";
 import { ApprovalCardList } from "@/components/assistant/ApprovalCard";
+import { FormattedMessage } from "@/components/assistant/FormattedMessage";
+
+/** "search_invoices" → "search invoices" — a readable label for the activity chip. */
+function humanizeTool(name: string): string {
+  return name.replace(/_/g, " ");
+}
 
 interface MessageListProps {
   messages: AssistantChatMessage[];
@@ -45,17 +52,48 @@ export function MessageList({
         return (
           <div
             key={message.id}
-            className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}
+            className={cn(
+              "flex flex-col gap-1",
+              message.role === "user" ? "items-end" : "items-start",
+            )}
           >
+            {message.role === "assistant" && message.tools && message.tools.length > 0 && (
+              <div className="flex max-w-[85%] flex-wrap gap-1.5 px-1">
+                {message.tools.map((tool, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px]",
+                      tool.ok
+                        ? "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                        : "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400",
+                    )}
+                  >
+                    <Search className="h-3 w-3" />
+                    {humanizeTool(tool.name)}
+                  </span>
+                ))}
+              </div>
+            )}
             <div
               className={cn(
-                "max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm",
+                "max-w-[85%] rounded-lg px-3 py-2 text-sm",
                 message.role === "user"
-                  ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+                  ? "whitespace-pre-wrap bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
                   : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50",
               )}
             >
-              {message.text || (isLastAssistant ? <span className="animate-pulse">…</span> : "")}
+              {message.role === "assistant" ? (
+                message.text ? (
+                  <FormattedMessage text={message.text} />
+                ) : isLastAssistant ? (
+                  <span className="animate-pulse">…</span>
+                ) : (
+                  ""
+                )
+              ) : (
+                message.text
+              )}
             </div>
           </div>
         );
