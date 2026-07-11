@@ -117,13 +117,15 @@ export function parseTallyInvoice(text: string): PdfParseResult {
   // Reconciliation safety net: derive the invoice total from the parsed line
   // items (taxable = qty x rate x (1 - discount%); total = taxable + tax) and
   // compare it to the parsed grand total. If they diverge beyond rounding
-  // tolerance — the tell-tale of a dropped/garbled/mis-parsed row — drop
-  // confidence below the LLM-fallback threshold rather than emit wrong data.
+  // tolerance — the tell-tale of a dropped/garbled/mis-parsed row, OR of an
+  // unrecognized item-table layout that yielded ZERO line items (derived 0 vs a
+  // positive total) — drop confidence below the LLM-fallback threshold rather
+  // than emit an invoice with confidently-wrong / missing line items.
   const derivedTotal = lineItems.reduce((acc, li) => {
     const taxable = li.qty * li.rate * (1 - (li.discountPct ?? 0) / 100);
     return acc + taxable * (1 + (li.taxRatePct ?? 0) / 100);
   }, 0);
-  if (lineItems.length > 0 && Math.abs(derivedTotal - amount) > RECONCILE_TOLERANCE) {
+  if (Math.abs(derivedTotal - amount) > RECONCILE_TOLERANCE) {
     warnings.push(
       `Line items (₹${derivedTotal.toFixed(2)}) do not reconcile with invoice total (₹${amount.toFixed(2)}) — likely a dropped or misparsed row`,
     );

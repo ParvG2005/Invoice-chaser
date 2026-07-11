@@ -93,6 +93,19 @@ describe("parseTallyInvoice", () => {
     expect(r.warnings.some((w) => /reconcile/i.test(w))).toBe(true);
   });
 
+  it("lowers confidence when the item table is unrecognized (zero line items but valid header + total)", () => {
+    // Header + grand total parse fine, but the item row is in a layout the row
+    // regex can't match -> zero line items. Must NOT return high confidence.
+    const text =
+      header("Arjun Traders", "AL/303") +
+      `1 MYSTERY WIDGET | 5000 | 50 | 18pct | unknownlayout ` +
+      `Total ī5,900.0050 No`;
+    const r = parseTallyInvoice(text);
+    expect(r.parsed?.invoice.lineItems).toHaveLength(0);
+    expect(r.confidence).toBeLessThan(0.8);
+    expect(r.warnings.length).toBeGreaterThan(0);
+  });
+
   it("stops the buyer name at the first suffix, not an address word further along", () => {
     // Real name is "Sunrise Metal Works"; the address "Near Industrial Area" follows.
     // Lazy capture must stop at "Works" and not run into the address.
