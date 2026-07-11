@@ -17,6 +17,9 @@ function toIsoDate(dmy: string): string | undefined {
 
 const num = (s: string) => Number(s.replace(/,/g, ""));
 
+/** Reconciliation tolerance in rupees: covers Tally's per-invoice ROUND OFF plus float error. */
+const RECONCILE_TOLERANCE = 5;
+
 /**
  * unpdf's `extractText(..., { mergePages: true })` (used by `extractPdfText`)
  * joins every line *within* a page with a single space — for these
@@ -29,16 +32,31 @@ const num = (s: string) => Number(s.replace(/,/g, ""));
 /**
  * One line-item row as it appears in the flattened text, e.g.:
  *   "1 TB/TRUFIX 110 GREY 20KG 10,593.7515.25 %No250.0050 No18 %38245090"
- * i.e. <sl> <description> <amount><discountPct>% No<rate><qty> No<taxRatePct>%<hsn>
- * (columns are Amount, Dis1, "No" (per), Rate, Quantity, "No" (unit), GST%, HSN/SAC —
- * concatenated with no separator between adjacent numeric fields).
+ * i.e. <sl> <description> <amount>[<discountPct> %]No<rate><qty> No<taxRatePct> %<hsn>
+ * Columns: Amount, Dis1, "No" (per), Rate, Quantity, "No" (unit), GST%, HSN/SAC —
+ * concatenated with no separator between adjacent numeric fields.
+ *
+ * The discount (Dis1) column is OPTIONAL: rows with no discount emit either
+ * nothing, a bare "%", or a "-" there. Quantity may be a DECIMAL (e.g. 12.5 KG).
+ *
+ * The row's serial number is anchored with a lookbehind on either "Rate " (the
+ * column-header text that immediately precedes the FIRST row) or a preceding
+ * 6-8 digit HSN/SAC code (the tail of the PREVIOUS row). Without this anchor a
+ * digit earlier in the flat text (e.g. the tail of a buyer phone number) can
+ * masquerade as the serial and balloon the captured description.
  */
 const LINE_ITEM_RE =
-  /\d+\s+([A-Za-z0-9+./\-][A-Za-z0-9+./\- ]*?)\s+[\d,]+\.\d{2}(\d+(?:\.\d+)?)\s*%No([\d,]+\.\d{2})(\d+)\s*No(\d+(?:\.\d+)?)\s*%(\d{6,8})/g;
+  /(?<=Rate\s|\d{6,8}\s)\d+\s+([A-Za-z0-9+./\-][A-Za-z0-9+./\- ]*?)\s+([\d,]+\.\d{2})\s*(?:(\d+(?:\.\d+)?)\s*%|-|%)?\s*No\s*([\d,]+\.\d{2})\s*(\d+(?:\.\d+)?)\s*No\s*(\d+(?:\.\d+)?)\s*%\s*(\d{6,8})/g;
 
-/** Company-entity suffix words used to find where the buyer's name ends and its address begins (see note above — no line breaks to anchor on). */
+/**
+ * Business-entity suffix words used to guess where the buyer's name ends and
+ * its address begins (no line breaks to anchor on — see note above). The
+ * capture is LAZY (`.+?`) so it stops at the FIRST suffix occurrence, which
+ * minimizes (but cannot fully eliminate) over-capture when an address word
+ * downstream also happens to be a suffix.
+ */
 const BUYER_NAME_RE =
-  /Buyer\s*\(Bill to\)\s*(.+?\b(?:Traders?|Trading|Company|Enterprises?|Industries|Corporation|Distributors?|Suppliers?|Agencies|Stores|Associates|Brothers|Sons|Pvt\.?\s*Ltd\.?|LLP)\b)/i;
+  /Buyer\s*\(Bill to\)\s*(.+?\b(?:Traders?|Trading|Company|Enterprises?|Industries|Corporation|Distributors?|Suppliers?|Agencies|Stores?|Associates|Brothers|Sons|Works|Pvt\.?\s*Ltd\.?|LLP)\b)/i;
 
 export function parseTallyInvoice(text: string): PdfParseResult {
   const warnings: string[] = [];
@@ -47,7 +65,7 @@ export function parseTallyInvoice(text: string): PdfParseResult {
   let hits = 0;
   const anchors = [/TAX INVOICE/i, /Invoice No/i, /Buyer \(Bill to\)/i, /HSN\/SAC/i, /Total/i];
   for (const a of anchors) if (a.test(flat)) hits += 1;
-  const confidence = hits / anchors.length;
+  let confidence = hits / anchors.length;
   if (confidence < 0.6) return { confidence, warnings: ["Not a recognized Tally tax invoice"] };
 
   // Invoice number: the token right after "Invoice No." (e.g. "AL/104").
@@ -58,7 +76,7 @@ export function parseTallyInvoice(text: string): PdfParseResult {
   const dateMatch = flat.match(/Dated\s*-\s*\S+\s+(\d{1,2}-[A-Za-z]{3}-\d{2})/);
   const invoiceDate = dateMatch ? toIsoDate(dateMatch[1]) : undefined;
 
-  // Buyer name: from "Buyer (Bill to)" up through the first business-entity suffix word.
+  // Buyer name: from "Buyer (Bill to)" up through the FIRST business-entity suffix word.
   const buyerMatch = flat.match(BUYER_NAME_RE);
   const clientName = buyerMatch?.[1]?.trim();
 
@@ -72,17 +90,17 @@ export function parseTallyInvoice(text: string): PdfParseResult {
 
   // Grand total: "Total ī12,501.0050 No" — the trailing "No" (unit) distinguishes it
   // from the later tax-breakdown "Total: ..." line, which has no "No" suffix.
-  const totalMatch = flat.match(/Total\s*\D*?([\d,]+\.\d{2})\d*\s*No\b/);
+  const totalMatch = flat.match(/Total\s*\D*?([\d,]+\.\d{2})[\d.]*\s*No\b/);
   const amount = totalMatch ? num(totalMatch[1]) : undefined;
 
   const lineItems: NonNullable<ParsedInvoice["invoice"]["lineItems"]> = [];
   for (const m of flat.matchAll(LINE_ITEM_RE)) {
     lineItems.push({
       description: m[1].trim(),
-      discountPct: num(m[2]),
-      rate: num(m[3]),
-      qty: num(m[4]),
-      taxRatePct: num(m[5]),
+      discountPct: m[3] ? num(m[3]) : 0,
+      rate: num(m[4]),
+      qty: num(m[5]),
+      taxRatePct: num(m[6]),
     });
   }
 
@@ -94,6 +112,22 @@ export function parseTallyInvoice(text: string): PdfParseResult {
 
   if (!invoiceNumber || !clientName || !invoiceDate || amount === undefined) {
     return { confidence: Math.min(confidence, 0.5), warnings };
+  }
+
+  // Reconciliation safety net: derive the invoice total from the parsed line
+  // items (taxable = qty x rate x (1 - discount%); total = taxable + tax) and
+  // compare it to the parsed grand total. If they diverge beyond rounding
+  // tolerance — the tell-tale of a dropped/garbled/mis-parsed row — drop
+  // confidence below the LLM-fallback threshold rather than emit wrong data.
+  const derivedTotal = lineItems.reduce((acc, li) => {
+    const taxable = li.qty * li.rate * (1 - (li.discountPct ?? 0) / 100);
+    return acc + taxable * (1 + (li.taxRatePct ?? 0) / 100);
+  }, 0);
+  if (lineItems.length > 0 && Math.abs(derivedTotal - amount) > RECONCILE_TOLERANCE) {
+    warnings.push(
+      `Line items (₹${derivedTotal.toFixed(2)}) do not reconcile with invoice total (₹${amount.toFixed(2)}) — likely a dropped or misparsed row`,
+    );
+    confidence = Math.min(confidence, 0.5);
   }
 
   return {
