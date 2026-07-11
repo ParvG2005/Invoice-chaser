@@ -110,7 +110,16 @@ export function withApiHandler(handler: RouteHandler, options: HandlerOptions = 
       }
 
       if (error instanceof ZodError) {
-        return errorResponse("VALIDATION_ERROR", "Invalid request", 422, error.flatten());
+        const flat = error.flatten();
+        // flatten() groups nested array errors under the top-level key only
+        // (e.g. everything under "invoices"), which hides WHICH row/field
+        // failed. Include the raw issue paths so the client can surface e.g.
+        // "invoices.0.lineItems.2.qty".
+        return errorResponse("VALIDATION_ERROR", "Invalid request", 422, {
+          formErrors: flat.formErrors,
+          fieldErrors: flat.fieldErrors,
+          issues: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+        });
       }
 
       log.error("Unhandled error", {

@@ -8,10 +8,31 @@ import type { ApiResponse } from "@/types";
  */
 function fieldErrorSummary(details: unknown): string | null {
   if (!details || typeof details !== "object") return null;
-  const fieldErrors = (details as { fieldErrors?: Record<string, unknown> }).fieldErrors;
-  if (!fieldErrors || typeof fieldErrors !== "object") return null;
-  const fields = Object.keys(fieldErrors);
-  return fields.length ? fields.join(", ") : null;
+  const d = details as {
+    issues?: { path: string; message: string }[];
+    fieldErrors?: Record<string, unknown>;
+  };
+
+  // Prefer the full issue paths (e.g. "invoices.0.lineItems.2.qty") over the
+  // flattened top-level keys, which collapse every nested array error under a
+  // single field name.
+  if (Array.isArray(d.issues) && d.issues.length > 0) {
+    return d.issues
+      .slice(0, 5)
+      .map((i) => (i.path ? `${i.path} (${i.message})` : i.message))
+      .join("; ");
+  }
+
+  if (d.fieldErrors && typeof d.fieldErrors === "object") {
+    const withMessages = Object.entries(d.fieldErrors).flatMap(([key, msgs]) =>
+      Array.isArray(msgs) ? msgs.map((m) => `${key}: ${m}`) : [],
+    );
+    if (withMessages.length > 0) return withMessages.slice(0, 5).join("; ");
+    const fields = Object.keys(d.fieldErrors);
+    return fields.length ? fields.join(", ") : null;
+  }
+
+  return null;
 }
 
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
