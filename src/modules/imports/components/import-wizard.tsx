@@ -106,7 +106,7 @@ export function ImportWizard() {
   const [dragging, setDragging] = useState(false);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [netDays, setNetDays] = useState(30);
-  const [emailOverrides, setEmailOverrides] = useState<Record<string, string>>({});
+  const [emailOverrides, setEmailOverrides] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   const tallySource = TALLY_SOURCES.find((s) => s.key === sourceKey);
@@ -267,10 +267,10 @@ export function ImportWizard() {
   const tallyPreview = preview?.kind === "tally" ? preview : null;
 
   const pdfPreview = preview?.kind === "pdf" ? preview : null;
-  /** Row's invoice with the user's net-N days and any typed-in email applied. */
-  const effectivePdfInvoice = (r: ExtractedInvoice): CreateInvoiceInput | null => {
+  /** Row's invoice with the user's net-N days and any typed-in email applied. Keyed by row index (stable within a single parse result set) rather than fileName, since two uploaded files can share the same name. */
+  const effectivePdfInvoice = (r: ExtractedInvoice, index: number): CreateInvoiceInput | null => {
     if (!r.invoice) return null;
-    const email = emailOverrides[r.fileName]?.trim() || r.invoice.clientEmail;
+    const email = emailOverrides[index]?.trim() || r.invoice.clientEmail;
     const dueDate = r.invoiceDate ? addDaysIso(r.invoiceDate, netDays) : r.invoice.dueDate;
     return { ...r.invoice, clientEmail: email, dueDate };
   };
@@ -494,7 +494,7 @@ export function ImportWizard() {
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {pdfPreview.results.map((r, i) => {
-                      const effective = effectivePdfInvoice(r);
+                      const effective = effectivePdfInvoice(r, i);
                       return (
                         <tr key={`${r.fileName}-${i}`} className={r.method === "failed" ? "bg-red-50 dark:bg-red-950/20" : undefined}>
                           <td className="px-3 py-2">{r.fileName}</td>
@@ -512,9 +512,9 @@ export function ImportWizard() {
                               <input
                                 type="email"
                                 placeholder="client@example.com"
-                                value={emailOverrides[r.fileName] ?? ""}
+                                value={emailOverrides[i] ?? ""}
                                 onChange={(e) =>
-                                  setEmailOverrides((prev) => ({ ...prev, [r.fileName]: e.target.value }))
+                                  setEmailOverrides((prev) => ({ ...prev, [i]: e.target.value }))
                                 }
                                 className="w-full rounded border border-amber-300 bg-white px-2 py-1 text-xs dark:border-amber-700 dark:bg-zinc-900"
                               />

@@ -1,14 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
+import type Anthropic from "@anthropic-ai/sdk";
 import { llmExtractInvoice } from "@/lib/import/pdf/llm-extract";
 
-function mockClient(payload: unknown) {
+function mockClient(payload: unknown): Anthropic {
   return {
     messages: {
       create: vi.fn().mockResolvedValue({
         content: [{ type: "tool_use", name: "emit_invoice", input: payload }],
       }),
     },
-  } as any;
+  } as unknown as Anthropic;
 }
 
 describe("llmExtractInvoice", () => {
