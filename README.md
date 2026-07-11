@@ -1,6 +1,6 @@
 # InvoicePilot
 
-AI-assisted receivables/payables and inventory platform for freelancers, agencies, and SMBs — invoices, bills, stock, Tally Prime import, automated reminders, and an in-app AI assistant.
+AI-assisted receivables/payables and inventory platform for freelancers, agencies, and SMBs — invoices, bills, stock, Tally Prime / CSV / PDF invoice import, automated reminders, and an in-app AI assistant.
 
 ## Stack
 
@@ -12,7 +12,7 @@ AI-assisted receivables/payables and inventory platform for freelancers, agencie
 - **AI (assistant):** Anthropic (`claude-sonnet-5`), tool-use loop with mandatory human approval on every write (`src/lib/assistant`, ADR-005)
 - **Jobs:** Inngest
 - **Rate limiting / assistant budgets:** Upstash Redis
-- **Deploy:** a single native Cloudflare Worker (`invoicechaser`, via the OpenNext Cloudflare adapter) — not the classic Pages product. See ADR-001 and `docs/setup/PROVISIONING.md`.
+- **Deploy:** Vercel — Git integration auto-deploys `main` to production and gives every PR a preview deployment (`@vercel/analytics` + `@vercel/speed-insights` wired in). See `docs/setup/PROVISIONING.md`.
 
 ## Prerequisites
 
@@ -50,6 +50,10 @@ clientName,clientEmail,amount,dueDate,invoiceNumber,notes
 ```
 
 For bulk data from Tally Prime, see [docs/TALLY.md](docs/TALLY.md) instead — it's a richer, foreign-key-ordered XML import (ledgers → stock items → vouchers), not this CSV path.
+
+## PDF invoice import
+
+Upload one or more TallyPrime sales-invoice PDFs in the import wizard (**Imports → PDF Invoices**). Each PDF is parsed automatically — LLM extraction first (Anthropic), with a deterministic Tally-layout regex parser as fallback — into invoice fields, buyer GSTIN/address, and line items, which then upsert the buyer Party and per-line Stock Items on commit. Review the extracted rows (fill any missing email, set net-N due days) before importing.
 
 ## Project structure
 
@@ -91,7 +95,7 @@ npm run test:smoke    # tagged @smoke subset — read-only, safe to run against 
 
 ## Deployment
 
-Cloudflare's Git integration builds and deploys `main` automatically as a native Worker (build: `npx opennextjs-cloudflare build`, deploy: `npx wrangler deploy`) — this is independent of GitHub Actions CI, which runs lint/typecheck/tests and, separately, gates `prisma migrate deploy` against production (see `.github/workflows/ci.yml` and `docs/RUNBOOK.md` §2–3). See `docs/setup/PROVISIONING.md` for the full provisioning history and current status of every external service.
+Vercel's Git integration builds and deploys `main` to production automatically, and gives every pull request a preview deployment. This is independent of GitHub Actions CI, which runs lint/typecheck/tests and, separately, gates `prisma migrate deploy` against production (see `.github/workflows/ci.yml` and `docs/RUNBOOK.md` §2–3). See `docs/setup/PROVISIONING.md` for the full provisioning history and current status of every external service.
 
 ## Program plan
 

@@ -329,11 +329,22 @@ export function ImportWizard() {
       buyerAddress: r.buyerAddress,
     };
   };
-  const pdfValidInvoices = (pdfPreview?.results ?? [])
-    .map(effectivePdfInvoice)
-    .filter(
-      (inv): inv is PdfImportInvoiceInput => !!inv && !!inv.clientEmail && isValidEmail(inv.clientEmail),
-    );
+  const emailOk = (email?: string | null) => {
+    const v = (email ?? "").trim();
+    return v === "" || isValidEmail(v);
+  };
+  const pdfEffective = (pdfPreview?.results ?? [])
+    .map((r, i) => effectivePdfInvoice(r, i))
+    .filter((inv): inv is PdfImportInvoiceInput => !!inv);
+  // Email is OPTIONAL for import: the invoice still imports with a blank email
+  // (reminders just can't send until it's filled — same policy as the Tally
+  // path). Only a NON-EMPTY, malformed email blocks a row, since the server
+  // rejects that specific case.
+  const pdfValidInvoices = pdfEffective.filter((inv) => emailOk(inv.clientEmail));
+  const pdfBlockedCount = pdfEffective.length - pdfValidInvoices.length;
+  const pdfMissingEmailCount = pdfValidInvoices.filter(
+    (inv) => (inv.clientEmail ?? "").trim() === "",
+  ).length;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -556,7 +567,9 @@ export function ImportWizard() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                     {pdfPreview.results.map((r, i) => {
                       const effective = effectivePdfInvoice(r, i);
-                      const emailInvalid = !!effective && !(effective.clientEmail && isValidEmail(effective.clientEmail));
+                      const emailValue = (effective?.clientEmail ?? "").trim();
+                      const emailBad = !!effective && emailValue !== "" && !isValidEmail(emailValue);
+                      const showEmailInput = !!effective && (emailBad || emailValue === "");
                       return (
                         <tr key={`${r.fileName}-${i}`} className={r.method === "failed" ? "bg-red-50 dark:bg-red-950/20" : undefined}>
                           <td className="px-3 py-2">{r.fileName}</td>
@@ -583,15 +596,19 @@ export function ImportWizard() {
                           <td className="px-3 py-2">{r.invoice ? formatCurrency(r.invoice.amount, "INR") : "—"}</td>
                           <td className="px-3 py-2">{effective?.dueDate ?? "—"}</td>
                           <td className="px-3 py-2">
-                            {r.invoice && emailInvalid ? (
+                            {r.invoice && showEmailInput ? (
                               <input
                                 type="email"
-                                placeholder="client@example.com"
+                                placeholder="optional — for reminders"
                                 value={emailOverrides[i] ?? r.invoice.clientEmail}
                                 onChange={(e) =>
                                   setEmailOverrides((prev) => ({ ...prev, [i]: e.target.value }))
                                 }
-                                className="w-full rounded border border-amber-300 bg-white px-2 py-1 text-xs dark:border-amber-700 dark:bg-zinc-900"
+                                className={`w-full rounded border bg-white px-2 py-1 text-xs dark:bg-zinc-900 ${
+                                  emailBad
+                                    ? "border-red-400 dark:border-red-700"
+                                    : "border-zinc-300 dark:border-zinc-700"
+                                }`}
                               />
                             ) : (
                               r.invoice?.clientEmail ?? "—"
@@ -614,6 +631,22 @@ export function ImportWizard() {
                       </div>
                     )),
                   )}
+                </div>
+              )}
+
+              {pdfBlockedCount > 0 && (
+                <div className="flex items-start gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  {pdfBlockedCount} row{pdfBlockedCount !== 1 ? "s have" : " has"} an invalid email —
+                  fix it in the Email column, or clear it to import without one. Only these rows are
+                  held back.
+                </div>
+              )}
+              {pdfBlockedCount === 0 && pdfMissingEmailCount > 0 && (
+                <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  {pdfMissingEmailCount} invoice{pdfMissingEmailCount !== 1 ? "s" : ""} will import
+                  without an email — add it on the Party page later to send reminders.
                 </div>
               )}
 

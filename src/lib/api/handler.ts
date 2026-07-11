@@ -111,6 +111,10 @@ export function withApiHandler(handler: RouteHandler, options: HandlerOptions = 
 
       if (error instanceof ZodError) {
         const flat = error.flatten();
+        log.warn("Validation failed", {
+          path: new URL(request.url).pathname,
+          issues: error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+        });
         // flatten() groups nested array errors under the top-level key only
         // (e.g. everything under "invoices"), which hides WHICH row/field
         // failed. Include the raw issue paths so the client can surface e.g.
