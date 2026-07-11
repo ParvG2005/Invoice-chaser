@@ -196,12 +196,14 @@ describe("invoiceService.importPdfInvoices (enrichment)", () => {
     expect(lineItems[1]).toMatchObject({ description: "Gadget", itemId: "item-existing" });
   });
 
-  it("tolerates null email / null gstin / no line items without throwing", async () => {
+  it("tolerates empty email / null gstin / no line items without throwing", async () => {
     vi.mocked(partyRepository.findByName).mockResolvedValue(null as never);
     vi.mocked(partyRepository.create).mockResolvedValue(fakeParty({ id: "party-new" }) as never);
 
     const result = await invoiceService.importPdfInvoices(ORG, [
-      baseInput({ clientEmail: null, buyerGstin: null, lineItems: [] }),
+      // The commit schema collapses a missing/blank email to "" (never null),
+      // so the enrichment path only ever sees a string here.
+      baseInput({ clientEmail: "", buyerGstin: null, lineItems: [] }),
     ]);
 
     expect(result).toHaveLength(1);

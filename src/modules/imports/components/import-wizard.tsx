@@ -317,33 +317,39 @@ export function ImportWizard() {
   /** Row's invoice with the user's net-N days and any typed-in email applied, plus the enrichment fields (GSTIN/address) the commit endpoint upserts onto the buyer Party. Keyed by row index (stable within a single parse result set) rather than fileName, since two uploaded files can share the same name. */
   const effectivePdfInvoice = (r: ExtractedInvoice, index: number): PdfImportInvoiceInput | null => {
     if (!r.invoice) return null;
-    const email = emailOverrides[index]?.trim() || r.invoice.clientEmail;
+    const rawEmail = (emailOverrides[index]?.trim() || r.invoice.clientEmail || "").trim();
+    // Only send a well-formed email; a blank or malformed one imports without
+    // an email rather than 422-ing (matches the server's tolerant schema).
+    const clientEmail = isValidEmail(rawEmail) ? rawEmail : "";
     const clientName = nameOverrides[index]?.trim() || r.invoice.clientName;
     const dueDate = r.invoiceDate ? addDaysIso(r.invoiceDate, netDays) : r.invoice.dueDate;
     return {
       ...r.invoice,
       clientName,
-      clientEmail: email,
+      clientEmail,
       dueDate,
       buyerGstin: r.buyerGstin,
       buyerAddress: r.buyerAddress,
     };
   };
-  const emailOk = (email?: string | null) => {
-    const v = (email ?? "").trim();
-    return v === "" || isValidEmail(v);
-  };
-  const pdfEffective = (pdfPreview?.results ?? [])
+  // The raw email a row would use, before sanitizing — for the preview warnings.
+  const rawEmailFor = (r: ExtractedInvoice, i: number) =>
+    (emailOverrides[i]?.trim() || r.invoice?.clientEmail || "").trim();
+
+  // Email is OPTIONAL for import and never blocks it: a blank or malformed
+  // address just imports without an email (reminders can't send until it's
+  // fixed on the Party page) — same policy as the Tally path. So every parsed
+  // row is importable; the button is only disabled when nothing parsed.
+  const pdfValidInvoices = (pdfPreview?.results ?? [])
     .map((r, i) => effectivePdfInvoice(r, i))
     .filter((inv): inv is PdfImportInvoiceInput => !!inv);
-  // Email is OPTIONAL for import: the invoice still imports with a blank email
-  // (reminders just can't send until it's filled — same policy as the Tally
-  // path). Only a NON-EMPTY, malformed email blocks a row, since the server
-  // rejects that specific case.
-  const pdfValidInvoices = pdfEffective.filter((inv) => emailOk(inv.clientEmail));
-  const pdfBlockedCount = pdfEffective.length - pdfValidInvoices.length;
-  const pdfMissingEmailCount = pdfValidInvoices.filter(
-    (inv) => (inv.clientEmail ?? "").trim() === "",
+  const pdfInvalidEmailCount = (pdfPreview?.results ?? []).filter((r, i) => {
+    if (!r.invoice) return false;
+    const raw = rawEmailFor(r, i);
+    return raw !== "" && !isValidEmail(raw);
+  }).length;
+  const pdfMissingEmailCount = (pdfPreview?.results ?? []).filter(
+    (r, i) => !!r.invoice && rawEmailFor(r, i) === "",
   ).length;
 
   return (
@@ -634,16 +640,16 @@ export function ImportWizard() {
                 </div>
               )}
 
-              {pdfBlockedCount > 0 && (
-                <div className="flex items-start gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-400">
+              {pdfInvalidEmailCount > 0 && (
+                <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                  {pdfBlockedCount} row{pdfBlockedCount !== 1 ? "s have" : " has"} an invalid email —
-                  fix it in the Email column, or clear it to import without one. Only these rows are
-                  held back.
+                  {pdfInvalidEmailCount} row{pdfInvalidEmailCount !== 1 ? "s have" : " has"} an email
+                  that doesn&apos;t look valid — it will import without one. Fix it in the Email
+                  column to keep it.
                 </div>
               )}
-              {pdfBlockedCount === 0 && pdfMissingEmailCount > 0 && (
-                <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+              {pdfMissingEmailCount > 0 && (
+                <div className="flex items-start gap-1.5 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                   {pdfMissingEmailCount} invoice{pdfMissingEmailCount !== 1 ? "s" : ""} will import
                   without an email — add it on the Party page later to send reminders.
