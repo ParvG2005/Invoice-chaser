@@ -12,6 +12,7 @@ import { MAX_TALLY_XML_BYTES } from "@/lib/validations/import";
 import { parseLedgers, parseStockItems } from "@/lib/import/tally/parse-masters";
 import { parseVouchers } from "@/lib/import/tally/parse-vouchers";
 import { parseCsv } from "@/lib/import/csv-parser";
+import { formatCurrency } from "@/lib/utils/currency";
 import type { ParseResult, ParseWarning, TallyLedger, TallyStockItem, TallyVoucher } from "@/lib/import/tally/types";
 import type { ExtractedInvoice } from "@/lib/import/pdf";
 import type { CreateInvoiceInput } from "@/lib/validations/invoice";
@@ -529,7 +530,7 @@ export function ImportWizard() {
                               "—"
                             )}
                           </td>
-                          <td className="px-3 py-2">{r.invoice ? r.invoice.amount.toFixed(2) : "—"}</td>
+                          <td className="px-3 py-2">{r.invoice ? formatCurrency(r.invoice.amount, "INR") : "—"}</td>
                           <td className="px-3 py-2">{effective?.dueDate ?? "—"}</td>
                           <td className="px-3 py-2">
                             {r.invoice && emailInvalid ? (
