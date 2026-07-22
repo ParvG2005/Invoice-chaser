@@ -29,10 +29,24 @@ async function resolveOrganizationId(): Promise<string> {
     throw new Error("Set DEMO_CLERK_USER_EMAIL (or E2E_CLERK_USER_EMAIL) to the account to seed.");
   }
   const user = await prisma.user.findFirst({ where: { email } });
-  if (!user) throw new Error(`No User found for "${email}". Sign in once first.`);
-  const membership = await prisma.organizationMember.findFirst({ where: { userId: user.id } });
-  if (!membership) throw new Error(`User "${email}" has no organization.`);
-  return membership.organizationId;
+  const membership = user
+    ? await prisma.organizationMember.findFirst({ where: { userId: user.id } })
+    : null;
+  if (membership) return membership.organizationId;
+
+  // Demo account created in Clerk but never signed in → no DB rows yet.
+  // Bootstrap them via the same path a first authenticated request uses, so
+  // `db:seed:demo` works end-to-end without a manual sign-in.
+  const { getDemoClerkUserId } = await import("../src/lib/demo");
+  const { organizationService } = await import("../src/server/services/organization.service");
+  const clerkId = await getDemoClerkUserId();
+  if (!clerkId) {
+    throw new Error(
+      `No DB rows and no Clerk user for "${email}". Check the account exists in Clerk and CLERK_SECRET_KEY is set.`,
+    );
+  }
+  const org = await organizationService.ensureUserOrganization(clerkId);
+  return org.organizationId;
 }
 
 function daysAgo(n: number): Date {

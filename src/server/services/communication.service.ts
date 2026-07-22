@@ -8,6 +8,7 @@ import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { organizationRepository } from "@/server/repositories/organization.repository";
 import { withAudit, type AuditActor } from "@/server/services/audit.service";
 import { renderBaseEmailTemplate, textToHtmlParagraphs } from "@/lib/email/templates/base";
+import { isDemoOrg } from "@/lib/demo";
 import { decimalToNumber, formatInr } from "@/lib/utils/currency";
 import type { CommunicationLogDto } from "@/types";
 
@@ -124,6 +125,17 @@ export const communicationService = {
 
     return withAudit(actor, "communication.send", { organizationId, entityType: "CommunicationLog", entityId: entry.id }, async () => {
       try {
+        // Demo org: never touch the real provider — interviewer clicks must not
+        // reach real inboxes. Mark the log SENT so the UI reflects a send.
+        if (await isDemoOrg(organizationId)) {
+          log.info("Demo org — skipping real send", { organizationId, channel: input.channel });
+          await communicationLogRepository.update(entry.id, {
+            status: "SENT",
+            providerId: "demo-skip",
+            sentAt: new Date(),
+          });
+          return { id: entry.id, status: "SENT" as const, providerId: "demo-skip" };
+        }
         const provider = getChannelProvider(input.channel);
         const result = await provider.send({
           channel: input.channel,

@@ -5,6 +5,9 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/inngest(.*)",
+  // Skip-login demo: mints a Clerk sign-in ticket for the shared demo account.
+  // Public so a signed-out interviewer can request it.
+  "/api/demo-login",
   // Tally sync agent authenticates with a per-org API key (Bearer), not a
   // Clerk session; withApiHandler validates the key. Public here only so
   // Clerk middleware doesn't reject the keyed request before the handler runs.

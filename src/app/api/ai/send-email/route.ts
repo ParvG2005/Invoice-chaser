@@ -6,6 +6,7 @@ import { invoiceRepository } from "@/server/repositories/invoice.repository";
 import { emailLogRepository } from "@/server/repositories/email-log.repository";
 import { NotFoundError } from "@/lib/api/errors";
 import { createLogger } from "@/lib/logger";
+import { isDemoOrg } from "@/lib/demo";
 
 const log = createLogger("send-email");
 
@@ -33,6 +34,17 @@ export const POST = withApiHandler(
       bodyHtml,
       status: "QUEUED",
     });
+
+    // Demo org: never dispatch real email/WhatsApp. Mark the log SENT so the
+    // UI reflects a send without reaching a real inbox.
+    if (await isDemoOrg(ctx.organizationId)) {
+      log.info("Demo org — skipping real send", { invoiceId });
+      await emailLogRepository.updateStatus(logEntry.id, "SENT", {
+        providerId: "demo-skip",
+        sentAt: new Date(),
+      });
+      return successResponse({ sent: true, whatsappSent: false, messageId: "demo-skip" });
+    }
 
     // Try to send WhatsApp if phone is present and message was generated
     let whatsappSent = false;
