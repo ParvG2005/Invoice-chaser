@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getEmailProvider } from "@/lib/email";
 import { createLogger } from "@/lib/logger";
 import { analyticsService } from "@/server/services/analytics.service";
+import { isDemoOrg } from "@/lib/demo";
 
 const log = createLogger("notification-service");
 
@@ -11,6 +12,8 @@ const escapeHtml = (s: string) =>
 export const notificationService = {
   /** Emails the org owner a low-stock digest. Returns true when a digest was sent. */
   async sendLowStockDigest(organizationId: string): Promise<boolean> {
+    if (await isDemoOrg(organizationId)) return false;
+
     const stock = await analyticsService.getStockAnalytics(organizationId);
     if (stock.lowStockItems.length === 0) return false;
 

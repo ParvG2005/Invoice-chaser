@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Show, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { ArrowRight, Mail, Sparkles, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DemoLoginButton } from "@/components/demo/demo-login-button";
+import { isDemoConfigured } from "@/lib/demo";
 
 export default function LandingPage() {
+  const demo = isDemoConfigured();
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -16,6 +19,7 @@ export default function LandingPage() {
             <SignUpButton mode="modal">
               <Button>Get started</Button>
             </SignUpButton>
+            {demo ? <DemoLoginButton variant="outline" /> : null}
           </Show>
           <Show when="signed-in">
             <Link href="/dashboard">
@@ -43,6 +47,7 @@ export default function LandingPage() {
             <SignUpButton mode="modal">
               <Button size="lg">Start free</Button>
             </SignUpButton>
+            {demo ? <DemoLoginButton size="lg" variant="outline" /> : null}
           </Show>
           <Show when="signed-in">
             <Link href="/dashboard">
